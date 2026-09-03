@@ -37,11 +37,6 @@ import upload from "./middleware/multer.js";
 
 const app = express();
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
 // =====================================================
 // GLOBAL MIDDLEWARE
 // =====================================================
@@ -188,9 +183,10 @@ app.use((error, req, res, next) => {
 // START SERVER
 // =====================================================
 
+const PORT = process.env.PORT || 4000;
+
 const startServer = async () => {
   try {
-    // Validate important environment variables
     if (!process.env.MONGODB_URI) {
       throw new Error(
         "MONGODB_URI is missing from .env"
@@ -203,14 +199,11 @@ const startServer = async () => {
       );
     }
 
-    // Connect MongoDB first
     await connectDB();
 
-    // Connect Cloudinary
     await connectCloudinary();
 
-    // Start Express
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log("------------------------------------------");
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌐 http://localhost:${PORT}`);
@@ -222,13 +215,8 @@ const startServer = async () => {
     });
 
   } catch (error) {
-
-    console.error(
-      "❌ Failed to start server:"
-    );
-
+    console.error("❌ Failed to start server:");
     console.error(error.message);
-
     process.exit(1);
   }
 };
