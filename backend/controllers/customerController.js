@@ -1,64 +1,129 @@
+
 import orderModel from "../models/orderModel.js";
 
+/* =========================================================
+   GET ALL CUSTOMERS
+   ADMIN ONLY
+========================================================= */
+
 const getCustomers = async (req, res) => {
-  try {
+    try {
+        const orders = await orderModel
+            .find({})
+            .sort({ date: -1 })
+            .lean();
 
-    const orders = await orderModel.find().sort({ date: -1 });
+        const customersMap = new Map();
 
-    const customersMap = {};
+        for (const order of orders) {
+            const address = order.address || {};
 
-    orders.forEach((order) => {
+            const userId = order.userId
+                ? order.userId.toString()
+                : null;
 
-      const phone = order.address.phone;
+            const phone =
+                address.phone ||
+                "No phone";
 
-      if (!customersMap[phone]) {
+            /*
+             * Prefer userId because phone numbers can change.
+             * Fall back to phone for older orders without userId.
+             */
+            const customerKey =
+                userId || phone;
 
-        customersMap[phone] = {
-          name:
-            order.address.firstName +
-            " " +
-            order.address.lastName,
+            if (!customersMap.has(customerKey)) {
+                customersMap.set(
+                    customerKey,
+                    {
+                        userId:
+                            order.userId || null,
 
-          phone,
+                        name:
+                            `${address.firstName || ""} ${
+                                address.lastName || ""
+                            }`.trim() ||
+                            "Customer",
 
-          city: order.address.city,
+                        phone,
 
-          address: order.address.address,
+                        city:
+                            address.city || "",
 
-          totalOrders: 0,
+                        state:
+                            address.state || "",
 
-          totalSpent: 0,
+                        address:
+                            address.address || "",
 
-          latestOrder: order.date
-        };
+                        totalOrders: 0,
 
-      }
+                        totalSpent: 0,
 
-      customersMap[phone].totalOrders++;
+                        latestOrder:
+                            order.date || null,
+                    }
+                );
+            }
 
-      customersMap[phone].totalSpent += order.amount;
+            const customer =
+                customersMap.get(customerKey);
 
-      if(order.date > customersMap[phone].latestOrder){
-        customersMap[phone].latestOrder = order.date;
-      }
+            /*
+             * Every order contributes to order count.
+             */
+            customer.totalOrders += 1;
 
-    });
+            /*
+             * Cancelled orders should not contribute
+             * to customer spending.
+             */
+            if (
+                order.orderStatus !==
+                "Cancelled"
+            ) {
+                customer.totalSpent +=
+                    Number(order.amount) || 0;
+            }
 
-    res.json({
-      success: true,
-      customers: Object.values(customersMap)
-    });
+            /*
+             * Keep the latest order date.
+             */
+            if (
+                order.date &&
+                (!customer.latestOrder ||
+                    new Date(order.date) >
+                        new Date(
+                            customer.latestOrder
+                        ))
+            ) {
+                customer.latestOrder =
+                    order.date;
+            }
+        }
 
-  } catch (error) {
+        return res.json({
+            success: true,
+            customers:
+                Array.from(
+                    customersMap.values()
+                ),
+        });
+    } catch (error) {
+        console.error(
+            "Get customers error:",
+            error
+        );
 
-    console.log(error);
-
-    res.json({
-      success:false,
-      message:error.message
-    });
-
-  }
+        return res.status(500).json({
+            success: false,
+            message:
+                "Unable to fetch customers",
+        });
+    }
 };
 
-export { getCustomers };
+export {
+    getCustomers,
+};

@@ -1,79 +1,63 @@
 import jwt from "jsonwebtoken";
 
+const authUser = (req, res, next) => {
+    try {
+        const authHeader =
+            req.headers.authorization;
 
-const authUser = async(req,res,next)=>{
+        const token =
+            req.headers.token ||
+            (
+                authHeader &&
+                authHeader.startsWith("Bearer ")
+                    ? authHeader.split(" ")[1]
+                    : null
+            );
 
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: "Not authorized. Please login again.",
+            });
+        }
 
-try{
+        if (!process.env.JWT_SECRET) {
+            console.error(
+                "JWT_SECRET is missing from environment variables"
+            );
 
+            return res.status(500).json({
+                success: false,
+                message: "Server authentication is not configured",
+            });
+        }
 
-const token = 
-req.headers.token ||
-req.headers.authorization?.split(" ")[1];
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
 
+        if (!decoded?.id) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid authentication token",
+            });
+        }
 
+        req.userId = decoded.id;
 
-if(!token){
+        next();
+    } catch (error) {
+        console.error(
+            "Authentication error:",
+            error.message
+        );
 
-return res.json({
+        return res.status(401).json({
+            success: false,
+            message: "Invalid or expired token",
+        });
+    }
+};
 
-success:false,
-
-message:"Not Authorized"
-
-});
-
-}
-
-
-
-const decoded = jwt.verify(
-
-token,
-
-process.env.JWT_SECRET
-
-);
-
-
-
-req.userId = decoded.id;
-
-
-
-console.log(
-"AUTH USER ID:",
-req.userId
-);
-
-
-
-next();
-
-
-
-}
-
-catch(error){
-
-
-console.log(error);
-
-
-res.json({
-
-success:false,
-
-message:"Invalid Token"
-
-});
-
-
-}
-
-
-}
-
-
-
-export default authUser;  
+export default authUser;

@@ -1,69 +1,121 @@
+
 import orderModel from "../models/orderModel.js";
 import productModel from "../models/productModel.js";
 import userModel from "../models/userModel.js";
 
+/* =========================================================
+   ADMIN DASHBOARD
+========================================================= */
+
 const dashboard = async (req, res) => {
-
     try {
+        const [
+            totalOrders,
+            totalProducts,
+            totalCustomers,
+            revenueResult,
+            lowStockProducts,
+            latestOrders,
+        ] = await Promise.all([
+            // ----------------------------------
+            // TOTAL ORDERS
+            // ----------------------------------
 
-        const totalOrders = await orderModel.countDocuments();
+            orderModel.countDocuments(),
 
-        const totalProducts = await productModel.countDocuments();
+            // ----------------------------------
+            // TOTAL PRODUCTS
+            // ----------------------------------
 
-        const totalCustomers = await userModel.countDocuments();
+            productModel.countDocuments(),
 
-        const revenueOrders = await orderModel.find({
+            // ----------------------------------
+            // TOTAL CUSTOMERS
+            // ----------------------------------
 
-            orderStatus: {
-                $ne: "Cancelled"
-            }
+            userModel.countDocuments(),
 
-        });
+            // ----------------------------------
+            // TOTAL REVENUE
+            // ----------------------------------
 
-        let totalRevenue = 0;
+            orderModel.aggregate([
+                {
+                    $match: {
+                        orderStatus: {
+                            $ne: "Cancelled",
+                        },
 
-        revenueOrders.forEach(order => {
+                        /*
+                         * Count paid orders and COD orders
+                         * as revenue only when they are not
+                         * cancelled.
+                         *
+                         * Pending COD orders are still valid
+                         * orders but are not yet collected.
+                         */
+                        $or: [
+                            {
+                                paymentStatus: "Paid",
+                            },
+                            {
+                                paymentMethod: "COD",
+                            },
+                        ],
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
 
-            totalRevenue += order.amount;
+                        totalRevenue: {
+                            $sum: {
+                                $ifNull: [
+                                    "$amount",
+                                    0,
+                                ],
+                            },
+                        },
+                    },
+                },
+            ]),
 
-        });
+            // ----------------------------------
+            // LOW STOCK PRODUCTS
+            // ----------------------------------
 
-        const lowStockProducts = await productModel
+            productModel
+                .find({
+                    stock: {
+                        $lte: 5,
+                    },
+                })
+                .sort({
+                    stock: 1,
+                })
+                .limit(5)
+                .lean(),
 
-            .find({
+            // ----------------------------------
+            // LATEST ORDERS
+            // ----------------------------------
 
-                stock: {
-                    $lte: 5
-                }
+            orderModel
+                .find({})
+                .sort({
+                    date: -1,
+                })
+                .limit(8)
+                .lean(),
+        ]);
 
-            })
+        const totalRevenue =
+            revenueResult[0]?.totalRevenue || 0;
 
-            .sort({
-
-                stock: 1
-
-            })
-
-            .limit(5);
-
-        const latestOrders = await orderModel
-
-            .find()
-
-            .sort({
-
-                date: -1
-
-            })
-
-            .limit(8);
-
-        res.json({
-
+        return res.json({
             success: true,
 
             dashboard: {
-
                 totalOrders,
 
                 totalProducts,
@@ -74,28 +126,23 @@ const dashboard = async (req, res) => {
 
                 lowStockProducts,
 
-                latestOrders
-
-            }
-
+                latestOrders,
+            },
         });
+    } catch (error) {
+        console.error(
+            "Dashboard error:",
+            error
+        );
 
-    }
-
-    catch (error) {
-
-        console.log(error);
-
-        res.json({
-
+        return res.status(500).json({
             success: false,
-
-            message: error.message
-
+            message:
+                "Unable to load dashboard",
         });
-
     }
-
 };
 
-export { dashboard };
+export {
+    dashboard,
+};

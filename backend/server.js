@@ -6,7 +6,6 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
-
 // =====================================================
 // CONFIG
 // =====================================================
@@ -39,10 +38,9 @@ import upload from "./middleware/multer.js";
 const app = express();
 
 const PORT = process.env.PORT || 4000;
-
-console.log("==========================================");
-console.log("🐟 BEZAWADA CUTS BACKEND");
-console.log("==========================================");
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 // =====================================================
 // GLOBAL MIDDLEWARE
@@ -51,7 +49,10 @@ console.log("==========================================");
 // CORS
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+    ],
     credentials: true,
   })
 );

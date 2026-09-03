@@ -1,67 +1,70 @@
+
 import express from "express";
 
 import {
-placeOrder,
-userOrders,
-allOrders,
-updateOrderStatus,
-cancelOrder
+    placeOrder,
+    userOrders,
+    allOrders,
+    updateOrderStatus,
+    cancelOrder,
 } from "../controllers/orderController.js";
 
-import authUser  from "../middleware/auth.js";
+import authUser from "../middleware/auth.js";
 import adminAuth from "../middleware/adminAuth.js";
-
 
 const orderRouter = express.Router();
 
+/* =========================================================
+   USER ROUTES
+========================================================= */
 
-
-// USER PLACE ORDER
-
+/*
+ * Place a new order
+ */
 orderRouter.post(
-"/place",
-authUser,
-placeOrder
+    "/place",
+    authUser,
+    placeOrder
 );
 
-
-
-
-// USER MY ORDERS
-
+/*
+ * Get logged-in user's orders
+ */
 orderRouter.post(
-"/userorders",
-authUser,
-userOrders
+    "/userorders",
+    authUser,
+    userOrders
 );
 
-
-
-
-// ADMIN ALL ORDERS
-
+/*
+ * Cancel logged-in user's order
+ */
 orderRouter.post(
-"/admin-orders",
-adminAuth,
-allOrders
+    "/cancel",
+    authUser,
+    cancelOrder
 );
 
+/* =========================================================
+   ADMIN ROUTES
+========================================================= */
 
-
-
-// UPDATE ORDER STATUS
-
+/*
+ * Get all orders
+ */
 orderRouter.post(
-"/update-status",
-adminAuth,
-updateOrderStatus
+    "/admin-orders",
+    adminAuth,
+    allOrders
 );
 
-
+/*
+ * Update order status
+ */
 orderRouter.post(
-"/cancel",
-authUser,
-cancelOrder
+    "/update-status",
+    adminAuth,
+    updateOrderStatus
 );
 
 export default orderRouter;

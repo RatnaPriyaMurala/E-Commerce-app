@@ -1,14 +1,79 @@
-import express from 'express';
-import { loginUser, registerUser, adminLogin, resetPassword, getProfile, updateProfile } from '../controllers/userController.js';
-import authUser from '../middleware/auth.js';
+
+import express from "express";
+
+import {
+    loginUser,
+    registerUser,
+    adminLogin,
+    resetPassword,
+    getProfile,
+    updateProfile,
+} from "../controllers/userController.js";
+
+import authUser from "../middleware/auth.js";
 
 const userRouter = express.Router();
 
-userRouter.post('/register', registerUser)
-userRouter.post('/login', loginUser)
-userRouter.post('/admin', adminLogin)
-userRouter.post("/reset-password",resetPassword);
-userRouter.get("/profile",authUser,getProfile);
-userRouter.post("/update-profile",authUser,updateProfile);
+/* =========================================================
+   PUBLIC USER ROUTES
+========================================================= */
+
+/*
+ * Register customer
+ */
+userRouter.post(
+    "/register",
+    registerUser
+);
+
+/*
+ * Login customer
+ */
+userRouter.post(
+    "/login",
+    loginUser
+);
+
+/*
+ * Admin login
+ */
+userRouter.post(
+    "/admin",
+    adminLogin
+);
+
+/*
+ * Reset password
+ *
+ * IMPORTANT:
+ * This endpoint currently needs OTP/email verification
+ * before production deployment.
+ */
+userRouter.post(
+    "/reset-password",
+    resetPassword
+);
+
+/* =========================================================
+   AUTHENTICATED USER ROUTES
+========================================================= */
+
+/*
+ * Get profile
+ */
+userRouter.get(
+    "/profile",
+    authUser,
+    getProfile
+);
+
+/*
+ * Update profile
+ */
+userRouter.post(
+    "/update-profile",
+    authUser,
+    updateProfile
+);
 
 export default userRouter;

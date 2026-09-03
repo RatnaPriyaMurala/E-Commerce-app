@@ -1,88 +1,110 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema({
-
-    name:{
-        type:String,
-        required:true
+const addressSchema = new mongoose.Schema(
+  {
+    firstName: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
-    email:{
-        type:String,
-        required:true,
-        unique:true
+    lastName: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
-    password:{
-        type:String,
-        required:true
+    phone: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
-
-    phone:{
-        type:String,
-        default:""
+    address: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
-
-    cartData:{
-        type:Object,
-        default:{}
+    city: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
-
-    favorites:{
-        type:Array,
-        default:[]
+    state: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
-
-    address:{
-
-        firstName:{
-            type:String,
-            default:""
-        },
-
-        lastName:{
-            type:String,
-            default:""
-        },
-
-        address:{
-            type:String,
-            default:""
-        },
-
-        city:{
-            type:String,
-            default:""
-        },
-
-        state:{
-            type:String,
-            default:""
-        },
-
-        zipcode:{
-            type:String,
-            default:""
-        },
-
-        country:{
-            type:String,
-            default:""
-        }
-
+    zipcode: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
+    country: {
+      type: String,
+      default: "India",
+      trim: true,
+    },
+  },
+  { _id: false }
+);
 
-},{minimize:false});
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+      minlength: 8,
+    },
+
+    phone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    cartData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+
+    favorites: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "product",
+      default: [],
+    },
+
+    address: {
+      type: addressSchema,
+      default: () => ({}),
+    },
+  },
+  {
+    timestamps: true,
+    minimize: false,
+  }
+);
 
 const userModel =
-mongoose.models.user ||
-mongoose.model("user",userSchema);
-
+  mongoose.models.user ||
+  mongoose.model("user", userSchema);
 
 export default userModel;
