@@ -61,7 +61,7 @@ import crabs from './crabs.jpg';
 import prawns from './prawns.jpg';
 
 // Kolkata fish
-import pabda from './pabda.jpg';
+import Pabda from './Pabda.jpg';
 import kolkata_fish from './kolkatafish.jpg';
 import ari from './ari.jpg';
 
@@ -149,7 +149,7 @@ export const assets = {
   prawns,
 
   // Kolkata
-  pabda,
+  Pabda,
   kolkata_fish,
   ari,
 
