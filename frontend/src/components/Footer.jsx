@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { assets } from "../assets/assets";
+
 import {
   FaFacebookF,
   FaInstagram,
@@ -15,63 +16,51 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="relative mt-20 sm:mt-24 bg-slate-950 text-white rounded-t-[2rem] overflow-hidden">
-      {/* =========================================================
-          DECORATIVE BACKGROUND
-      ========================================================= */}
+    <footer className="relative mt-10 sm:mt-12 bg-slate-950 text-white rounded-t-2xl overflow-hidden">
 
-      <div className="absolute -top-32 -right-32 w-96 h-96 bg-cyan-700/10 rounded-full blur-3xl pointer-events-none" />
+      {/* MAIN FOOTER */}
 
-      <div className="absolute bottom-0 -left-32 w-96 h-96 bg-blue-700/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-6">
 
-      {/* =========================================================
-          MAIN FOOTER
-      ========================================================= */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-7">
 
-      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-14 sm:pt-16 pb-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12">
-          {/* =====================================================
-              BRAND
-          ===================================================== */}
+          {/* BRAND */}
 
-          <div className="sm:col-span-2 lg:col-span-1">
+          <div className="col-span-2 lg:col-span-1">
+
             <Link to="/" className="inline-block">
               <img
                 src={assets.logo}
-                className="w-36 sm:w-40 bg-white rounded-xl p-2 shadow-lg"
+                className="w-28 sm:w-32 bg-white rounded-lg p-1.5"
                 alt="Priya Live Fish"
               />
             </Link>
 
-            <p className="mt-6 text-sm sm:text-base text-gray-400 leading-7 max-w-md">
-              Priya Live Fish delivers premium quality freshwater, seawater
-              fish, prawns and crabs directly from trusted fishermen to your
-              doorstep with freshness you can trust.
+            <p className="mt-3 text-[11px] sm:text-xs text-gray-400 leading-5 max-w-sm">
+              Freshwater fish, seawater fish, prawns and crabs sourced carefully and packed hygienically.
             </p>
 
-            {/* Freshness badge */}
-            <div className="mt-6 inline-flex items-center gap-2 bg-cyan-950/70 border border-cyan-800/50 text-cyan-300 px-4 py-2.5 rounded-full text-sm">
+            <div className="mt-3 inline-flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-800/50 text-cyan-300 px-2.5 py-1.5 rounded-full text-[10px]">
               <FaFish />
-              <span>Freshness Delivered</span>
+              Freshness Delivered
             </div>
           </div>
 
-          {/* =====================================================
-              COMPANY
-          ===================================================== */}
+          {/* COMPANY */}
 
           <div>
-            <h3 className="text-lg sm:text-xl font-bold mb-6">
+            <h3 className="text-sm font-bold mb-3">
               Company
             </h3>
 
-            <ul className="space-y-3.5 text-sm sm:text-base text-gray-400">
+            <ul className="space-y-2 text-[11px] text-gray-400">
+
               <li>
                 <Link
                   to="/"
-                  className="group inline-flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300"
+                  className="flex items-center gap-1.5 hover:text-cyan-400"
                 >
-                  <FaArrowRight className="text-[9px] opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
+                  <FaArrowRight className="text-[7px]" />
                   Home
                 </Link>
               </li>
@@ -79,9 +68,9 @@ const Footer = () => {
               <li>
                 <Link
                   to="/about"
-                  className="group inline-flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300"
+                  className="flex items-center gap-1.5 hover:text-cyan-400"
                 >
-                  <FaArrowRight className="text-[9px] opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
+                  <FaArrowRight className="text-[7px]" />
                   About Us
                 </Link>
               </li>
@@ -89,9 +78,9 @@ const Footer = () => {
               <li>
                 <Link
                   to="/menu"
-                  className="group inline-flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300"
+                  className="flex items-center gap-1.5 hover:text-cyan-400"
                 >
-                  <FaArrowRight className="text-[9px] opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
+                  <FaArrowRight className="text-[7px]" />
                   Products
                 </Link>
               </li>
@@ -99,31 +88,30 @@ const Footer = () => {
               <li>
                 <Link
                   to="/contact"
-                  className="group inline-flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300"
+                  className="flex items-center gap-1.5 hover:text-cyan-400"
                 >
-                  <FaArrowRight className="text-[9px] opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
+                  <FaArrowRight className="text-[7px]" />
                   Contact
                 </Link>
               </li>
+
             </ul>
           </div>
 
-          {/* =====================================================
-              POLICIES
-          ===================================================== */}
+          {/* POLICIES */}
 
           <div>
-            <h3 className="text-lg sm:text-xl font-bold mb-6">
+            <h3 className="text-sm font-bold mb-3">
               Policies
             </h3>
 
-            <ul className="space-y-3.5 text-sm sm:text-base text-gray-400">
+            <ul className="space-y-2 text-[11px] text-gray-400">
+
               <li>
                 <Link
                   to="/privacy-policy"
-                  className="group inline-flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300"
+                  className="hover:text-cyan-400"
                 >
-                  <FaArrowRight className="text-[9px] opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
                   Privacy Policy
                 </Link>
               </li>
@@ -131,9 +119,8 @@ const Footer = () => {
               <li>
                 <Link
                   to="/terms"
-                  className="group inline-flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300"
+                  className="hover:text-cyan-400"
                 >
-                  <FaArrowRight className="text-[9px] opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
                   Terms & Conditions
                 </Link>
               </li>
@@ -141,9 +128,8 @@ const Footer = () => {
               <li>
                 <Link
                   to="/refund-policy"
-                  className="group inline-flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300"
+                  className="hover:text-cyan-400"
                 >
-                  <FaArrowRight className="text-[9px] opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
                   Refund Policy
                 </Link>
               </li>
@@ -151,56 +137,57 @@ const Footer = () => {
               <li>
                 <Link
                   to="/shipping-policy"
-                  className="group inline-flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300"
+                  className="hover:text-cyan-400"
                 >
-                  <FaArrowRight className="text-[9px] opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
                   Shipping Policy
                 </Link>
               </li>
+
             </ul>
           </div>
 
-          {/* =====================================================
-              CONTACT
-          ===================================================== */}
+          {/* CONTACT */}
 
-          <div>
-            <h3 className="text-lg sm:text-xl font-bold mb-6">
+          <div className="col-span-2 lg:col-span-1">
+
+            <h3 className="text-sm font-bold mb-3">
               Contact Us
             </h3>
 
-            <div className="space-y-4 text-sm sm:text-base text-gray-400">
-              {/* Phone */}
+            <div className="space-y-2.5 text-[11px] text-gray-400">
+
               <a
                 href="tel:+919954833369"
-                className="flex gap-3 items-center hover:text-cyan-400 transition-colors duration-300"
+                className="flex items-center gap-2 hover:text-cyan-400"
               >
-                <span className="w-9 h-9 shrink-0 rounded-full bg-cyan-950 flex items-center justify-center">
-                  <FaPhoneAlt className="text-cyan-400 text-sm" />
+                <span className="w-7 h-7 rounded-full bg-cyan-950 flex items-center justify-center shrink-0">
+                  <FaPhoneAlt className="text-cyan-400 text-[10px]" />
                 </span>
 
-                <span>+91 9954833369</span>
+                <span>
+                  +91 9954833369
+                </span>
               </a>
 
-              {/* Email */}
               <a
                 href="mailto:priyalivefish@gmail.com"
-                className="flex gap-3 items-center hover:text-cyan-400 transition-colors duration-300 break-all"
+                className="flex items-center gap-2 hover:text-cyan-400"
               >
-                <span className="w-9 h-9 shrink-0 rounded-full bg-cyan-950 flex items-center justify-center">
-                  <FaEnvelope className="text-cyan-400 text-sm" />
+                <span className="w-7 h-7 rounded-full bg-cyan-950 flex items-center justify-center shrink-0">
+                  <FaEnvelope className="text-cyan-400 text-[10px]" />
                 </span>
 
-                <span>priyalivefish@gmail.com</span>
+                <span className="break-all">
+                  priyalivefish@gmail.com
+                </span>
               </a>
 
-              {/* Address */}
-              <div className="flex gap-3 items-start">
-                <span className="w-9 h-9 shrink-0 rounded-full bg-cyan-950 flex items-center justify-center">
-                  <FaMapMarkerAlt className="text-cyan-400 text-sm" />
+              <div className="flex items-start gap-2">
+                <span className="w-7 h-7 rounded-full bg-cyan-950 flex items-center justify-center shrink-0">
+                  <FaMapMarkerAlt className="text-cyan-400 text-[10px]" />
                 </span>
 
-                <span className="leading-6">
+                <span className="leading-4">
                   Fresh Fish Market,
                   <br />
                   Andhra Pradesh,
@@ -208,87 +195,88 @@ const Footer = () => {
                   India
                 </span>
               </div>
+
             </div>
 
-            {/* =================================================
-                SOCIAL ICONS
-            ================================================= */}
+            {/* SOCIAL */}
 
-            <div className="flex gap-3 mt-7">
-              {/* Facebook */}
+            <div className="flex gap-2 mt-3">
+
               <button
                 type="button"
                 aria-label="Facebook"
-                className="w-10 h-10 rounded-full bg-cyan-900/70 border border-cyan-800 flex items-center justify-center hover:bg-cyan-700 hover:-translate-y-1 transition-all duration-300"
+                className="w-7 h-7 rounded-full bg-cyan-900/70 flex items-center justify-center text-xs"
               >
                 <FaFacebookF />
               </button>
 
-              {/* Instagram */}
               <button
                 type="button"
                 aria-label="Instagram"
-                className="w-10 h-10 rounded-full bg-pink-900/40 border border-pink-800/50 flex items-center justify-center hover:bg-pink-600 hover:-translate-y-1 transition-all duration-300"
+                className="w-7 h-7 rounded-full bg-pink-900/40 flex items-center justify-center text-xs"
               >
                 <FaInstagram />
               </button>
 
-              {/* WhatsApp */}
               <button
                 type="button"
                 aria-label="WhatsApp"
-                className="w-10 h-10 rounded-full bg-green-900/40 border border-green-800/50 flex items-center justify-center hover:bg-green-600 hover:-translate-y-1 transition-all duration-300"
+                className="w-7 h-7 rounded-full bg-green-900/40 flex items-center justify-center text-xs"
               >
                 <FaWhatsapp />
               </button>
+
             </div>
           </div>
         </div>
 
-        {/* =======================================================
-            TRUST STRIP
-        ======================================================= */}
+        {/* TRUST STRIP */}
 
-        <div className="mt-12 pt-8 border-t border-slate-800">
-          <div className="flex flex-wrap justify-center sm:justify-between gap-4 text-xs sm:text-sm text-gray-500">
-            <div className="flex items-center gap-2">
+        <div className="mt-6 pt-4 border-t border-slate-800">
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9px] sm:text-[10px] text-gray-500">
+
+            <div className="flex items-center gap-1.5">
               <FaCheckCircle className="text-cyan-500" />
               Fresh Seafood
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <FaCheckCircle className="text-cyan-500" />
               Hygienically Packed
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <FaCheckCircle className="text-cyan-500" />
               Quality Assured
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <FaCheckCircle className="text-cyan-500" />
               Customer First
             </div>
+
           </div>
         </div>
       </div>
 
-      {/* =========================================================
-          COPYRIGHT
-      ========================================================= */}
+      {/* COPYRIGHT */}
 
-      <div className="relative z-10 border-t border-slate-800 bg-slate-950/80">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-5 text-center">
-          <p className="text-xs sm:text-sm text-gray-500">
+      <div className="border-t border-slate-800">
+
+        <div className="max-w-7xl mx-auto px-4 py-3 text-center">
+
+          <p className="text-[9px] sm:text-[10px] text-gray-500">
             © {new Date().getFullYear()}{" "}
             <span className="text-gray-300 font-medium">
               Priya Live Fish
             </span>
             . All Rights Reserved.
           </p>
+
         </div>
       </div>
+
     </footer>
   );
 };

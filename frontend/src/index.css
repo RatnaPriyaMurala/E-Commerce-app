@@ -6,7 +6,7 @@
 
 
 /* =========================================================
-   GLOBAL STYLES
+   GLOBAL RESET
 ========================================================= */
 
 * {
@@ -24,6 +24,8 @@ body {
   background: #f8fafc;
   color: #1f2937;
   overflow-x: hidden;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 button,
@@ -49,7 +51,7 @@ a {
 
 
 /* =========================================================
-   CUSTOM FONTS
+   FONTS
 ========================================================= */
 
 .prata-regular {
@@ -60,7 +62,34 @@ a {
 
 
 /* =========================================================
-   NAVBAR ACTIVE LINK
+   HEADINGS
+========================================================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: clamp(2rem, 4vw, 3.25rem);
+}
+
+h2 {
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
+}
+
+h3 {
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+}
+
+
+/* =========================================================
+   NAVBAR
 ========================================================= */
 
 a.active hr {
@@ -71,8 +100,6 @@ a.active hr {
 /* =========================================================
    SCROLLBAR
 ========================================================= */
-
-/* Chrome, Edge, Safari */
 
 ::-webkit-scrollbar {
   width: 7px;
@@ -90,9 +117,6 @@ a.active hr {
 ::-webkit-scrollbar-thumb:hover {
   background: #0e7490;
 }
-
-
-/* Firefox */
 
 html {
   scrollbar-width: thin;
@@ -116,13 +140,68 @@ html {
 
 .page-container {
   width: 100%;
-  max-width: 1440px;
+  max-width: 1320px;
   margin: 0 auto;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 
 /* =========================================================
-   SMOOTH HOVER
+   COMMON SECTION SPACING
+
+   Prevents huge empty spaces between sections.
+========================================================= */
+
+section {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+
+/* Common Tailwind-style large vertical spacing
+   is visually reduced without destroying layout. */
+
+.py-24 {
+  padding-top: 4rem !important;
+  padding-bottom: 4rem !important;
+}
+
+.py-20 {
+  padding-top: 3.5rem !important;
+  padding-bottom: 3.5rem !important;
+}
+
+.py-16 {
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+
+.py-12 {
+  padding-top: 2.5rem !important;
+  padding-bottom: 2.5rem !important;
+}
+
+
+/* =========================================================
+   COMMON GAPS
+========================================================= */
+
+.gap-12 {
+  gap: 2.5rem !important;
+}
+
+.gap-10 {
+  gap: 2rem !important;
+}
+
+.gap-8 {
+  gap: 1.5rem !important;
+}
+
+
+/* =========================================================
+   SMOOTH INTERACTIONS
 ========================================================= */
 
 button,
@@ -130,11 +209,11 @@ a,
 img,
 .card {
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease,
-    background-color 0.3s ease,
-    color 0.3s ease,
-    border-color 0.3s ease;
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
 }
 
 
@@ -143,11 +222,12 @@ img,
 ========================================================= */
 
 .product-card {
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
+  border-radius: 14px;
 }
 
 .product-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-4px);
 }
 
 
@@ -160,11 +240,72 @@ img,
 }
 
 .image-hover img {
-  transition: transform 0.5s ease;
+  transition: transform 0.4s ease;
 }
 
 .image-hover:hover img {
-  transform: scale(1.06);
+  transform: scale(1.04);
+}
+
+
+/* =========================================================
+   PRODUCT IMAGE HEIGHT CONTROL
+========================================================= */
+
+/*
+  Prevents product images from becoming unnecessarily tall.
+*/
+
+.product-card img {
+  max-height: 280px;
+  object-fit: cover;
+}
+
+
+/* =========================================================
+   BUTTON COMPRESSION
+========================================================= */
+
+button {
+  line-height: 1.2;
+}
+
+
+/* Prevent excessively tall buttons */
+
+button.h-14 {
+  height: 3rem !important;
+}
+
+button.h-16 {
+  height: 3.25rem !important;
+}
+
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+input,
+textarea,
+select {
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.08);
+}
+
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.card {
+  border-radius: 14px;
 }
 
 
@@ -173,21 +314,19 @@ img,
 ========================================================= */
 
 @keyframes fadeIn {
-
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
 
   to {
     opacity: 1;
     transform: translateY(0);
   }
-
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.4s ease forwards;
+  animation: fadeIn 0.35s ease forwards;
 }
 
 
@@ -196,21 +335,19 @@ img,
 ========================================================= */
 
 @keyframes slideUp {
-
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(18px);
   }
 
   to {
     opacity: 1;
     transform: translateY(0);
   }
-
 }
 
 .animate-slideUp {
-  animation: slideUp 0.5s ease forwards;
+  animation: slideUp 0.4s ease forwards;
 }
 
 
@@ -219,39 +356,35 @@ img,
 ========================================================= */
 
 @keyframes scaleIn {
-
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.97);
   }
 
   to {
     opacity: 1;
     transform: scale(1);
   }
-
 }
 
 .animate-scaleIn {
-  animation: scaleIn 0.35s ease forwards;
+  animation: scaleIn 0.3s ease forwards;
 }
 
 
 /* =========================================================
-   FLOATING ANIMATION
+   FLOATING
 ========================================================= */
 
 @keyframes float {
-
   0%,
   100% {
     transform: translateY(0);
   }
 
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-5px);
   }
-
 }
 
 .animate-float {
@@ -260,11 +393,10 @@ img,
 
 
 /* =========================================================
-   SHIMMER / LOADING
+   SHIMMER
 ========================================================= */
 
 @keyframes shimmer {
-
   0% {
     background-position: -500px 0;
   }
@@ -272,7 +404,6 @@ img,
   100% {
     background-position: 500px 0;
   }
-
 }
 
 .skeleton {
@@ -289,7 +420,7 @@ img,
 
 
 /* =========================================================
-   MOBILE ACTIVE NAVIGATION
+   MOBILE NAVIGATION
 ========================================================= */
 
 @media (max-width: 640px) {
@@ -297,39 +428,112 @@ img,
   a.active {
     background-color: #0f766e;
     color: white;
-    border-radius: 10px;
+    border-radius: 8px;
   }
 
 }
 
 
 /* =========================================================
-   MOBILE RESPONSIVE
+   MOBILE
 ========================================================= */
 
 @media (max-width: 640px) {
 
   body {
     font-size: 14px;
+    line-height: 1.45;
   }
 
   h1 {
-    font-size: 2rem;
-    line-height: 1.2;
+    font-size: 1.85rem;
+    line-height: 1.15;
   }
 
   h2 {
-    font-size: 1.6rem;
-    line-height: 1.25;
+    font-size: 1.45rem;
+    line-height: 1.2;
   }
 
   h3 {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
+    line-height: 1.25;
   }
 
   .page-container {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  /*
+    Reduce excessive mobile section spacing.
+  */
+
+  .py-24 {
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+
+  .py-20 {
+    padding-top: 2.25rem !important;
+    padding-bottom: 2.25rem !important;
+  }
+
+  .py-16 {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+
+  .py-12 {
+    padding-top: 1.75rem !important;
+    padding-bottom: 1.75rem !important;
+  }
+
+  /*
+    Reduce large Tailwind gaps.
+  */
+
+  .gap-12 {
+    gap: 1.5rem !important;
+  }
+
+  .gap-10 {
+    gap: 1.5rem !important;
+  }
+
+  .gap-8 {
+    gap: 1.25rem !important;
+  }
+
+  /*
+    Product cards.
+  */
+
+  .product-card {
+    border-radius: 14px;
+  }
+
+  .product-card img {
+    max-height: 210px;
+  }
+
+  /*
+    Buttons remain touch-friendly,
+    but aren't unnecessarily huge.
+  */
+
+  button {
+    min-height: 40px;
+  }
+
+  /*
+    Form controls.
+  */
+
+  input,
+  textarea,
+  select {
+    min-height: 42px;
   }
 
 }
@@ -342,7 +546,26 @@ img,
 @media (min-width: 641px) and (max-width: 1024px) {
 
   body {
-    font-size: 15px;
+    font-size: 14.5px;
+  }
+
+  .page-container {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+}
+
+
+/* =========================================================
+   DESKTOP
+========================================================= */
+
+@media (min-width: 1025px) {
+
+  .page-container {
+    padding-left: 24px;
+    padding-right: 24px;
   }
 
 }
@@ -355,53 +578,9 @@ img,
 @media (min-width: 1280px) {
 
   body {
-    font-size: 16px;
+    font-size: 15px;
   }
 
-}
-
-
-/* =========================================================
-   MOBILE TOUCH OPTIMIZATION
-========================================================= */
-
-@media (max-width: 640px) {
-
-  button {
-    min-height: 44px;
-  }
-
-  input,
-  textarea,
-  select {
-    min-height: 44px;
-  }
-
-}
-
-
-/* =========================================================
-   MOBILE CARD IMPROVEMENTS
-========================================================= */
-
-@media (max-width: 640px) {
-
-  .product-card {
-    border-radius: 18px;
-  }
-
-}
-
-
-/* =========================================================
-   PREVENT HORIZONTAL OVERFLOW
-========================================================= */
-
-.container,
-.max-w-7xl,
-.max-w-6xl,
-.max-w-5xl {
-  max-width: 100%;
 }
 
 
@@ -425,6 +604,27 @@ img,
   max-height: 90vh;
   overflow-y: auto;
 }
+
+
+/* =========================================================
+   PREVENT HORIZONTAL OVERFLOW
+========================================================= */
+
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   IMPORTANT:
+   DO NOT FORCE .container / .max-w-* TO 100%
+
+   Tailwind's max-width classes are useful for
+   controlling content width.
+========================================================= */
 
 
 /* =========================================================

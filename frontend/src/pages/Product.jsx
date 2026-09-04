@@ -1,5 +1,16 @@
-import React, { useContext, useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, {
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  useParams,
+  Link,
+  useLocation,
+} from "react-router-dom";
+
 import {
   FaFish,
   FaWeightHanging,
@@ -13,6 +24,11 @@ import {
   FaCreditCard,
   FaShieldAlt,
   FaArrowLeft,
+  FaChevronDown,
+  FaChevronUp,
+  FaBoxOpen,
+  FaCut,
+  FaInfoCircle,
 } from "react-icons/fa";
 
 import { ShopContext } from "../context/ShopContext";
@@ -20,11 +36,41 @@ import RelatedProducts from "../components/RelatedProducts";
 
 const Product = () => {
   const { productId } = useParams();
+  const location = useLocation();
 
-  const { products, currency, addToCart } = useContext(ShopContext);
+  const {
+    products = [],
+    currency,
+    addToCart,
+    removeFromCart,
+  } = useContext(ShopContext);
 
   const [productData, setProductData] = useState(null);
   const [weight, setWeight] = useState(0.5);
+  const [selectedPreparation, setSelectedPreparation] = useState("");
+
+  // Cart edit mode
+  const editCart = location.state?.editCart === true;
+  const editCartLineKey = location.state?.lineKey || "";
+  const editCartWeight = Number(location.state?.weight || 0);
+  const editCartPreparation =
+    location.state?.preparation || "";
+
+  // Collapsible sections
+  const [showPreparation, setShowPreparation] =
+    useState(false);
+
+  const [showNutrition, setShowNutrition] =
+    useState(false);
+
+  const [showBenefits, setShowBenefits] =
+    useState(false);
+
+  const [showDescription, setShowDescription] =
+    useState(false);
+
+  const [showWhyChoose, setShowWhyChoose] =
+    useState(false);
 
   // ============================================================
   // LOAD PRODUCT
@@ -37,21 +83,87 @@ const Product = () => {
       (item) => item._id === productId
     );
 
-    if (foundProduct) {
-      setProductData(foundProduct);
+    if (!foundProduct) return;
 
-      if (Number(foundProduct.stock) <= 0) {
-        setWeight(0);
-      } else {
-        setWeight(
-          Math.min(
-            foundProduct.minQuantity ?? 0.5,
-            Number(foundProduct.stock)
-          )
-        );
-      }
+    setProductData(foundProduct);
+
+    const stock = Number(foundProduct.stock ?? 0);
+
+    const minQuantity = Number(
+      foundProduct.minQuantity ?? 0.5
+    );
+
+    if (editCart && editCartWeight > 0) {
+      setWeight(
+        Math.min(editCartWeight, stock)
+      );
+    } else {
+      setWeight(
+        stock > 0
+          ? Math.min(minQuantity, stock)
+          : 0
+      );
     }
-  }, [productId, products]);
+
+    if (editCart && editCartPreparation) {
+      setSelectedPreparation(
+        editCartPreparation
+      );
+    } else {
+      setSelectedPreparation("");
+    }
+  }, [
+    productId,
+    products,
+    editCart,
+    editCartWeight,
+    editCartPreparation,
+  ]);
+
+  // ============================================================
+  // PREPARATION OPTIONS
+  // ============================================================
+
+  const preparationOptions = useMemo(() => {
+    if (
+      !productData ||
+      !Array.isArray(productData.preparationOptions)
+    ) {
+      return [];
+    }
+
+    return productData.preparationOptions
+      .map((option) => {
+        if (
+          option &&
+          typeof option === "object" &&
+          option.name
+        ) {
+          return {
+            name: String(option.name).trim(),
+            pricePerKg: Number(
+              option.pricePerKg ??
+                option.price ??
+                productData.price ??
+                0
+            ),
+          };
+        }
+
+        return {
+          name: String(option || "").trim(),
+          pricePerKg: Number(
+            productData.price ?? 0
+          ),
+        };
+      })
+      .filter(
+        (option) =>
+          option.name &&
+          Number.isFinite(option.pricePerKg) &&
+          option.pricePerKg >= 0
+      );
+  }, [productData]);
 
   // ============================================================
   // LOADING
@@ -59,18 +171,14 @@ const Product = () => {
 
   if (!productData) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
+      <div className="min-h-[45vh] flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-20 h-20 mx-auto rounded-full bg-cyan-50 flex items-center justify-center animate-pulse">
-            <FaFish className="text-4xl text-cyan-600" />
+          <div className="w-14 h-14 mx-auto rounded-full bg-cyan-50 flex items-center justify-center animate-pulse">
+            <FaFish className="text-2xl text-cyan-600" />
           </div>
 
-          <p className="mt-5 text-gray-500 font-medium">
-            Loading Fresh Product...
-          </p>
-
-          <p className="mt-1 text-sm text-gray-400">
-            Please wait while we fetch the seafood details.
+          <p className="mt-3 text-sm text-gray-500 font-medium">
+            Loading fresh product...
           </p>
         </div>
       </div>
@@ -81,18 +189,61 @@ const Product = () => {
   // PRODUCT VALUES
   // ============================================================
 
-  const min = Number(productData.minQuantity ?? 0.5);
+  const min = Number(
+    productData.minQuantity ?? 0.5
+  );
 
-  const max = Number(productData.maxQuantity ?? 10);
+  const max = Number(
+    productData.maxQuantity ?? 10
+  );
 
-  const step = Number(productData.quantityStep ?? 0.5);
+  const step = Number(
+    productData.quantityStep ?? 0.5
+  );
 
-  const availableStock = Number(productData.stock ?? 0);
+  const availableStock = Number(
+    productData.stock ?? 0
+  );
 
-  const availableMax = Math.min(max, availableStock);
+  const safeMin = Math.max(0, min);
+
+  const safeStep =
+    step > 0 ? step : 0.5;
+
+  const availableMax = Math.max(
+    0,
+    Math.min(max, availableStock)
+  );
 
   const isOutOfStock =
-    !productData.isAvailable || availableStock <= 0;
+    !productData.isAvailable ||
+    availableStock <= 0 ||
+    availableMax < safeMin;
+
+  const hasPreparationOptions =
+    preparationOptions.length > 0;
+
+  const isPreparationSelected =
+    selectedPreparation.trim().length > 0;
+
+  const selectedPreparationOption =
+    preparationOptions.find(
+      (option) =>
+        option.name === selectedPreparation
+    );
+
+  const productPrice = Number(
+    productData.price ?? 0
+  );
+
+  const currentPricePerKg =
+    selectedPreparationOption
+      ? selectedPreparationOption.pricePerKg
+      : productPrice;
+
+  const estimatedTotal =
+    currentPricePerKg *
+    Number(weight || 0);
 
   // ============================================================
   // WEIGHT HANDLER
@@ -101,80 +252,196 @@ const Product = () => {
   const handleWeightChange = (value) => {
     const numericValue = Number(value);
 
-    if (isNaN(numericValue)) return;
+    if (Number.isNaN(numericValue)) return;
 
     if (availableStock <= 0) {
       setWeight(0);
       return;
     }
 
-    if (numericValue < min) {
-      setWeight(min);
-    } else if (numericValue > availableMax) {
-      setWeight(availableMax);
-    } else {
-      setWeight(Number(numericValue.toFixed(1)));
+    let nextValue = numericValue;
+
+    if (nextValue < safeMin) {
+      nextValue = safeMin;
     }
+
+    if (nextValue > availableMax) {
+      nextValue = availableMax;
+    }
+
+    const stepsFromMin = Math.round(
+      (nextValue - safeMin) / safeStep
+    );
+
+    const steppedValue =
+      safeMin +
+      stepsFromMin * safeStep;
+
+    const finalValue = Math.min(
+      availableMax,
+      Math.max(safeMin, steppedValue)
+    );
+
+    setWeight(
+      Number(finalValue.toFixed(2))
+    );
   };
 
   // ============================================================
-  // CATEGORY DESCRIPTION
+  // DESCRIPTION
   // ============================================================
 
   const categoryDescriptions = {
     "live fish":
-      "Freshly harvested and kept alive until delivery.",
+      "Freshly harvested seafood carefully handled and packed for dispatch.",
 
     "fresh water fish":
-      "Freshwater fish rich in protein and nutrients.",
+      "Freshwater fish selected for quality and carefully packed for dispatch.",
 
     "sea fish":
-      "Premium sea fish with rich Omega-3 content.",
+      "Premium sea fish carefully sourced, handled and packed for freshness.",
 
     "kolkata fish":
-      "Authentic Kolkata market speciality.",
+      "Authentic Kolkata market speciality, carefully selected and packed.",
 
     prawns:
-      "Fresh premium prawns with delicious taste.",
+      "Fresh premium prawns carefully selected and hygienically packed.",
 
     crabs:
-      "Live crabs selected daily for freshness.",
+      "Fresh crabs selected for quality and carefully prepared for dispatch.",
   };
+
+  const categoryName =
+    productData.category ||
+    "Fresh Seafood";
 
   const commonDescription =
     categoryDescriptions[
       productData.category?.toLowerCase()
     ];
 
+  const descriptionText =
+    productData.overview ||
+    commonDescription ||
+    "Premium quality seafood, freshly sourced and carefully packed for your order.";
+
   // ============================================================
-  // CATEGORY
+  // ADD / UPDATE CART
   // ============================================================
 
-  const categoryName =
-    productData.category || "Fresh Seafood";
+  const handleAddToCart = async () => {
+    if (isOutOfStock) return;
+
+    if (!hasPreparationOptions) {
+      window.alert(
+        "Preparation options are not configured for this product yet. Please contact the store before ordering."
+      );
+      return;
+    }
+
+    if (!isPreparationSelected) {
+      window.alert(
+        "Please select a preparation option before adding this product to your cart."
+      );
+      return;
+    }
+
+    if (
+      !weight ||
+      weight < safeMin ||
+      weight > availableMax
+    ) {
+      window.alert(
+        "Please select a valid quantity."
+      );
+      return;
+    }
+
+    try {
+      if (editCart && editCartLineKey) {
+        await removeFromCart(
+          productData._id,
+          editCartLineKey,
+          editCartPreparation
+        );
+      }
+
+      await addToCart(
+        productData._id,
+        weight,
+        selectedPreparation
+      );
+    } catch (error) {
+      console.error(
+        "❌ Cart update error:",
+        error
+      );
+    }
+  };
+
+  // ============================================================
+  // SMALL ACCORDION COMPONENT
+  // ============================================================
+
+  const AccordionHeader = ({
+    icon,
+    iconBg = "bg-cyan-100",
+    iconColor = "text-cyan-700",
+    title,
+    subtitle,
+    open,
+    onClick,
+  }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center justify-between gap-3 text-left px-4 py-3.5"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className={`w-9 h-9 shrink-0 rounded-lg ${iconBg} flex items-center justify-center`}
+        >
+          <span className={iconColor}>
+            {icon}
+          </span>
+        </div>
+
+        <div className="min-w-0">
+          <h2 className="font-bold text-sm sm:text-base text-gray-800">
+            {title}
+          </h2>
+
+          {subtitle && (
+            <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {open ? (
+        <FaChevronUp className="shrink-0 text-gray-400 text-xs" />
+      ) : (
+        <FaChevronDown className="shrink-0 text-gray-400 text-xs" />
+      )}
+    </button>
+  );
 
   // ============================================================
   // RENDER
   // ============================================================
 
   return (
-    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-20 overflow-hidden">
-      {/* ========================================================
-          DECORATIVE BACKGROUND
-      ======================================================== */}
-
-      <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-100/40 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="absolute top-[35rem] -left-40 w-80 h-80 bg-blue-100/30 rounded-full blur-3xl pointer-events-none" />
+    <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-8 overflow-hidden">
 
       {/* ========================================================
           BREADCRUMB
       ======================================================== */}
 
-      <div className="relative z-10 flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-7">
+      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-gray-500 mb-3 overflow-hidden">
         <Link
           to="/"
-          className="hover:text-cyan-600 transition-colors"
+          className="hover:text-cyan-600 shrink-0"
         >
           Home
         </Link>
@@ -183,694 +450,479 @@ const Product = () => {
 
         <Link
           to="/menu"
-          className="hover:text-cyan-600 transition-colors"
+          className="hover:text-cyan-600 shrink-0"
         >
           Menu
         </Link>
 
         <span>/</span>
 
-        <span className="text-cyan-700 font-medium">
-          {categoryName}
+        <span className="text-cyan-700 font-medium truncate">
+          {productData.name}
         </span>
       </div>
 
       {/* ========================================================
-          MAIN PRODUCT SECTION
+          MAIN PRODUCT
       ======================================================== */}
 
-      <div className="relative z-10 grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-        {/* ======================================================
-            LEFT — PRODUCT IMAGE
-        ====================================================== */}
+      <div className="grid lg:grid-cols-2 gap-5 lg:gap-8 items-start">
 
-        <div className="lg:sticky lg:top-24">
-          <div className="relative bg-white rounded-[2rem] overflow-hidden shadow-xl border border-gray-100 group">
-            {/* Bestseller */}
+        {/* IMAGE */}
+
+        <div className="lg:sticky lg:top-20">
+          <div className="relative bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+
             {productData.bestseller && (
-              <div className="absolute top-5 left-5 z-20 flex items-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white px-4 py-2 rounded-full text-xs sm:text-sm font-semibold shadow-xl">
-                <FaStar className="text-yellow-100" />
+              <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-amber-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
+                <FaStar />
                 Bestseller
               </div>
             )}
 
-            {/* Fresh badge */}
-            <div className="absolute top-5 right-5 z-20 flex items-center gap-2 bg-white/95 backdrop-blur-md text-cyan-700 px-3 py-2 rounded-full text-xs font-semibold shadow-lg border border-gray-100">
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-white/95 text-cyan-700 px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
               <FaCheckCircle className="text-green-500" />
-              Fresh Catch
+
+              {isOutOfStock
+                ? "Unavailable"
+                : "Available"}
             </div>
 
-            {/* Image */}
-            <div className="overflow-hidden bg-gray-50">
-              <img
-                src={productData.image?.[0]}
-                alt={productData.name}
-                className="w-full h-[340px] sm:h-[460px] lg:h-[540px] object-cover transition-transform duration-700 group-hover:scale-105"
-              />
+            <div className="bg-gray-50">
+              {productData.image?.[0] ? (
+                <img
+                  src={productData.image[0]}
+                  alt={productData.name}
+                  className="w-full h-[260px] sm:h-[350px] lg:h-[440px] object-cover"
+                />
+              ) : (
+                <div className="w-full h-[260px] sm:h-[350px] lg:h-[440px] flex items-center justify-center bg-cyan-50">
+                  <FaFish className="text-6xl text-cyan-300" />
+                </div>
+              )}
             </div>
 
-            {/* Image bottom information */}
-            <div className="bg-white px-5 sm:px-7 py-5 border-t border-gray-100">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <FaSnowflake className="text-cyan-600" />
-                  Hygienically Packed
-                </div>
+            <div className="px-4 py-2.5 border-t border-gray-100 flex justify-between gap-3 text-[10px] sm:text-xs text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <FaSnowflake className="text-cyan-600" />
+                Hygienically Packed
+              </span>
 
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <FaTruck className="text-cyan-600" />
-                  Fresh Delivery
-                </div>
-              </div>
+              <span className="flex items-center gap-1.5">
+                <FaBoxOpen className="text-cyan-600" />
+                Carefully Dispatched
+              </span>
             </div>
           </div>
         </div>
 
-        {/* ======================================================
-            RIGHT — PRODUCT INFORMATION
-        ====================================================== */}
+        {/* INFORMATION */}
 
-        <div className="flex flex-col">
-          {/* Category */}
-          <div>
-            <span className="inline-flex items-center gap-2 text-cyan-700 font-bold uppercase tracking-wider text-xs sm:text-sm">
-              <FaFish />
-              {categoryName}
-            </span>
+        <div>
 
-            {/* Product name */}
-            <h1 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-800 tracking-tight leading-tight">
-              {productData.name}
-            </h1>
+          <span className="inline-flex items-center gap-1.5 text-cyan-700 font-bold uppercase tracking-wide text-[10px] sm:text-xs">
+            <FaFish />
+            {categoryName}
+          </span>
 
-            {/* Overview */}
-            <p className="mt-5 text-gray-600 leading-7 text-sm sm:text-base">
-              {productData.overview ||
-                commonDescription ||
-                "Premium quality seafood, freshly sourced and carefully packed for your family."}
+          <h1 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-800 leading-tight">
+            {productData.name}
+          </h1>
+
+          <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-5">
+            {descriptionText}
+          </p>
+
+          {/* PRICE */}
+
+          <div className="mt-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 text-white px-4 py-3.5 shadow-md">
+
+            <p className="text-[10px] text-cyan-100 uppercase tracking-wide">
+              {isPreparationSelected
+                ? `${selectedPreparation} price`
+                : "Base price"}
             </p>
-          </div>
 
-          {/* ====================================================
-              PRICE
-          ==================================================== */}
-
-          <div className="relative mt-7 overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-600 via-cyan-700 to-blue-800 text-white shadow-xl">
-            <div className="absolute -right-16 -top-16 w-40 h-40 bg-white/10 rounded-full blur-xl" />
-
-            <div className="relative p-6 sm:p-7">
-              <p className="text-cyan-100 text-xs uppercase tracking-wider font-semibold">
-                Price per kilogram
-              </p>
-
-              <div className="flex items-end gap-2 mt-2">
-                <h2 className="text-4xl sm:text-5xl font-extrabold">
+            <div className="flex items-end justify-between gap-3">
+              <div className="flex items-end gap-1.5">
+                <span className="text-2xl sm:text-3xl font-extrabold">
                   {currency}
-                  {productData.price}
-                </h2>
+                  {currentPricePerKg.toLocaleString(
+                    "en-IN"
+                  )}
+                </span>
 
-                <span className="text-cyan-100 text-base sm:text-lg mb-1">
+                <span className="text-xs text-cyan-100 mb-1">
                   / KG
                 </span>
               </div>
 
-              <div className="mt-4 flex items-center gap-2 text-sm text-cyan-100">
-                <FaCheckCircle className="text-green-300" />
-                Freshness and quality checked
-              </div>
+              {weight > 0 && (
+                <div className="text-right">
+                  <p className="text-[9px] text-cyan-200">
+                    Estimated total
+                  </p>
+
+                  <p className="font-bold text-sm">
+                    {currency}
+                    {estimatedTotal.toLocaleString(
+                      "en-IN",
+                      {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      }
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* ====================================================
-              STOCK INFORMATION
-          ==================================================== */}
+          {/* STOCK */}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6">
-            {/* Available */}
-            <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
-              <p className="text-xs sm:text-sm text-gray-500">
+          <div className="grid grid-cols-3 gap-2 mt-3">
+
+            <div className="rounded-lg bg-green-50 border border-green-100 px-2.5 py-2">
+              <p className="text-[9px] text-gray-500">
                 Available
               </p>
 
-              <h3 className="mt-1 text-lg sm:text-xl font-bold text-green-700">
-                {availableStock.toFixed(1)} KG
-              </h3>
+              <p className="mt-0.5 text-sm font-bold text-green-700">
+                {Math.max(
+                  0,
+                  availableStock
+                ).toFixed(1)} KG
+              </p>
             </div>
 
-            {/* Minimum */}
-            <div className="bg-cyan-50 rounded-2xl p-4 border border-cyan-100">
-              <p className="text-xs sm:text-sm text-gray-500">
+            <div className="rounded-lg bg-cyan-50 border border-cyan-100 px-2.5 py-2">
+              <p className="text-[9px] text-gray-500">
                 Min Order
               </p>
 
-              <h3 className="mt-1 text-lg sm:text-xl font-bold text-cyan-700">
-                {min} KG
-              </h3>
+              <p className="mt-0.5 text-sm font-bold text-cyan-700">
+                {safeMin} KG
+              </p>
             </div>
 
-            {/* Maximum */}
-            <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
-              <p className="text-xs sm:text-sm text-gray-500">
+            <div className="rounded-lg bg-orange-50 border border-orange-100 px-2.5 py-2">
+              <p className="text-[9px] text-gray-500">
                 Max Order
               </p>
 
-              <h3 className="mt-1 text-lg sm:text-xl font-bold text-orange-600">
-                {Math.max(0, availableMax)} KG
-              </h3>
+              <p className="mt-0.5 text-sm font-bold text-orange-600">
+                {availableMax.toFixed(1)} KG
+              </p>
             </div>
           </div>
 
-          {/* ====================================================
-              QUANTITY
-          ==================================================== */}
+          {/* QUANTITY */}
 
-          <div className="mt-8 bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center">
-                <FaWeightHanging className="text-cyan-700" />
+          <div className="mt-3 bg-white rounded-xl border border-gray-100 shadow-sm p-3.5">
+
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
+                  <FaWeightHanging className="text-cyan-700 text-xs" />
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-sm text-gray-800">
+                    Select Quantity
+                  </h3>
+
+                  <p className="text-[10px] text-gray-500">
+                    Choose order weight
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="font-bold text-lg text-gray-800">
-                  Select Quantity
-                </h3>
-
-                <p className="text-xs text-gray-500">
-                  Choose how much you'd like to order
-                </p>
-              </div>
+              <span className="text-xs font-bold text-cyan-700">
+                {weight} KG
+              </span>
             </div>
 
-            <div className="flex items-center gap-3 sm:gap-4">
-              {/* Minus */}
+            <div className="flex items-center justify-center gap-3">
+
               <button
                 type="button"
                 onClick={() =>
-                  handleWeightChange(weight - step)
+                  handleWeightChange(
+                    weight - safeStep
+                  )
                 }
                 disabled={
                   isOutOfStock ||
-                  weight <= min
+                  weight <= safeMin
                 }
-                aria-label="Decrease quantity"
-                className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-xl font-bold text-gray-700 transition"
+                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-lg font-bold"
               >
                 −
               </button>
 
-              {/* Input */}
               <div className="relative">
                 <input
                   type="number"
-                  min={min}
+                  min={safeMin}
                   max={availableMax}
-                  step={step}
+                  step={safeStep}
                   value={weight}
                   disabled={isOutOfStock}
                   onChange={(e) => {
-                    const value = parseFloat(
-                      e.target.value
-                    );
+                    const value =
+                      parseFloat(
+                        e.target.value
+                      );
 
-                    if (!isNaN(value)) {
-                      handleWeightChange(value);
+                    if (
+                      !Number.isNaN(value)
+                    ) {
+                      handleWeightChange(
+                        value
+                      );
                     }
                   }}
-                  className="w-28 sm:w-32 text-center border border-gray-200 rounded-2xl py-3 px-2 text-lg font-bold text-gray-800 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-24 text-center border border-gray-200 rounded-lg py-2 px-2 text-sm font-bold outline-none focus:border-cyan-500"
                 />
 
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 pointer-events-none">
                   KG
                 </span>
               </div>
 
-              {/* Plus */}
               <button
                 type="button"
                 onClick={() =>
-                  handleWeightChange(weight + step)
+                  handleWeightChange(
+                    weight + safeStep
+                  )
                 }
                 disabled={
                   isOutOfStock ||
                   weight >= availableMax
                 }
-                aria-label="Increase quantity"
-                className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-xl font-bold text-gray-700 transition"
+                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-lg font-bold"
               >
                 +
               </button>
             </div>
+          </div>
 
-            {/* Quantity status */}
-            {!isOutOfStock ? (
-              <div className="mt-5 flex items-center gap-2 text-sm text-green-600 font-medium">
-                <FaCheckCircle />
-                Ready to order {weight} KG
+          {/* ====================================================
+              PREPARATION COLLAPSIBLE
+          ==================================================== */}
+
+          <div className="mt-3 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+
+            <AccordionHeader
+              icon={<FaCut />}
+              title="Choose Preparation"
+              subtitle={
+                isPreparationSelected
+                  ? `${selectedPreparation} • ${currency}${currentPricePerKg}/KG`
+                  : "Select how you want it prepared"
+              }
+              open={showPreparation}
+              onClick={() =>
+                setShowPreparation(
+                  !showPreparation
+                )
+              }
+            />
+
+            {showPreparation && (
+              <div className="px-3.5 pb-3.5 border-t border-gray-100">
+
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-[10px] text-gray-500">
+                    Preparation is required
+                  </span>
+
+                  <span className="text-[10px] font-bold text-red-500">
+                    Required
+                  </span>
+                </div>
+
+                {hasPreparationOptions ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {preparationOptions.map(
+                      (option) => {
+                        const isSelected =
+                          selectedPreparation ===
+                          option.name;
+
+                        return (
+                          <button
+                            key={option.name}
+                            type="button"
+                            onClick={() => {
+                              setSelectedPreparation(
+                                option.name
+                              );
+                              setShowPreparation(
+                                false
+                              );
+                            }}
+                            disabled={
+                              isOutOfStock
+                            }
+                            className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
+                              isSelected
+                                ? "border-cyan-600 bg-cyan-50"
+                                : "border-gray-100 bg-gray-50 hover:border-cyan-200"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+
+                              <span
+                                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                  isSelected
+                                    ? "border-cyan-600 bg-cyan-600"
+                                    : "border-gray-300 bg-white"
+                                }`}
+                              >
+                                {isSelected && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                )}
+                              </span>
+
+                              <span
+                                className={`text-xs font-semibold truncate ${
+                                  isSelected
+                                    ? "text-cyan-800"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                {option.name}
+                              </span>
+                            </div>
+
+                            <span className="text-[10px] font-semibold text-gray-500 shrink-0">
+                              {currency}
+                              {option.pricePerKg.toLocaleString(
+                                "en-IN"
+                              )}
+                              /KG
+                            </span>
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                    <div className="flex gap-2">
+                      <FaInfoCircle className="text-amber-500 mt-0.5 shrink-0" />
+
+                      <p className="text-xs text-amber-700">
+                        Preparation options are not configured for this product.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="mt-5 text-sm text-red-500 font-medium">
-                This product is currently unavailable.
+            )}
+
+            {isPreparationSelected && (
+              <div className="px-3.5 pb-3 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-700">
+                <FaCheckCircle className="text-green-500" />
+                Selected: {selectedPreparation}
               </div>
             )}
           </div>
 
-          {/* ====================================================
-              ADD TO CART
-          ==================================================== */}
+          {/* ADD TO CART */}
 
-          <div className="mt-7">
+          <div className="mt-3">
+
             {!isOutOfStock ? (
               <button
                 type="button"
                 disabled={
-                  availableStock <= 0 ||
+                  !hasPreparationOptions ||
+                  !isPreparationSelected ||
                   weight <= 0 ||
                   weight > availableStock
                 }
-                onClick={() =>
-                  addToCart(productData._id, weight)
-                }
-                className="group w-full py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold text-base sm:text-lg shadow-xl shadow-cyan-600/20 hover:shadow-2xl hover:shadow-cyan-600/30 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3"
+                onClick={handleAddToCart}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base shadow-md flex items-center justify-center gap-2"
               >
-                <FaShoppingCart className="transition-transform duration-300 group-hover:scale-110" />
+                <FaShoppingCart />
 
-                ADD TO CART
+                {!hasPreparationOptions
+                  ? "PREPARATION NOT AVAILABLE"
+                  : !isPreparationSelected
+                  ? "SELECT PREPARATION TO CONTINUE"
+                  : editCart
+                  ? "UPDATE CART"
+                  : "ADD TO CART"}
               </button>
             ) : (
               <button
                 type="button"
                 disabled
-                className="w-full py-4 sm:py-5 rounded-2xl bg-gray-400 text-white font-bold text-base sm:text-lg cursor-not-allowed"
+                className="w-full py-3.5 rounded-xl bg-gray-400 text-white font-bold text-sm"
               >
                 OUT OF STOCK
               </button>
             )}
           </div>
 
-          {/* Small purchase assurance */}
-          <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-3 text-xs sm:text-sm text-gray-500">
-            <div className="flex items-center gap-2">
+          {/* ASSURANCE */}
+
+          <div className="mt-2 flex justify-center flex-wrap gap-x-4 gap-y-1.5 text-[10px] text-gray-500">
+            <span className="flex items-center gap-1">
               <FaShieldAlt className="text-green-500" />
               Secure Order
-            </div>
-
-            <div className="flex items-center gap-2">
-              <FaCheckCircle className="text-cyan-600" />
-              Quality Checked
-            </div>
-
-            <div className="flex items-center gap-2">
-              <FaTruck className="text-blue-600" />
-              Fresh Delivery
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================
-          PRODUCT FEATURES
-      ======================================================== */}
-
-      <div className="relative z-10 grid md:grid-cols-3 gap-5 mt-12">
-        <div className="group bg-white rounded-3xl shadow-sm hover:shadow-xl border border-gray-100 p-6 transition-all duration-300 hover:-translate-y-1">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-100 flex items-center justify-center">
-            <FaSnowflake className="text-cyan-700 text-xl" />
-          </div>
-
-          <h3 className="font-bold text-lg mt-5 text-gray-800">
-            Fresh Guarantee
-          </h3>
-
-          <p className="mt-3 text-gray-500 leading-7 text-sm">
-            Freshly caught and hygienically packed before dispatch to help
-            preserve premium quality.
-          </p>
-        </div>
-
-        <div className="group bg-white rounded-3xl shadow-sm hover:shadow-xl border border-gray-100 p-6 transition-all duration-300 hover:-translate-y-1">
-          <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center">
-            <FaTruck className="text-blue-700 text-xl" />
-          </div>
-
-          <h3 className="font-bold text-lg mt-5 text-gray-800">
-            Fast Delivery
-          </h3>
-
-          <p className="mt-3 text-gray-500 leading-7 text-sm">
-            Same-day delivery in selected locations with suitable packaging
-            for freshness.
-          </p>
-        </div>
-
-        <div className="group bg-white rounded-3xl shadow-sm hover:shadow-xl border border-gray-100 p-6 transition-all duration-300 hover:-translate-y-1">
-          <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center">
-            <FaCreditCard className="text-green-700 text-xl" />
-          </div>
-
-          <h3 className="font-bold text-lg mt-5 text-gray-800">
-            Safe Payments
-          </h3>
-
-          <p className="mt-3 text-gray-500 leading-7 text-sm">
-            Secure online payment options and Cash on Delivery for eligible
-            locations.
-          </p>
-        </div>
-      </div>
-
-      {/* ========================================================
-          NUTRITIONAL INFORMATION
-      ======================================================== */}
-
-      <div className="relative z-10 mt-16 sm:mt-20">
-        <div className="text-center mb-8">
-          <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold">
-            <FaLeaf />
-            Nutrition
-          </span>
-
-          <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-gray-800">
-            Nutritional Information
-          </h2>
-
-          <p className="mt-3 text-gray-500 text-sm sm:text-base">
-            Key nutritional information available for this seafood.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
-          {/* Protein */}
-          <div className="bg-cyan-50 rounded-2xl p-5 border border-cyan-100">
-            <p className="text-gray-500 text-sm">
-              Protein
-            </p>
-
-            <h3 className="font-bold text-xl mt-2 text-cyan-700">
-              {productData.description?.proteins || "-"}
-            </h3>
-          </div>
-
-          {/* Calories */}
-          <div className="bg-red-50 rounded-2xl p-5 border border-red-100">
-            <p className="text-gray-500 text-sm">
-              Calories
-            </p>
-
-            <h3 className="font-bold text-xl mt-2 text-red-600">
-              {productData.description?.calories || "-"}
-            </h3>
-          </div>
-
-          {/* Vitamins */}
-          <div className="bg-yellow-50 rounded-2xl p-5 border border-yellow-100">
-            <p className="text-gray-500 text-sm">
-              Vitamins
-            </p>
-
-            <h3 className="font-bold text-xl mt-2 text-yellow-700">
-              {productData.description?.vitamins || "-"}
-            </h3>
-          </div>
-
-          {/* Minerals */}
-          <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-            <p className="text-gray-500 text-sm">
-              Minerals
-            </p>
-
-            <h3 className="font-bold text-xl mt-2 text-green-700">
-              {productData.description?.minerals || "-"}
-            </h3>
-          </div>
-
-          {/* Uses */}
-          <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
-            <p className="text-gray-500 text-sm">
-              Uses
-            </p>
-
-            <h3 className="font-bold text-lg mt-2 text-blue-700">
-              {productData.description?.uses || "-"}
-            </h3>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================
-          HEALTH BENEFITS
-      ======================================================== */}
-
-      <div className="relative z-10 mt-16 sm:mt-20">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
-            <FaHeartbeat className="text-red-500 text-xl" />
-          </div>
-
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800">
-              Health Benefits
-            </h2>
-
-            <p className="text-sm text-gray-500 mt-1">
-              Benefits listed for this product
-            </p>
-          </div>
-        </div>
-
-        {productData.description?.benefits?.length > 0 ? (
-          <div className="grid md:grid-cols-2 gap-4">
-            {productData.description.benefits.map(
-              (benefit, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-4 bg-green-50 rounded-2xl p-5 border border-green-100 hover:shadow-md transition-shadow"
-                >
-                  <div className="w-9 h-9 shrink-0 rounded-full bg-white flex items-center justify-center shadow-sm">
-                    <FaCheckCircle className="text-green-500" />
-                  </div>
-
-                  <p className="text-gray-700 leading-7">
-                    {benefit}
-                  </p>
-                </div>
-              )
-            )}
-          </div>
-        ) : (
-          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 text-gray-500 text-sm">
-            Health benefit information is currently unavailable for this
-            product.
-          </div>
-        )}
-      </div>
-
-      {/* ========================================================
-          DESCRIPTION / REVIEWS
-      ======================================================== */}
-
-      <div className="relative z-10 mt-16 sm:mt-20">
-        <div className="flex items-center gap-6 border-b border-gray-200">
-          <button
-            type="button"
-            className="font-bold text-cyan-700 border-b-2 border-cyan-600 pb-4"
-          >
-            Description
-          </button>
-
-          <button
-            type="button"
-            className="text-gray-400 pb-4 cursor-default"
-          >
-            Customer Reviews
-          </button>
-        </div>
-
-        <div className="mt-8 bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-10 leading-8 text-gray-600">
-          <p>
-            {commonDescription ||
-              "Our seafood is sourced from trusted fishermen and carefully inspected before delivery."}
-          </p>
-
-          <p className="mt-5">
-            Every order is cleaned, packed hygienically, and transported using
-            suitable packaging to help maintain freshness.
-          </p>
-
-          <p className="mt-5">
-            Fish may naturally vary slightly in size and weight because they
-            are fresh products and are not standardized processed items.
-          </p>
-        </div>
-      </div>
-
-      {/* ========================================================
-          CUSTOMER REVIEWS
-      ======================================================== */}
-
-      <div className="relative z-10 mt-16 sm:mt-20">
-        <div className="text-center mb-8">
-          <span className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-semibold">
-            <FaStar />
-            Customer Feedback
-          </span>
-
-          <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-gray-800">
-            What Customers Say
-          </h2>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-5">
-          {/* Review 1 */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
-            <div className="flex gap-1 text-yellow-400">
-              <FaStar />
-              <FaStar />
-              <FaStar />
-              <FaStar />
-              <FaStar />
-            </div>
-
-            <p className="mt-4 text-gray-600 leading-7">
-              Fresh fish arrived within two hours. Very clean packaging and
-              excellent taste.
-            </p>
-
-            <h4 className="mt-5 font-semibold text-gray-800">
-              — Rajesh Kumar
-            </h4>
-          </div>
-
-          {/* Review 2 */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
-            <div className="flex gap-1 text-yellow-400">
-              <FaStar />
-              <FaStar />
-              <FaStar />
-              <FaStar />
-              <FaStar />
-            </div>
-
-            <p className="mt-4 text-gray-600 leading-7">
-              Good quality seafood. Prices are reasonable and delivery was
-              very fast.
-            </p>
-
-            <h4 className="mt-5 font-semibold text-gray-800">
-              — Priya Sharma
-            </h4>
-          </div>
-
-          {/* Review 3 */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
-            <div className="flex gap-1 text-yellow-400">
-              <FaStar />
-              <FaStar />
-              <FaStar />
-              <FaStar />
-              <FaStar />
-            </div>
-
-            <p className="mt-4 text-gray-600 leading-7">
-              Excellent customer service. Fish was extremely fresh and worth
-              every rupee.
-            </p>
-
-            <h4 className="mt-5 font-semibold text-gray-800">
-              — Akash Reddy
-            </h4>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================
-          WHY CHOOSE PRIYA LIVE FISH
-      ======================================================== */}
-
-      <div className="relative z-10 mt-16 sm:mt-20 overflow-hidden rounded-[2rem] bg-gradient-to-br from-cyan-700 via-cyan-800 to-blue-900 text-white shadow-2xl">
-        <div className="absolute -top-32 -right-32 w-80 h-80 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative p-7 sm:p-10 lg:p-12">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 rounded-full text-sm font-semibold text-cyan-100">
-              <FaFish />
-              Priya Live Fish
             </span>
 
-            <h2 className="mt-5 text-3xl sm:text-4xl font-extrabold">
-              Why Choose Us?
-            </h2>
+            <span className="flex items-center gap-1">
+              <FaCheckCircle className="text-cyan-600" />
+              Quality Checked
+            </span>
 
-            <p className="mt-3 text-cyan-100 leading-7 text-sm sm:text-base">
-              From careful sourcing to hygienic packing, we focus on bringing
-              quality seafood closer to your family table.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
-            <div>
-              <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center">
-                <FaFish />
-              </div>
-
-              <h3 className="font-bold text-lg mt-4">
-                Fresh Catch
-              </h3>
-
-              <p className="mt-2 text-sm text-cyan-100 leading-6">
-                Directly sourced from trusted fishermen.
-              </p>
-            </div>
-
-            <div>
-              <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center">
-                <FaTruck />
-              </div>
-
-              <h3 className="font-bold text-lg mt-4">
-                Fast Delivery
-              </h3>
-
-              <p className="mt-2 text-sm text-cyan-100 leading-6">
-                Quick doorstep delivery in selected locations.
-              </p>
-            </div>
-
-            <div>
-              <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center">
-                <FaCreditCard />
-              </div>
-
-              <h3 className="font-bold text-lg mt-4">
-                Safe Payments
-              </h3>
-
-              <p className="mt-2 text-sm text-cyan-100 leading-6">
-                Secure payment options with eligible COD support.
-              </p>
-            </div>
-
-            <div>
-              <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center">
-                <FaCheckCircle />
-              </div>
-
-              <h3 className="font-bold text-lg mt-4">
-                Quality Assured
-              </h3>
-
-              <p className="mt-2 text-sm text-cyan-100 leading-6">
-                Carefully handled and hygienically packed seafood.
-              </p>
-            </div>
+            <span className="flex items-center gap-1">
+              <FaBoxOpen className="text-blue-600" />
+              Packed Carefully
+            </span>
           </div>
         </div>
       </div>
 
       {/* ========================================================
-          RELATED PRODUCTS
+          QUICK INFORMATION — COMPACT
       ======================================================== */}
 
-      <div className="relative z-10 mt-20 sm:mt-24">
+      <div className="grid grid-cols-3 gap-2 mt-5">
+
+        <div className="rounded-lg bg-cyan-50 border border-cyan-100 p-2.5 text-center">
+          <FaSnowflake className="mx-auto text-cyan-600 text-sm" />
+          <p className="mt-1 text-[9px] sm:text-xs font-semibold text-gray-700">
+            Fresh & Hygienic
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-blue-50 border border-blue-100 p-2.5 text-center">
+          <FaTruck className="mx-auto text-blue-600 text-sm" />
+          <p className="mt-1 text-[9px] sm:text-xs font-semibold text-gray-700">
+            Reliable Dispatch
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-green-50 border border-green-100 p-2.5 text-center">
+          <FaCreditCard className="mx-auto text-green-600 text-sm" />
+          <p className="mt-1 text-[9px] sm:text-xs font-semibold text-gray-700">
+            Secure Payments
+          </p>
+        </div>
+
+      </div>
+
+      {/* ========================================================
+          RELATED PRODUCTS — MOVED UP
+      ======================================================== */}
+
+      <div className="mt-6">
         <RelatedProducts
           category={productData.category}
           subCategory={productData.subCategory}
@@ -879,15 +931,317 @@ const Product = () => {
       </div>
 
       {/* ========================================================
+          PRODUCT INFORMATION ACCORDIONS
+      ======================================================== */}
+
+      <div className="mt-5 space-y-2">
+
+        {/* NUTRITION */}
+
+        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+
+          <AccordionHeader
+            icon={<FaLeaf />}
+            iconBg="bg-green-100"
+            iconColor="text-green-700"
+            title="Nutritional Information"
+            subtitle="Key nutritional information"
+            open={showNutrition}
+            onClick={() =>
+              setShowNutrition(
+                !showNutrition
+              )
+            }
+          />
+
+          {showNutrition && (
+            <div className="px-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 border-t border-gray-100 pt-3">
+
+              {[
+                ["Protein", productData.description?.proteins],
+                ["Calories", productData.description?.calories],
+                ["Vitamins", productData.description?.vitamins],
+                ["Minerals", productData.description?.minerals],
+                ["Uses", productData.description?.uses],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="bg-gray-50 rounded-lg p-3"
+                >
+                  <p className="text-[10px] text-gray-500">
+                    {label}
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-gray-700">
+                    {value || "-"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* BENEFITS */}
+
+        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+
+          <AccordionHeader
+            icon={<FaHeartbeat />}
+            iconBg="bg-red-50"
+            iconColor="text-red-500"
+            title="Health Benefits"
+            subtitle="Benefits listed for this product"
+            open={showBenefits}
+            onClick={() =>
+              setShowBenefits(
+                !showBenefits
+              )
+            }
+          />
+
+          {showBenefits && (
+            <div className="px-3.5 pb-3.5 border-t border-gray-100 pt-3">
+
+              {productData.description?.benefits?.length > 0 ? (
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {productData.description.benefits.map(
+                    (benefit, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-2 bg-green-50 rounded-lg p-3"
+                      >
+                        <FaCheckCircle className="text-green-500 mt-0.5 shrink-0" />
+
+                        <p className="text-xs text-gray-700 leading-5">
+                          {benefit}
+                        </p>
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  Health benefit information is currently unavailable.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ABOUT */}
+
+        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+
+          <AccordionHeader
+            icon={<FaFish />}
+            title="About This Seafood"
+            subtitle="Product details and handling"
+            open={showDescription}
+            onClick={() =>
+              setShowDescription(
+                !showDescription
+              )
+            }
+          />
+
+          {showDescription && (
+            <div className="px-4 pb-4 border-t border-gray-100 pt-3 text-xs sm:text-sm text-gray-600 leading-5 space-y-2">
+              <p>
+                {commonDescription ||
+                  "Our seafood is sourced from trusted suppliers and carefully inspected before dispatch."}
+              </p>
+
+              <p>
+                Seafood is handled carefully and packed hygienically to help maintain quality during transportation.
+              </p>
+
+              <p>
+                Because these are fresh seafood products, natural variations in size and weight may occur.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* PREPARATION & PACKING — COMPACT ACCORDION */}
+
+        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+
+          <AccordionHeader
+            icon={<FaCut />}
+            title="Preparation & Packing"
+            subtitle="How your seafood is handled"
+            open={showPreparation}
+            onClick={() =>
+              setShowPreparation(
+                !showPreparation
+              )
+            }
+          />
+
+          {showPreparation && (
+            <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+
+              <div className="flex flex-wrap gap-2">
+                {preparationOptions.map(
+                  (option) => (
+                    <span
+                      key={option.name}
+                      className={`rounded-full px-2.5 py-1.5 text-[10px] font-semibold border ${
+                        selectedPreparation ===
+                        option.name
+                          ? "bg-cyan-600 text-white border-cyan-600"
+                          : "bg-gray-50 text-gray-600 border-gray-200"
+                      }`}
+                    >
+                      {option.name} • {currency}
+                      {option.pricePerKg}/KG
+                    </span>
+                  )
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-gray-500">
+                <span className="flex items-center gap-1">
+                  <FaCheckCircle className="text-green-500" />
+                  Hygienic handling
+                </span>
+
+                <span className="flex items-center gap-1">
+                  <FaCheckCircle className="text-green-500" />
+                  Secure packing
+                </span>
+
+                <span className="flex items-center gap-1">
+                  <FaCheckCircle className="text-green-500" />
+                  Carefully dispatched
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ========================================================
+          CUSTOMER FEEDBACK — COMPACT
+      ======================================================== */}
+
+      <div className="mt-5 bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center">
+            <FaStar className="text-yellow-500" />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold text-yellow-700 uppercase">
+              Customer Feedback
+            </p>
+
+            <h2 className="text-base font-extrabold text-gray-800">
+              Your feedback matters
+            </h2>
+          </div>
+        </div>
+
+        <p className="mt-2 text-xs text-gray-600">
+          Product reviews will appear here as customers share their experience.
+        </p>
+      </div>
+
+      {/* ========================================================
+          WHY CHOOSE US — NOW AT BOTTOM
+      ======================================================== */}
+
+      <div className="mt-5 rounded-xl bg-gradient-to-r from-cyan-700 to-blue-800 text-white overflow-hidden">
+
+        <button
+          type="button"
+          onClick={() =>
+            setShowWhyChoose(
+              !showWhyChoose
+            )
+          }
+          className="w-full flex items-center justify-between gap-3 p-4 text-left"
+        >
+          <div>
+            <p className="text-[10px] text-cyan-100 uppercase tracking-wide">
+              Priya Live Fish
+            </p>
+
+            <h2 className="mt-0.5 text-lg font-extrabold">
+              Why Choose Us?
+            </h2>
+
+            <p className="mt-0.5 text-[11px] text-cyan-100">
+              Fresh seafood, careful handling and reliable service.
+            </p>
+          </div>
+
+          {showWhyChoose ? (
+            <FaChevronUp />
+          ) : (
+            <FaChevronDown />
+          )}
+        </button>
+
+        {showWhyChoose && (
+          <div className="px-4 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-3 border-t border-white/10 pt-3">
+
+            {[
+              [
+                <FaFish />,
+                "Fresh Catch",
+                "Carefully sourced seafood.",
+              ],
+              [
+                <FaTruck />,
+                "Reliable Dispatch",
+                "Securely packed before dispatch.",
+              ],
+              [
+                <FaCreditCard />,
+                "Safe Payments",
+                "Secure payment options.",
+              ],
+              [
+                <FaCheckCircle />,
+                "Quality Assured",
+                "Carefully handled seafood.",
+              ],
+            ].map(
+              ([icon, title, text]) => (
+                <div
+                  key={title}
+                  className="rounded-lg bg-white/10 p-3"
+                >
+                  <div className="text-sm">
+                    {icon}
+                  </div>
+
+                  <h3 className="mt-2 text-xs font-bold">
+                    {title}
+                  </h3>
+
+                  <p className="mt-1 text-[10px] text-cyan-100 leading-4">
+                    {text}
+                  </p>
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================
           BACK TO MENU
       ======================================================== */}
 
-      <div className="relative z-10 flex justify-center mt-12">
+      <div className="flex justify-center mt-5">
         <Link
           to="/menu"
-          className="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold shadow-sm hover:shadow-lg hover:-translate-y-1 hover:text-cyan-700 transition-all duration-300"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold shadow-sm hover:text-cyan-700 transition text-xs"
         >
-          <FaArrowLeft className="text-sm" />
+          <FaArrowLeft />
           Continue Shopping
         </Link>
       </div>

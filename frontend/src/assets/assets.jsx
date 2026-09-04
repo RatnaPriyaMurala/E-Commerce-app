@@ -29,7 +29,7 @@ import rupchand from './rupchand.jpg';
 import tilapi from './tilapi.jpg';
 import pangas from './pangas.jpg';
 import pandugappa from './pandugappa.jpg';
-import koramenu from './Koramenu.jpg';
+import koramenu from './koramenu.jpg';
 
 
 // Sea water fish
