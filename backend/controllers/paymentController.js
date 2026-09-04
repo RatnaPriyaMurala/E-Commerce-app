@@ -1,3 +1,4 @@
+
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
@@ -36,7 +37,154 @@ const normalizeDeliveryFee = (value) => {
   return roundMoney(fee);
 };
 
-const normalizeAddress = (address, user) => {
+/* =========================================================
+   PREPARATION HELPERS
+
+   Supports both:
+
+   Old:
+   "Whole Cleaned"
+
+   New:
+   {
+     name: "Whole Cleaned",
+     pricePerKg: 600
+   }
+========================================================= */
+
+const getPreparationName = (option) => {
+  if (typeof option === "string") {
+    return option.trim();
+  }
+
+  if (option && typeof option === "object") {
+    return String(
+      option.name ??
+        option.label ??
+        option.preparation ??
+        option.title ??
+        ""
+    ).trim();
+  }
+
+  return "";
+};
+
+const normalizePreparationName = (value) => {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+};
+
+/* =========================================================
+   GET PREPARATION PRICE
+========================================================= */
+
+const getPreparationPrice = (
+  product,
+  preparation
+) => {
+  const basePrice = Number(
+    product?.price || 0
+  );
+
+  const selectedPreparation =
+    normalizePreparationName(
+      preparation
+    );
+
+  /*
+    No preparation selected.
+    Fall back to base product price.
+  */
+  if (!selectedPreparation) {
+    return basePrice;
+  }
+
+  const options = Array.isArray(
+    product?.preparationOptions
+  )
+    ? product.preparationOptions
+    : [];
+
+  const matchedOption = options.find(
+    (option) => {
+      const optionName =
+        normalizePreparationName(
+          getPreparationName(option)
+        );
+
+      return (
+        optionName ===
+        selectedPreparation
+      );
+    }
+  );
+
+  /*
+    Preparation doesn't exist.
+  */
+  if (!matchedOption) {
+    return null;
+  }
+
+  /*
+    Legacy string preparation option.
+
+    Example:
+    "Curry Cut"
+
+    Since there is no separate price,
+    use the base product price.
+  */
+  if (
+    typeof matchedOption === "string"
+  ) {
+    return basePrice;
+  }
+
+  /*
+    New object preparation option.
+
+    Example:
+    {
+      name: "Curry Cut",
+      pricePerKg: 650
+    }
+  */
+  const possiblePrices = [
+    matchedOption.pricePerKg,
+    matchedOption.price,
+    matchedOption.amount,
+  ];
+
+  for (const value of possiblePrices) {
+    const price = Number(value);
+
+    if (
+      Number.isFinite(price) &&
+      price >= 0
+    ) {
+      return price;
+    }
+  }
+
+  /*
+    If preparation exists but doesn't have
+    a valid custom price, use base price.
+  */
+  return basePrice;
+};
+
+/* =========================================================
+   ADDRESS
+========================================================= */
+
+const normalizeAddress = (
+  address,
+  user
+) => {
   const phone = String(
     address?.phone ||
       user?.phone ||
@@ -76,7 +224,9 @@ const normalizeAddress = (address, user) => {
   };
 };
 
-const validateAddress = (address) => {
+const validateAddress = (
+  address
+) => {
   const requiredFields = [
     ["firstName", "First name"],
     ["address", "Address"],
@@ -85,7 +235,10 @@ const validateAddress = (address) => {
     ["phone", "Phone number"],
   ];
 
-  for (const [field, label] of requiredFields) {
+  for (const [
+    field,
+    label,
+  ] of requiredFields) {
     if (
       !String(
         address?.[field] || ""
@@ -106,9 +259,10 @@ const validatePreparation = (
   product,
   preparation
 ) => {
-  const selectedPreparation = String(
-    preparation || ""
-  ).trim();
+  const selectedPreparation =
+    String(
+      preparation || ""
+    ).trim();
 
   if (!selectedPreparation) {
     throw new Error(
@@ -120,23 +274,25 @@ const validatePreparation = (
     product.preparationOptions
   )
     ? product.preparationOptions
-        .map((option) =>
-          String(option || "").trim()
-        )
+        .map(getPreparationName)
         .filter(Boolean)
     : [];
 
   /*
-   * If preparation options are configured
-   * for this product, only those options are
-   * accepted.
-   */
+    If preparation options are configured,
+    only those exact options are accepted.
+  */
   if (options.length > 0) {
-    const matchedOption = options.find(
-      (option) =>
-        option.toLowerCase() ===
-        selectedPreparation.toLowerCase()
-    );
+    const matchedOption =
+      options.find(
+        (option) =>
+          normalizePreparationName(
+            option
+          ) ===
+          normalizePreparationName(
+            selectedPreparation
+          )
+      );
 
     if (!matchedOption) {
       throw new Error(
@@ -147,16 +303,33 @@ const validatePreparation = (
     return matchedOption;
   }
 
+  /*
+    If product has no preparation options,
+    accept the selected preparation.
+  */
   return selectedPreparation;
 };
 
 /* =========================================================
-   VALIDATE PRODUCTS
+   VALIDATE ORDER ITEMS
+
    IMPORTANT:
-   Price comes from MongoDB, NOT frontend.
+
+   Frontend price is NEVER trusted.
+
+   Server gets:
+   - Product
+   - Preparation
+   - Preparation price
+   - Weight
+   - Quantity
+
+   directly from MongoDB/product data.
 ========================================================= */
 
-const validateOrderItems = async (items) => {
+const validateOrderItems = async (
+  items
+) => {
   if (
     !Array.isArray(items) ||
     items.length === 0
@@ -171,6 +344,10 @@ const validateOrderItems = async (items) => {
   let subtotal = 0;
 
   for (const item of items) {
+    /* -----------------------------------------------
+       PRODUCT ID
+    ----------------------------------------------- */
+
     const productId =
       item?._id ||
       item?.productId;
@@ -180,6 +357,10 @@ const validateOrderItems = async (items) => {
         "Invalid product in order"
       );
     }
+
+    /* -----------------------------------------------
+       GET PRODUCT FROM DATABASE
+    ----------------------------------------------- */
 
     const product =
       await productModel.findById(
@@ -201,7 +382,7 @@ const validateOrderItems = async (items) => {
     );
 
     if (
-      !product.isAvailable ||
+      product.isAvailable !== true ||
       !Number.isFinite(stock) ||
       stock <= 0
     ) {
@@ -256,7 +437,7 @@ const validateOrderItems = async (items) => {
     }
 
     /* -----------------------------------------------
-       WEIGHT RULES
+       MIN / MAX WEIGHT
     ----------------------------------------------- */
 
     const minQuantity = Number(
@@ -271,30 +452,40 @@ const validateOrderItems = async (items) => {
       product.quantityStep || 0.1
     );
 
-    if (weight < minQuantity) {
+    if (
+      weight < minQuantity
+    ) {
       throw new Error(
         `${product.name} minimum weight is ${minQuantity} kg`
       );
     }
 
-    if (weight > maxQuantity) {
+    if (
+      weight > maxQuantity
+    ) {
       throw new Error(
         `${product.name} maximum weight is ${maxQuantity} kg`
       );
     }
 
-    const steps =
-      weight / quantityStep;
+    /* -----------------------------------------------
+       QUANTITY STEP
+    ----------------------------------------------- */
 
-    if (
-      Math.abs(
-        steps -
-          Math.round(steps)
-      ) > 0.000001
-    ) {
-      throw new Error(
-        `${product.name} weight must be in increments of ${quantityStep} kg`
-      );
+    if (quantityStep > 0) {
+      const steps =
+        weight / quantityStep;
+
+      if (
+        Math.abs(
+          steps -
+            Math.round(steps)
+        ) > 0.000001
+      ) {
+        throw new Error(
+          `${product.name} weight must be in increments of ${quantityStep} kg`
+        );
+      }
     }
 
     /* -----------------------------------------------
@@ -304,31 +495,42 @@ const validateOrderItems = async (items) => {
     const totalWeight =
       weight * quantity;
 
-    if (totalWeight > stock) {
+    if (
+      totalWeight > stock
+    ) {
       throw new Error(
         `${product.name} has only ${stock} kg available`
       );
     }
 
     /* -----------------------------------------------
-       PRICE FROM DATABASE
+       PREPARATION PRICE
+       FROM DATABASE
     ----------------------------------------------- */
 
-    const productPrice = Number(
-      product.price
-    );
+    const preparationPrice =
+      getPreparationPrice(
+        product,
+        preparation
+      );
 
     if (
-      !Number.isFinite(productPrice) ||
-      productPrice < 0
+      preparationPrice === null ||
+      !Number.isFinite(
+        preparationPrice
+      ) ||
+      preparationPrice < 0
     ) {
       throw new Error(
-        `Invalid price for ${product.name}`
+        `Invalid price for ${product.name} - ${preparation}`
       );
     }
 
+    const productPrice =
+      Number(preparationPrice);
+
     /* -----------------------------------------------
-       SUBTOTAL
+       ITEM SUBTOTAL
     ----------------------------------------------- */
 
     const itemSubtotal =
@@ -344,17 +546,26 @@ const validateOrderItems = async (items) => {
     ----------------------------------------------- */
 
     validatedItems.push({
-      productId: product._id,
+      productId:
+        product._id,
 
-      name: product.name,
+      name:
+        product.name,
 
-      image: Array.isArray(
-        product.image
-      )
-        ? product.image[0] || ""
-        : product.image || "",
+      image:
+        Array.isArray(
+          product.image
+        )
+          ? product.image[0] || ""
+          : product.image || "",
 
-      price: productPrice,
+      /*
+        IMPORTANT:
+        This is the selected preparation
+        price per KG.
+      */
+      price:
+        productPrice,
 
       weight,
 
@@ -362,16 +573,18 @@ const validateOrderItems = async (items) => {
 
       preparation,
 
-      subtotal: itemSubtotal,
+      subtotal:
+        itemSubtotal,
     });
   }
 
   return {
     validatedItems,
 
-    subtotal: roundMoney(
-      subtotal
-    ),
+    subtotal:
+      roundMoney(
+        subtotal
+      ),
   };
 };
 
@@ -393,16 +606,19 @@ const reduceOrderStock = async (
       const updatedProduct =
         await productModel.findOneAndUpdate(
           {
-            _id: item.productId,
+            _id:
+              item.productId,
 
             stock: {
-              $gte: totalWeight,
+              $gte:
+                totalWeight,
             },
           },
 
           {
             $inc: {
-              stock: -totalWeight,
+              stock:
+                -totalWeight,
             },
           },
 
@@ -424,6 +640,10 @@ const reduceOrderStock = async (
         totalWeight,
       });
 
+      /*
+        Automatically mark unavailable
+        when stock reaches zero.
+      */
       await productModel.findByIdAndUpdate(
         item.productId,
         {
@@ -440,31 +660,38 @@ const reduceOrderStock = async (
     ----------------------------------------------- */
 
     for (const previous of updatedProducts) {
-      const restored =
-        await productModel.findByIdAndUpdate(
-          previous.productId,
+      try {
+        const restored =
+          await productModel.findByIdAndUpdate(
+            previous.productId,
 
-          {
-            $inc: {
-              stock:
-                previous.totalWeight,
+            {
+              $inc: {
+                stock:
+                  previous.totalWeight,
+              },
             },
-          },
 
-          {
-            new: true,
-          }
-        );
+            {
+              new: true,
+            }
+          );
 
-      if (restored) {
-        await productModel.findByIdAndUpdate(
-          previous.productId,
-          {
-            isAvailable:
-              Number(
-                restored.stock
-              ) > 0,
-          }
+        if (restored) {
+          await productModel.findByIdAndUpdate(
+            previous.productId,
+            {
+              isAvailable:
+                Number(
+                  restored.stock
+                ) > 0,
+            }
+          );
+        }
+      } catch (rollbackError) {
+        console.error(
+          "❌ Stock rollback error:",
+          rollbackError
         );
       }
     }
@@ -515,7 +742,8 @@ const restoreOrderStock = async (
 
         {
           $inc: {
-            stock: totalWeight,
+            stock:
+              totalWeight,
           },
         },
 
@@ -540,17 +768,19 @@ const restoreOrderStock = async (
 
 /* =========================================================
    CREATE RAZORPAY ORDER
-   IMPORTANT:
-   Frontend NEVER decides the payment amount.
 
    Frontend sends:
+
    {
      items,
      deliveryFee
    }
 
    Server calculates:
-   MongoDB product prices
+
+   MongoDB preparation prices
+   × weight
+   × quantity
    + delivery fee
 ========================================================= */
 
@@ -574,6 +804,7 @@ const createRazorpayOrder =
       ) {
         return res.status(500).json({
           success: false,
+
           message:
             "Razorpay is not configured on the server",
         });
@@ -589,6 +820,7 @@ const createRazorpayOrder =
       ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Order must contain at least one product",
         });
@@ -626,6 +858,7 @@ const createRazorpayOrder =
       ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Invalid order amount",
         });
@@ -641,7 +874,8 @@ const createRazorpayOrder =
             calculatedAmount * 100
           ),
 
-        currency: "INR",
+        currency:
+          "INR",
 
         receipt:
           `receipt_${Date.now()}_${req.userId}`,
@@ -657,10 +891,6 @@ const createRazorpayOrder =
 
         order,
 
-        /*
-         * Useful for frontend display/debugging.
-         * The Razorpay amount remains the authority.
-         */
         subtotal,
 
         deliveryFee:
@@ -675,12 +905,57 @@ const createRazorpayOrder =
         error
       );
 
-      return res.status(500).json({
+      const message =
+        error?.message ||
+        "Unable to create Razorpay order";
+
+      /*
+        Validation problems are client errors,
+        not server errors.
+      */
+      const validationError =
+        message.includes(
+          "does not support"
+        ) ||
+        message.includes(
+          "Please select preparation"
+        ) ||
+        message.includes(
+          "Invalid weight"
+        ) ||
+        message.includes(
+          "Invalid quantity"
+        ) ||
+        message.includes(
+          "minimum weight"
+        ) ||
+        message.includes(
+          "maximum weight"
+        ) ||
+        message.includes(
+          "increments of"
+        ) ||
+        message.includes(
+          "not found"
+        ) ||
+        message.includes(
+          "unavailable"
+        ) ||
+        message.includes(
+          "Invalid price"
+        ) ||
+        message.includes(
+          "available in the requested quantity"
+        );
+
+      return res.status(
+        validationError
+          ? 400
+          : 500
+      ).json({
         success: false,
 
-        message:
-          error.message ||
-          "Unable to create Razorpay order",
+        message,
       });
     }
   };
@@ -713,6 +988,7 @@ const verifyPayment =
       ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Incomplete Razorpay payment details",
         });
@@ -727,6 +1003,7 @@ const verifyPayment =
       ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Invalid order data",
         });
@@ -738,6 +1015,7 @@ const verifyPayment =
       ) {
         return res.status(500).json({
           success: false,
+
           message:
             "Razorpay secret is not configured",
         });
@@ -781,6 +1059,7 @@ const verifyPayment =
       ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Payment verification failed",
         });
@@ -829,6 +1108,7 @@ const verifyPayment =
       if (!user) {
         return res.status(404).json({
           success: false,
+
           message:
             "User not found",
         });
@@ -838,9 +1118,12 @@ const verifyPayment =
          ADDRESS
       ----------------------------------------------- */
 
-      if (!orderData.address) {
+      if (
+        !orderData.address
+      ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Delivery address is required",
         });
@@ -860,6 +1143,7 @@ const verifyPayment =
       if (addressError) {
         return res.status(400).json({
           success: false,
+
           message:
             addressError,
         });
@@ -867,7 +1151,7 @@ const verifyPayment =
 
       /* -----------------------------------------------
          PRODUCTS
-         Recalculate from MongoDB.
+         Recalculate everything from MongoDB.
       ----------------------------------------------- */
 
       const result =
@@ -901,6 +1185,7 @@ const verifyPayment =
       ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Invalid order amount",
         });
@@ -925,13 +1210,14 @@ const verifyPayment =
 
         return res.status(400).json({
           success: false,
+
           message:
             "Unable to validate Razorpay order",
         });
       }
 
       /* -----------------------------------------------
-         VERIFY RAZORPAY ORDER BELONGS TO INR
+         VERIFY CURRENCY
       ----------------------------------------------- */
 
       if (
@@ -940,6 +1226,7 @@ const verifyPayment =
       ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Invalid payment currency",
         });
@@ -962,6 +1249,7 @@ const verifyPayment =
       ) {
         return res.status(400).json({
           success: false,
+
           message:
             "Payment amount does not match the order total",
         });
@@ -1080,7 +1368,7 @@ const verifyPayment =
         success: false,
 
         message:
-          error.message ||
+          error?.message ||
           "Unable to verify payment",
       });
     }
