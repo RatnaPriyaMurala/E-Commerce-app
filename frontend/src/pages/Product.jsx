@@ -223,6 +223,17 @@ const Product = () => {
   const hasPreparationOptions =
     preparationOptions.length > 0;
 
+    const categoriesWithoutPreparation = [
+  "Dry Fish",
+  "Dry Prawns",
+  "Pickles",
+];
+
+const requiresPreparation =
+  !categoriesWithoutPreparation.includes(
+    productData.category?.trim()
+  );
+
   const isPreparationSelected =
     selectedPreparation.trim().length > 0;
 
@@ -329,55 +340,53 @@ const Product = () => {
   // ADD / UPDATE CART
   // ============================================================
 
-  const handleAddToCart = async () => {
-    if (isOutOfStock) return;
+ const handleAddToCart = async () => {
+  if (isOutOfStock) return;
 
-    if (!hasPreparationOptions) {
-      window.alert(
-        "Preparation options are not configured for this product yet. Please contact the store before ordering."
-      );
-      return;
-    }
+  if (
+    requiresPreparation &&
+    !isPreparationSelected
+  ) {
+    window.alert(
+      "Please select a preparation option before adding this product to your cart."
+    );
+    return;
+  }
 
-    if (!isPreparationSelected) {
-      window.alert(
-        "Please select a preparation option before adding this product to your cart."
-      );
-      return;
-    }
+  if (
+    !weight ||
+    weight < safeMin ||
+    weight > availableMax
+  ) {
+    window.alert(
+      "Please select a valid quantity."
+    );
+    return;
+  }
 
-    if (
-      !weight ||
-      weight < safeMin ||
-      weight > availableMax
-    ) {
-      window.alert(
-        "Please select a valid quantity."
-      );
-      return;
-    }
-
-    try {
-      if (editCart && editCartLineKey) {
-        await removeFromCart(
-          productData._id,
-          editCartLineKey,
-          editCartPreparation
-        );
-      }
-
-      await addToCart(
+  try {
+    if (editCart && editCartLineKey) {
+      await removeFromCart(
         productData._id,
-        weight,
-        selectedPreparation
-      );
-    } catch (error) {
-      console.error(
-        "❌ Cart update error:",
-        error
+        editCartLineKey,
+        editCartPreparation
       );
     }
-  };
+
+    await addToCart(
+      productData._id,
+      weight,
+      requiresPreparation
+        ? selectedPreparation
+        : ""
+    );
+  } catch (error) {
+    console.error(
+      "❌ Cart update error:",
+      error
+    );
+  }
+};
 
   // ============================================================
   // SMALL ACCORDION COMPONENT
@@ -711,7 +720,7 @@ const Product = () => {
           {/* ====================================================
               PREPARATION COLLAPSIBLE
           ==================================================== */}
-
+{requiresPreparation && (
           <div className="mt-3 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
 
             <AccordionHeader
@@ -831,6 +840,8 @@ const Product = () => {
             )}
           </div>
 
+          )}
+
           {/* ADD TO CART */}
 
           <div className="mt-3">
@@ -839,23 +850,22 @@ const Product = () => {
               <button
                 type="button"
                 disabled={
-                  !hasPreparationOptions ||
-                  !isPreparationSelected ||
-                  weight <= 0 ||
-                  weight > availableStock
-                }
+  (requiresPreparation &&
+    !isPreparationSelected) ||
+  weight <= 0 ||
+  weight > availableStock
+}
                 onClick={handleAddToCart}
                 className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base shadow-md flex items-center justify-center gap-2"
               >
                 <FaShoppingCart />
 
-                {!hasPreparationOptions
-                  ? "PREPARATION NOT AVAILABLE"
-                  : !isPreparationSelected
-                  ? "SELECT PREPARATION TO CONTINUE"
-                  : editCart
-                  ? "UPDATE CART"
-                  : "ADD TO CART"}
+                {requiresPreparation &&
+!isPreparationSelected
+  ? "SELECT PREPARATION TO CONTINUE"
+  : editCart
+  ? "UPDATE CART"
+  : "ADD TO CART"}
               </button>
             ) : (
               <button

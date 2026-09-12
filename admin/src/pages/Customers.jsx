@@ -352,6 +352,61 @@ customer.totalWeight
 
 </div>
 
+<div className="border-t pt-4 mt-4">
+    <p className="text-gray-500 mb-3">
+      Current Cart
+    </p>
+
+    {customer.cartItems?.length > 0 ? (
+      <div className="space-y-3">
+
+        {customer.cartItems.map((item, itemIndex) => (
+          <div
+            key={itemIndex}
+            className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg"
+          >
+
+            {item.image && (
+              <img
+                src={item.image}
+                alt={item.productName}
+                className="w-14 h-14 object-cover rounded-lg"
+              />
+            )}
+
+            <div className="flex-1">
+
+              <p className="font-semibold">
+                {item.productName}
+              </p>
+
+              <p className="text-sm text-gray-500">
+                {item.weight} KG
+                {item.quantity > 1 &&
+                  ` × ${item.quantity}`}
+              </p>
+
+              {item.preparation && (
+                <p className="text-sm text-cyan-600">
+                  {item.preparation}
+                </p>
+              )}
+
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+    ) : (
+      <p className="text-gray-500 text-sm">
+        Cart is empty
+      </p>
+    )}
+  </div>
+
+  
+
 <div className="flex justify-between items-center">
 
 <p className="text-gray-500">

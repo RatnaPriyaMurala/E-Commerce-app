@@ -1,7 +1,7 @@
 
 import orderModel from "../models/orderModel.js";
 import productModel from "../models/productModel.js";
-import userModel from "../models/userModel.js";
+import customerModel from "../models/customerModel.js";
 
 /* =========================================================
    ADMIN DASHBOARD
@@ -10,7 +10,7 @@ import userModel from "../models/userModel.js";
 const dashboard = async (req, res) => {
     try {
         const [
-            totalOrders,
+           totalOrders,
             totalProducts,
             totalCustomers,
             revenueResult,
@@ -32,8 +32,7 @@ const dashboard = async (req, res) => {
             // ----------------------------------
             // TOTAL CUSTOMERS
             // ----------------------------------
-
-            userModel.countDocuments(),
+customerModel.countDocuments(),
 
             // ----------------------------------
             // TOTAL REVENUE

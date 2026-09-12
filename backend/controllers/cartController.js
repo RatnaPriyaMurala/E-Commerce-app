@@ -1,5 +1,6 @@
 import userModel from "../models/userModel.js";
 import productModel from "../models/productModel.js";
+import customerModel from "../models/customerModel.js";
 
 /* =========================================================
    HELPERS
@@ -143,7 +144,79 @@ const normalizeCartData = (cartData) => {
 
   return normalized;
 };
+const syncCustomerCart = async (userId, cartData) => {
+  try {
+    const customer = await customerModel.findOne({ userId });
 
+    if (!customer) {
+      console.log(
+        "⚠️ Customer profile not found for user:",
+        userId
+      );
+      return;
+    }
+
+    const normalizedCart = normalizeCartData(cartData || {});
+    const productIds = Object.keys(normalizedCart);
+
+    // Cart is empty
+    if (productIds.length === 0) {
+      customer.cartItems = [];
+
+      await customer.save();
+
+      console.log(
+        `🛒 Customer ${customer.customerId} cart cleared`
+      );
+
+      return;
+    }
+
+    const cartItems = [];
+
+    for (const productId of productIds) {
+      const product = await productModel.findById(productId);
+
+      if (!product) {
+        continue;
+      }
+
+      const productCart = normalizedCart[productId];
+
+      for (const line of Object.values(productCart)) {
+        cartItems.push({
+          productId: String(productId),
+
+          productName: product.name || "",
+
+          image: Array.isArray(product.image)
+            ? product.image[0] || ""
+            : product.image || "",
+
+          weight: Number(line.weight || 0),
+
+          quantity: Number(line.quantity || 1),
+
+          preparation: line.preparation || "",
+        });
+      }
+    }
+
+    customer.cartItems = cartItems;
+
+    await customer.save();
+
+    console.log(
+      `🛒 Customer ${customer.customerId} cart synchronized`
+    );
+
+  } catch (error) {
+    console.error(
+      "❌ Customer cart sync error:",
+      error
+    );
+  }
+};
 /*
   Validates preparation against the product's
   preparationOptions.
@@ -413,9 +486,14 @@ const addToCart = async (req, res) => {
 
     user.cartData = cartData;
 
-    await user.save();
+await user.save();
 
-    return res.json({
+await syncCustomerCart(
+  user._id,
+  user.cartData
+);
+
+return res.json({
       success: true,
       message: "Added to cart.",
       cartData: user.cartData,
@@ -758,9 +836,14 @@ const updateCartWeight = async (req, res) => {
 
     user.cartData = cartData;
 
-    await user.save();
+await user.save();
 
-    return res.json({
+await syncCustomerCart(
+  user._id,
+  user.cartData
+);
+
+return res.json({
       success: true,
       message:
         "Cart weight updated.",
@@ -946,12 +1029,16 @@ const removeFromCart = async (req, res) => {
     ) {
       delete cartData[itemId];
     }
+user.cartData = cartData;
 
-    user.cartData = cartData;
+await user.save(); 
 
-    await user.save();
+await syncCustomerCart(
+  user._id,
+  user.cartData
+);
 
-    return res.json({
+return res.json({
       success: true,
       message:
         "Item removed from cart.",

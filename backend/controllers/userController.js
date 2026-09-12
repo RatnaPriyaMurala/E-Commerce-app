@@ -1,8 +1,9 @@
-
 // controllers/userController.js
 
 import userModel from "../models/userModel.js";
 import orderModel from "../models/orderModel.js";
+import customerModel from "../models/customerModel.js";
+
 import validator from "validator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -63,6 +64,73 @@ const loginUser = async (req, res) => {
             });
         }
 
+        /* =================================================
+           MAKE SURE CUSTOMER PROFILE EXISTS
+           
+           This also handles older users who registered
+           before the customer collection was introduced.
+        ================================================= */
+
+        let customer =
+            await customerModel.findOne({
+                userId: user._id,
+            });
+
+        if (!customer) {
+            const customerCount =
+                await customerModel.countDocuments();
+
+            const nextNumber =
+                customerCount + 1;
+
+            const customerId =
+                `CUS${String(nextNumber).padStart(6, "0")}`;
+
+            customer =
+                await customerModel.create({
+                    customerId,
+
+                    userId: user._id,
+
+                    firstName:
+                        user.name?.trim() || "Customer",
+
+                    lastName: "",
+
+                    phone:
+                        user.phone || "",
+
+                    address:
+                        user.address?.address || "",
+
+                    city:
+                        user.address?.city || "",
+
+                    state:
+                        user.address?.state || "",
+
+                    zipcode:
+                        user.address?.zipcode || "",
+
+                    country:
+                        user.address?.country ||
+                        "India",
+
+                    totalOrders: 0,
+
+                    totalSpent: 0,
+
+                    totalWeight: 0,
+
+                    lastOrder: null,
+                });
+
+            console.log(
+                "✅ Customer profile created during login:",
+                customer.customerId
+            );
+        }
+
         const token =
             createToken(user._id);
 
@@ -72,6 +140,9 @@ const loginUser = async (req, res) => {
             token,
 
             userId: user._id,
+
+            customerId:
+                customer.customerId,
 
             user: {
                 _id: user._id,
@@ -84,8 +155,12 @@ const loginUser = async (req, res) => {
 
             message: "Login successful",
         });
+
     } catch (error) {
-        console.error("Login error:", error);
+        console.error(
+            "Login error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -121,7 +196,8 @@ const resetPassword = async (req, res) => {
         if (!validator.isEmail(emailLower)) {
             return res.status(400).json({
                 success: false,
-                message: "Please enter a valid email",
+                message:
+                    "Please enter a valid email",
             });
         }
 
@@ -161,6 +237,7 @@ const resetPassword = async (req, res) => {
             message:
                 "Password changed successfully",
         });
+
     } catch (error) {
         console.error(
             "Reset password error:",
@@ -201,8 +278,14 @@ const registerUser = async (req, res) => {
             });
         }
 
+        const cleanName =
+            name.trim();
+
         const emailLower =
             email.trim().toLowerCase();
+
+        const cleanPhone =
+            phone?.trim() || "";
 
         if (!validator.isEmail(emailLower)) {
             return res.status(400).json({
@@ -241,20 +324,81 @@ const registerUser = async (req, res) => {
                 salt
             );
 
+        /* =================================================
+           CREATE USER
+        ================================================= */
+
         const newUser =
             new userModel({
-                name: name.trim(),
+                name: cleanName,
 
                 email: emailLower,
 
-                phone:
-                    phone?.trim() || "",
+                phone: cleanPhone,
 
                 password: hashedPassword,
             });
 
         const user =
             await newUser.save();
+
+        /* =================================================
+           CREATE CUSTOMER PROFILE
+           
+           Customer is created immediately after signup.
+           Payment is NOT required.
+        ================================================= */
+
+        const customerCount =
+            await customerModel.countDocuments();
+
+        const nextNumber =
+            customerCount + 1;
+
+        const customerId =
+            `CUS${String(nextNumber).padStart(6, "0")}`;
+
+        const customer =
+            await customerModel.create({
+                customerId,
+
+                userId: user._id,
+
+                firstName:
+                    cleanName,
+
+                lastName: "",
+
+                phone:
+                    cleanPhone,
+
+                address: "",
+
+                city: "",
+
+                state: "",
+
+                zipcode: "",
+
+                country: "India",
+
+                totalOrders: 0,
+
+                totalSpent: 0,
+
+                totalWeight: 0,
+
+                lastOrder: null,
+            });
+
+        console.log(
+            "✅ Customer created:",
+            customer.customerId
+        );
+
+        /* =================================================
+           AUTOMATIC LOGIN AFTER SIGNUP
+        ================================================= */
 
         const token =
             createToken(user._id);
@@ -265,6 +409,9 @@ const registerUser = async (req, res) => {
             token,
 
             userId: user._id,
+
+            customerId:
+                customer.customerId,
 
             user: {
                 _id: user._id,
@@ -277,6 +424,7 @@ const registerUser = async (req, res) => {
             message:
                 "User registered successfully",
         });
+
     } catch (error) {
         console.error(
             "Registration error:",
@@ -310,10 +458,22 @@ const getProfile = async (req, res) => {
             });
         }
 
+        const customer =
+            await customerModel.findOne({
+                userId: user._id,
+            });
+
         return res.json({
             success: true,
+
             user,
+
+            customer: customer || null,
+
+            customerId:
+                customer?.customerId || null,
         });
+
     } catch (error) {
         console.error(
             "Get profile error:",
@@ -405,6 +565,7 @@ const adminLogin = async (req, res) => {
             success: false,
             message: "Invalid credentials",
         });
+
     } catch (error) {
         console.error(
             "Admin login error:",
@@ -439,6 +600,7 @@ const userOrders = async (req, res) => {
             success: true,
             orders,
         });
+
     } catch (error) {
         console.error(
             "User orders error:",
@@ -510,10 +672,60 @@ const updateProfile = async (req, res) => {
             });
         }
 
+        /* =================================================
+           UPDATE CUSTOMER PROFILE TOO
+        ================================================= */
+
+        const customer =
+            await customerModel.findOne({
+                userId: req.userId,
+            });
+
+        if (customer) {
+            if (name !== undefined) {
+                customer.firstName =
+                    name.trim();
+            }
+
+            if (phone !== undefined) {
+                customer.phone =
+                    phone.trim();
+            }
+
+            if (address !== undefined) {
+                customer.address =
+                    address.address || "";
+
+                customer.city =
+                    address.city || "";
+
+                customer.state =
+                    address.state || "";
+
+                customer.zipcode =
+                    address.zipcode || "";
+
+                customer.country =
+                    address.country ||
+                    "India";
+            }
+
+            await customer.save();
+        }
+
         return res.json({
             success: true,
+
             user,
+
+            customer:
+                customer || null,
+
+            customerId:
+                customer?.customerId ||
+                null,
         });
+
     } catch (error) {
         console.error(
             "Update profile error:",
@@ -528,6 +740,10 @@ const updateProfile = async (req, res) => {
         });
     }
 };
+
+// ======================================
+// EXPORT
+// ======================================
 
 export {
     registerUser,

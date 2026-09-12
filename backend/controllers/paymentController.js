@@ -1,10 +1,10 @@
-
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
 import orderModel from "../models/orderModel.js";
 import productModel from "../models/productModel.js";
 import userModel from "../models/userModel.js";
+import customerModel from "../models/customerModel.js";
 
 /* =========================================================
    RAZORPAY
@@ -12,7 +12,7 @@ import userModel from "../models/userModel.js";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_SECRET,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 /* =========================================================
@@ -20,11 +20,7 @@ const razorpay = new Razorpay({
 ========================================================= */
 
 const roundMoney = (value) => {
-  return (
-    Math.round(
-      (Number(value) + Number.EPSILON) * 100
-    ) / 100
-  );
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 };
 
 const normalizeDeliveryFee = (value) => {
@@ -39,17 +35,6 @@ const normalizeDeliveryFee = (value) => {
 
 /* =========================================================
    PREPARATION HELPERS
-
-   Supports both:
-
-   Old:
-   "Whole Cleaned"
-
-   New:
-   {
-     name: "Whole Cleaned",
-     pricePerKg: 600
-   }
 ========================================================= */
 
 const getPreparationName = (option) => {
@@ -58,193 +43,82 @@ const getPreparationName = (option) => {
   }
 
   if (option && typeof option === "object") {
-    return String(
-      option.name ??
-        option.label ??
-        option.preparation ??
-        option.title ??
-        ""
-    ).trim();
+    return String(option.name || "").trim();
   }
 
   return "";
 };
 
-const normalizePreparationName = (value) => {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
+const getPreparationPrice = (option, fallbackPrice = 0) => {
+  if (
+    option &&
+    typeof option === "object" &&
+    Number.isFinite(Number(option.pricePerKg))
+  ) {
+    return Number(option.pricePerKg);
+  }
+
+  return Number(fallbackPrice) || 0;
 };
 
-/* =========================================================
-   GET PREPARATION PRICE
-========================================================= */
-
-const getPreparationPrice = (
+const findPreparationOption = (
   product,
   preparation
 ) => {
-  const basePrice = Number(
-    product?.price || 0
-  );
+  const requestedPreparation =
+    String(preparation || "").trim();
 
-  const selectedPreparation =
-    normalizePreparationName(
-      preparation
-    );
-
-  /*
-    No preparation selected.
-    Fall back to base product price.
-  */
-  if (!selectedPreparation) {
-    return basePrice;
-  }
-
-  const options = Array.isArray(
-    product?.preparationOptions
-  )
-    ? product.preparationOptions
-    : [];
-
-  const matchedOption = options.find(
-    (option) => {
-      const optionName =
-        normalizePreparationName(
-          getPreparationName(option)
-        );
-
-      return (
-        optionName ===
-        selectedPreparation
-      );
-    }
-  );
-
-  /*
-    Preparation doesn't exist.
-  */
-  if (!matchedOption) {
+  if (!requestedPreparation) {
     return null;
   }
 
-  /*
-    Legacy string preparation option.
+  const options =
+    Array.isArray(product.preparationOptions)
+      ? product.preparationOptions
+      : [];
 
-    Example:
-    "Curry Cut"
-
-    Since there is no separate price,
-    use the base product price.
-  */
-  if (
-    typeof matchedOption === "string"
-  ) {
-    return basePrice;
-  }
-
-  /*
-    New object preparation option.
-
-    Example:
-    {
-      name: "Curry Cut",
-      pricePerKg: 650
-    }
-  */
-  const possiblePrices = [
-    matchedOption.pricePerKg,
-    matchedOption.price,
-    matchedOption.amount,
-  ];
-
-  for (const value of possiblePrices) {
-    const price = Number(value);
-
-    if (
-      Number.isFinite(price) &&
-      price >= 0
-    ) {
-      return price;
-    }
-  }
-
-  /*
-    If preparation exists but doesn't have
-    a valid custom price, use base price.
-  */
-  return basePrice;
+  return (
+    options.find(
+      (option) =>
+        getPreparationName(option).toLowerCase() ===
+        requestedPreparation.toLowerCase()
+    ) || null
+  );
 };
 
 /* =========================================================
    ADDRESS
 ========================================================= */
 
-const normalizeAddress = (
-  address,
-  user
-) => {
-  const phone = String(
-    address?.phone ||
-      user?.phone ||
-      ""
-  ).trim();
-
+const normalizeAddress = (address = {}) => {
   return {
-    firstName: String(
-      address?.firstName || ""
-    ).trim(),
-
-    lastName: String(
-      address?.lastName || ""
-    ).trim(),
-
-    address: String(
-      address?.address || ""
-    ).trim(),
-
-    city: String(
-      address?.city || ""
-    ).trim(),
-
-    state: String(
-      address?.state || ""
-    ).trim(),
-
+    firstName: String(address.firstName || "").trim(),
+    lastName: String(address.lastName || "").trim(),
+    phone: String(address.phone || "").trim(),
+    address: String(address.address || "").trim(),
+    city: String(address.city || "").trim(),
+    state: String(address.state || "").trim(),
     zipcode: String(
-      address?.zipcode || ""
+      address.zipcode || address.pincode || ""
     ).trim(),
-
-    country: String(
-      address?.country || "India"
-    ).trim(),
-
-    phone,
+    country:
+      String(address.country || "India").trim() ||
+      "India",
   };
 };
 
-const validateAddress = (
-  address
-) => {
+const validateAddress = (address) => {
   const requiredFields = [
-    ["firstName", "First name"],
-    ["address", "Address"],
-    ["city", "City"],
-    ["zipcode", "Zip code"],
-    ["phone", "Phone number"],
+    "firstName",
+    "phone",
+    "address",
+    "city",
+    "zipcode",
   ];
 
-  for (const [
-    field,
-    label,
-  ] of requiredFields) {
-    if (
-      !String(
-        address?.[field] || ""
-      ).trim()
-    ) {
-      return `${label} is required`;
+  for (const field of requiredFields) {
+    if (!address[field]) {
+      return `Missing address field: ${field}`;
     }
   }
 
@@ -252,162 +126,43 @@ const validateAddress = (
 };
 
 /* =========================================================
-   VALIDATE PREPARATION
+   ORDER ITEM VALIDATION
 ========================================================= */
 
-const validatePreparation = (
-  product,
-  preparation
-) => {
-  const selectedPreparation =
-    String(
-      preparation || ""
-    ).trim();
-
-  if (!selectedPreparation) {
-    throw new Error(
-      `Please select preparation for ${product.name}`
-    );
-  }
-
-  const options = Array.isArray(
-    product.preparationOptions
-  )
-    ? product.preparationOptions
-        .map(getPreparationName)
-        .filter(Boolean)
-    : [];
-
-  /*
-    If preparation options are configured,
-    only those exact options are accepted.
-  */
-  if (options.length > 0) {
-    const matchedOption =
-      options.find(
-        (option) =>
-          normalizePreparationName(
-            option
-          ) ===
-          normalizePreparationName(
-            selectedPreparation
-          )
-      );
-
-    if (!matchedOption) {
-      throw new Error(
-        `${product.name} does not support "${selectedPreparation}" preparation`
-      );
-    }
-
-    return matchedOption;
-  }
-
-  /*
-    If product has no preparation options,
-    accept the selected preparation.
-  */
-  return selectedPreparation;
-};
-
-/* =========================================================
-   VALIDATE ORDER ITEMS
-
-   IMPORTANT:
-
-   Frontend price is NEVER trusted.
-
-   Server gets:
-   - Product
-   - Preparation
-   - Preparation price
-   - Weight
-   - Quantity
-
-   directly from MongoDB/product data.
-========================================================= */
-
-const validateOrderItems = async (
-  items
-) => {
-  if (
-    !Array.isArray(items) ||
-    items.length === 0
-  ) {
-    throw new Error(
-      "Order must contain at least one product"
-    );
+const validateOrderItems = async (items) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error("Order must contain at least one item");
   }
 
   const validatedItems = [];
 
-  let subtotal = 0;
-
   for (const item of items) {
-    /* -----------------------------------------------
-       PRODUCT ID
-    ----------------------------------------------- */
-
-    const productId =
-      item?._id ||
-      item?.productId;
-
-    if (!productId) {
-      throw new Error(
-        "Invalid product in order"
-      );
+    if (!item?.productId) {
+      throw new Error("Product ID is missing");
     }
 
-    /* -----------------------------------------------
-       GET PRODUCT FROM DATABASE
-    ----------------------------------------------- */
-
-    const product =
-      await productModel.findById(
-        productId
-      );
+    const product = await productModel.findById(
+      item.productId
+    );
 
     if (!product) {
       throw new Error(
-        `${item?.name || "Product"} not found`
+        `Product not found: ${item.productId}`
       );
     }
 
-    /* -----------------------------------------------
-       AVAILABILITY
-    ----------------------------------------------- */
-
-    const stock = Number(
-      product.stock
-    );
-
     if (
-      product.isAvailable !== true ||
-      !Number.isFinite(stock) ||
-      stock <= 0
+      product.isAvailable === false ||
+      Number(product.stock || 0) <= 0
     ) {
       throw new Error(
         `${product.name} is currently unavailable`
       );
     }
 
-    /* -----------------------------------------------
-       PREPARATION
-    ----------------------------------------------- */
+    const weight = Number(item.weight);
 
-    const preparation =
-      validatePreparation(
-        product,
-        item?.preparation
-      );
-
-    /* -----------------------------------------------
-       WEIGHT
-    ----------------------------------------------- */
-
-    const weight = Number(
-      item.weight
-    );
+    const quantity = Number(item.quantity);
 
     if (
       !Number.isFinite(weight) ||
@@ -418,964 +173,813 @@ const validateOrderItems = async (
       );
     }
 
-    /* -----------------------------------------------
-       QUANTITY
-    ----------------------------------------------- */
-
-    const quantity = Number(
-      item.quantity ?? 1
-    );
-
     if (
       !Number.isFinite(quantity) ||
-      quantity <= 0 ||
-      !Number.isInteger(quantity)
+      quantity < 1
     ) {
       throw new Error(
         `Invalid quantity for ${product.name}`
       );
     }
 
-    /* -----------------------------------------------
-       MIN / MAX WEIGHT
-    ----------------------------------------------- */
+    /* =====================================================
+       WEIGHT VALIDATION
+    ===================================================== */
 
-    const minQuantity = Number(
-      product.minQuantity || 0.1
-    );
+    const minQuantity =
+      Number(product.minQuantity || 0);
 
-    const maxQuantity = Number(
-      product.maxQuantity || 10
-    );
+    const maxQuantity =
+      Number(product.maxQuantity || 0);
 
-    const quantityStep = Number(
-      product.quantityStep || 0.1
-    );
+    const quantityStep =
+      Number(product.quantityStep || 0);
 
     if (
+      minQuantity > 0 &&
       weight < minQuantity
     ) {
       throw new Error(
-        `${product.name} minimum weight is ${minQuantity} kg`
+        `${product.name} minimum weight is ${minQuantity} KG`
       );
     }
 
     if (
+      maxQuantity > 0 &&
       weight > maxQuantity
     ) {
       throw new Error(
-        `${product.name} maximum weight is ${maxQuantity} kg`
+        `${product.name} maximum weight is ${maxQuantity} KG`
       );
     }
-
-    /* -----------------------------------------------
-       QUANTITY STEP
-    ----------------------------------------------- */
 
     if (quantityStep > 0) {
       const steps =
-        weight / quantityStep;
+        (weight - minQuantity) /
+        quantityStep;
+
+      const isValidStep =
+        Math.abs(
+          steps - Math.round(steps)
+        ) < 0.000001;
 
       if (
-        Math.abs(
-          steps -
-            Math.round(steps)
-        ) > 0.000001
+        minQuantity > 0 &&
+        !isValidStep
       ) {
         throw new Error(
-          `${product.name} weight must be in increments of ${quantityStep} kg`
+          `Invalid weight for ${product.name}. Please select a valid weight.`
         );
       }
     }
 
-    /* -----------------------------------------------
-       STOCK
-    ----------------------------------------------- */
+    /* =====================================================
+       STOCK VALIDATION
+    ===================================================== */
 
-    const totalWeight =
+    const requiredStock =
       weight * quantity;
 
     if (
-      totalWeight > stock
+      requiredStock >
+      Number(product.stock || 0)
     ) {
       throw new Error(
-        `${product.name} has only ${stock} kg available`
+        `Only ${Number(product.stock || 0)} KG of ${product.name} is available`
       );
     }
 
-    /* -----------------------------------------------
-       PREPARATION PRICE
-       FROM DATABASE
-    ----------------------------------------------- */
+    /* =====================================================
+       PREPARATION / PRICE
+    ===================================================== */
 
-    const preparationPrice =
-      getPreparationPrice(
-        product,
-        preparation
-      );
+    const preparation =
+      String(item.preparation || "").trim();
 
-    if (
-      preparationPrice === null ||
-      !Number.isFinite(
-        preparationPrice
-      ) ||
-      preparationPrice < 0
-    ) {
-      throw new Error(
-        `Invalid price for ${product.name} - ${preparation}`
-      );
+    let pricePerKg =
+      Number(product.price || 0);
+
+    if (preparation) {
+      const preparationOption =
+        findPreparationOption(
+          product,
+          preparation
+        );
+
+      if (!preparationOption) {
+        throw new Error(
+          `${preparation} is not available for ${product.name}`
+        );
+      }
+
+      pricePerKg =
+        getPreparationPrice(
+          preparationOption,
+          product.price
+        );
     }
 
-    const productPrice =
-      Number(preparationPrice);
-
-    /* -----------------------------------------------
-       ITEM SUBTOTAL
-    ----------------------------------------------- */
-
-    const itemSubtotal =
-      roundMoney(
-        productPrice *
-          totalWeight
-      );
-
-    subtotal += itemSubtotal;
-
-    /* -----------------------------------------------
-       VALIDATED ITEM
-    ----------------------------------------------- */
+    const subtotal = roundMoney(
+      pricePerKg *
+        weight *
+        quantity
+    );
 
     validatedItems.push({
-      productId:
-        product._id,
-
-      name:
-        product.name,
-
+      productId: product._id,
+      name: product.name,
       image:
-        Array.isArray(
-          product.image
-        )
-          ? product.image[0] || ""
-          : product.image || "",
-
-      /*
-        IMPORTANT:
-        This is the selected preparation
-        price per KG.
-      */
-      price:
-        productPrice,
-
+        Array.isArray(product.image) &&
+        product.image.length > 0
+          ? product.image[0]
+          : "",
+      price: pricePerKg,
       weight,
-
       quantity,
-
       preparation,
-
-      subtotal:
-        itemSubtotal,
+      subtotal,
     });
   }
 
-  return {
-    validatedItems,
-
-    subtotal:
-      roundMoney(
-        subtotal
-      ),
-  };
+  return validatedItems;
 };
 
 /* =========================================================
-   REDUCE STOCK
+   STOCK REDUCTION
 ========================================================= */
 
 const reduceOrderStock = async (
-  items
+  validatedItems
 ) => {
-  const updatedProducts = [];
-
-  try {
-    for (const item of items) {
-      const totalWeight =
-        Number(item.weight) *
-        Number(item.quantity);
-
-      const updatedProduct =
-        await productModel.findOneAndUpdate(
-          {
-            _id:
-              item.productId,
-
-            stock: {
-              $gte:
-                totalWeight,
-            },
-          },
-
-          {
-            $inc: {
-              stock:
-                -totalWeight,
-            },
-          },
-
-          {
-            new: true,
-          }
-        );
-
-      if (!updatedProduct) {
-        throw new Error(
-          `${item.name} is no longer available in the requested quantity`
-        );
-      }
-
-      updatedProducts.push({
-        productId:
-          item.productId,
-
-        totalWeight,
-      });
-
-      /*
-        Automatically mark unavailable
-        when stock reaches zero.
-      */
-      await productModel.findByIdAndUpdate(
-        item.productId,
-        {
-          isAvailable:
-            Number(
-              updatedProduct.stock
-            ) > 0,
-        }
-      );
-    }
-  } catch (error) {
-    /* -----------------------------------------------
-       ROLLBACK STOCK
-    ----------------------------------------------- */
-
-    for (const previous of updatedProducts) {
-      try {
-        const restored =
-          await productModel.findByIdAndUpdate(
-            previous.productId,
-
-            {
-              $inc: {
-                stock:
-                  previous.totalWeight,
-              },
-            },
-
-            {
-              new: true,
-            }
-          );
-
-        if (restored) {
-          await productModel.findByIdAndUpdate(
-            previous.productId,
-            {
-              isAvailable:
-                Number(
-                  restored.stock
-                ) > 0,
-            }
-          );
-        }
-      } catch (rollbackError) {
-        console.error(
-          "❌ Stock rollback error:",
-          rollbackError
-        );
-      }
-    }
-
-    throw error;
-  }
-};
-
-/* =========================================================
-   RESTORE STOCK
-========================================================= */
-
-const restoreOrderStock = async (
-  items
-) => {
-  for (const item of items) {
-    const productId =
-      item.productId ||
-      item._id;
-
-    if (!productId) {
-      continue;
-    }
-
-    const weight = Number(
-      item.weight
-    );
-
-    const quantity = Number(
-      item.quantity || 1
-    );
-
-    if (
-      !Number.isFinite(weight) ||
-      weight <= 0 ||
-      !Number.isFinite(quantity) ||
-      quantity <= 0
-    ) {
-      continue;
-    }
-
-    const totalWeight =
-      weight * quantity;
+  for (const item of validatedItems) {
+    const requiredStock =
+      Number(item.weight || 0) *
+      Number(item.quantity || 1);
 
     const updatedProduct =
-      await productModel.findByIdAndUpdate(
-        productId,
-
+      await productModel.findOneAndUpdate(
         {
-          $inc: {
-            stock:
-              totalWeight,
+          _id: item.productId,
+          stock: {
+            $gte: requiredStock,
           },
         },
-
+        {
+          $inc: {
+            stock: -requiredStock,
+          },
+        },
         {
           new: true,
         }
       );
 
-    if (updatedProduct) {
-      await productModel.findByIdAndUpdate(
-        productId,
-        {
-          isAvailable:
-            Number(
-              updatedProduct.stock
-            ) > 0,
-        }
+    if (!updatedProduct) {
+      throw new Error(
+        `Insufficient stock for ${item.name}`
       );
+    }
+
+    if (
+      Number(updatedProduct.stock || 0) <= 0
+    ) {
+      updatedProduct.isAvailable = false;
+      await updatedProduct.save();
     }
   }
 };
 
 /* =========================================================
-   CREATE RAZORPAY ORDER
-
-   Frontend sends:
-
-   {
-     items,
-     deliveryFee
-   }
-
-   Server calculates:
-
-   MongoDB preparation prices
-   × weight
-   × quantity
-   + delivery fee
+   STOCK RESTORE
 ========================================================= */
 
-const createRazorpayOrder =
-  async (req, res) => {
-    try {
-      const {
-        items,
-        deliveryFee = 0,
-      } = req.body;
+const restoreOrderStock = async (
+  validatedItems
+) => {
+  for (const item of validatedItems) {
+    const restoreStock =
+      Number(item.weight || 0) *
+      Number(item.quantity || 1);
 
-      /* -----------------------------------------------
-         RAZORPAY CONFIG
-      ----------------------------------------------- */
-
-      if (
-        !process.env
-          .RAZORPAY_KEY_ID ||
-        !process.env
-          .RAZORPAY_SECRET
-      ) {
-        return res.status(500).json({
-          success: false,
-
-          message:
-            "Razorpay is not configured on the server",
-        });
+    await productModel.findByIdAndUpdate(
+      item.productId,
+      {
+        $inc: {
+          stock: restoreStock,
+        },
+        $set: {
+          isAvailable: true,
+        },
       }
+    );
+  }
+};
 
-      /* -----------------------------------------------
-         ITEMS
-      ----------------------------------------------- */
+/* =========================================================
+   CREATE RAZORPAY ORDER
+========================================================= */
 
-      if (
-        !Array.isArray(items) ||
-        items.length === 0
-      ) {
-        return res.status(400).json({
-          success: false,
+const createRazorpayOrder = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      items,
+      deliveryFee,
+    } = req.body;
 
-          message:
-            "Order must contain at least one product",
-        });
-      }
+    /* =====================================================
+       VALIDATE ITEMS
+    ===================================================== */
 
-      /* -----------------------------------------------
-         VALIDATE PRODUCTS
-      ----------------------------------------------- */
+    const validatedItems =
+      await validateOrderItems(items);
 
-      const result =
-        await validateOrderItems(
-          items
-        );
+    /* =====================================================
+       CALCULATE AUTHORITATIVE SUBTOTAL
+    ===================================================== */
 
-      const subtotal =
-        result.subtotal;
+    const subtotal = roundMoney(
+      validatedItems.reduce(
+        (total, item) =>
+          total +
+          Number(item.subtotal || 0),
+        0
+      )
+    );
 
-      /* -----------------------------------------------
-         DELIVERY
-      ----------------------------------------------- */
+    const normalizedDeliveryFee =
+      normalizeDeliveryFee(
+        deliveryFee
+      );
 
-      const normalizedDeliveryFee =
-        normalizeDeliveryFee(
-          deliveryFee
-        );
+    const amount = roundMoney(
+      subtotal +
+        normalizedDeliveryFee
+    );
 
-      const calculatedAmount =
-        roundMoney(
-          subtotal +
-            normalizedDeliveryFee
-        );
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Order amount must be greater than zero",
+      });
+    }
 
-      if (
-        calculatedAmount <= 0
-      ) {
-        return res.status(400).json({
-          success: false,
+    /* =====================================================
+       CREATE RAZORPAY ORDER
+    ===================================================== */
 
-          message:
-            "Invalid order amount",
-        });
-      }
-
-      /* -----------------------------------------------
-         CREATE RAZORPAY ORDER
-      ----------------------------------------------- */
-
-      const options = {
-        amount:
-          Math.round(
-            calculatedAmount * 100
-          ),
-
-        currency:
-          "INR",
-
+    const razorpayOrder =
+      await razorpay.orders.create({
+        amount: Math.round(
+          amount * 100
+        ),
+        currency: "INR",
         receipt:
-          `receipt_${Date.now()}_${req.userId}`,
-      };
+          `order_${Date.now()}`,
+      });
 
-      const order =
-        await razorpay.orders.create(
-          options
-        );
+    return res.json({
+      success: true,
 
-      return res.json({
+      order: razorpayOrder,
+
+      subtotal,
+
+      deliveryFee:
+        normalizedDeliveryFee,
+
+      amount,
+    });
+  } catch (error) {
+    console.error(
+      "Create Razorpay order error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Unable to create Razorpay order",
+    });
+  }
+};
+
+/* =========================================================
+   VERIFY RAZORPAY PAYMENT
+========================================================= */
+
+const verifyPayment = async (
+  req,
+  res
+) => {
+  let stockReduced = false;
+
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      orderData,
+    } = req.body;
+
+    /* =====================================================
+       BASIC VALIDATION
+    ===================================================== */
+
+    if (
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Missing Razorpay payment details",
+      });
+    }
+
+    if (!orderData) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Order data is missing",
+      });
+    }
+
+    /* =====================================================
+       VERIFY RAZORPAY SIGNATURE
+    ===================================================== */
+
+    const generatedSignature =
+      crypto
+        .createHmac(
+          "sha256",
+          process.env.RAZORPAY_KEY_SECRET
+        )
+        .update(
+          `${razorpay_order_id}|${razorpay_payment_id}`
+        )
+        .digest("hex");
+
+    if (
+      generatedSignature !==
+      razorpay_signature
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid payment signature",
+      });
+    }
+
+    /* =====================================================
+       CHECK DUPLICATE PAYMENT
+    ===================================================== */
+
+    const existingOrder =
+      await orderModel.findOne({
+        razorpayPaymentId:
+          razorpay_payment_id,
+      });
+
+    if (existingOrder) {
+      return res.status(200).json({
         success: true,
+        message:
+          "Payment already verified",
+        order: existingOrder,
+      });
+    }
 
-        order,
+    /* =====================================================
+       GET USER
+    ===================================================== */
+
+    const user =
+      await userModel.findById(
+        req.userId
+      );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "User not found",
+      });
+    }
+
+    /* =====================================================
+       NORMALIZE + VALIDATE ADDRESS
+    ===================================================== */
+
+    const normalizedAddress =
+      normalizeAddress(
+        orderData.address
+      );
+
+    const addressError =
+      validateAddress(
+        normalizedAddress
+      );
+
+    if (addressError) {
+      return res.status(400).json({
+        success: false,
+        message: addressError,
+      });
+    }
+
+    /* =====================================================
+       REVALIDATE PRODUCTS + PRICES
+    ===================================================== */
+
+    const validatedItems =
+      await validateOrderItems(
+        orderData.items
+      );
+
+    /* =====================================================
+       CALCULATE AUTHORITATIVE AMOUNTS
+    ===================================================== */
+
+    const subtotal = roundMoney(
+      validatedItems.reduce(
+        (total, item) =>
+          total +
+          Number(item.subtotal || 0),
+        0
+      )
+    );
+
+    const deliveryFee =
+      normalizeDeliveryFee(
+        orderData.deliveryFee
+      );
+
+    const calculatedAmount =
+      roundMoney(
+        subtotal +
+          deliveryFee
+      );
+
+    /* =====================================================
+       VERIFY RAZORPAY ORDER
+    ===================================================== */
+
+    const razorpayOrder =
+      await razorpay.orders.fetch(
+        razorpay_order_id
+      );
+
+    if (!razorpayOrder) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Razorpay order not found",
+      });
+    }
+
+    if (
+      razorpayOrder.currency !==
+      "INR"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid Razorpay currency",
+      });
+    }
+
+    const razorpayAmount =
+      Number(razorpayOrder.amount) /
+      100;
+
+    if (
+      roundMoney(
+        razorpayAmount
+      ) !==
+      roundMoney(
+        calculatedAmount
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Payment amount does not match order amount",
+      });
+    }
+
+    /* =====================================================
+       REDUCE STOCK
+    ===================================================== */
+
+    await reduceOrderStock(
+      validatedItems
+    );
+
+    stockReduced = true;
+
+    /* =====================================================
+       SAVE USER ADDRESS
+    ===================================================== */
+
+    user.phone =
+      normalizedAddress.phone;
+
+    user.address =
+      normalizedAddress.address;
+
+    /* =====================================================
+       CREATE ORDER
+    ===================================================== */
+
+    const newOrder =
+      new orderModel({
+        userId: req.userId,
+
+        items: validatedItems,
 
         subtotal,
 
-        deliveryFee:
-          normalizedDeliveryFee,
+        deliveryFee,
 
         amount:
           calculatedAmount,
+
+        address:
+          normalizedAddress,
+
+        paymentMethod:
+          "Razorpay",
+
+        paymentStatus:
+          "Paid",
+
+        razorpayOrderId:
+          razorpay_order_id,
+
+        razorpayPaymentId:
+          razorpay_payment_id,
+
+        razorpaySignature:
+          razorpay_signature,
+
+        orderStatus:
+          "Order Placed",
+
+        date: Date.now(),
       });
-    } catch (error) {
-      console.error(
-        "❌ Razorpay order creation error:",
-        error
-      );
 
-      const message =
-        error?.message ||
-        "Unable to create Razorpay order";
+    await newOrder.save();
 
-      /*
-        Validation problems are client errors,
-        not server errors.
-      */
-      const validationError =
-        message.includes(
-          "does not support"
-        ) ||
-        message.includes(
-          "Please select preparation"
-        ) ||
-        message.includes(
-          "Invalid weight"
-        ) ||
-        message.includes(
-          "Invalid quantity"
-        ) ||
-        message.includes(
-          "minimum weight"
-        ) ||
-        message.includes(
-          "maximum weight"
-        ) ||
-        message.includes(
-          "increments of"
-        ) ||
-        message.includes(
-          "not found"
-        ) ||
-        message.includes(
-          "unavailable"
-        ) ||
-        message.includes(
-          "Invalid price"
-        ) ||
-        message.includes(
-          "available in the requested quantity"
-        );
-
-      return res.status(
-        validationError
-          ? 400
-          : 500
-      ).json({
-        success: false,
-
-        message,
-      });
-    }
-  };
-
-/* =========================================================
-   VERIFY PAYMENT
-========================================================= */
-
-const verifyPayment =
-  async (req, res) => {
-    let stockReduced = false;
-    let validatedItems = [];
+    /* =====================================================
+       CREATE / UPDATE CUSTOMER
+       
+       IMPORTANT:
+       Same userId = same customer
+       Each order still gets its own order ID.
+    ===================================================== */
 
     try {
-      const {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-        orderData,
-      } = req.body;
-
-      /* -----------------------------------------------
-         BASIC VALIDATION
-      ----------------------------------------------- */
-
-      if (
-        !razorpay_order_id ||
-        !razorpay_payment_id ||
-        !razorpay_signature
-      ) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "Incomplete Razorpay payment details",
+      let customer =
+        await customerModel.findOne({
+          userId: req.userId,
         });
-      }
 
-      if (
-        !orderData ||
-        !Array.isArray(
-          orderData.items
-        ) ||
-        orderData.items.length === 0
-      ) {
-        return res.status(400).json({
-          success: false,
+      /* ===================================================
+         CALCULATE TOTAL WEIGHT
+      =================================================== */
 
-          message:
-            "Invalid order data",
-        });
-      }
-
-      if (
-        !process.env
-          .RAZORPAY_SECRET
-      ) {
-        return res.status(500).json({
-          success: false,
-
-          message:
-            "Razorpay secret is not configured",
-        });
-      }
-
-      /* -----------------------------------------------
-         VERIFY RAZORPAY SIGNATURE
-      ----------------------------------------------- */
-
-      const generatedSignature =
-        crypto
-          .createHmac(
-            "sha256",
-            process.env
-              .RAZORPAY_SECRET
-          )
-          .update(
-            `${razorpay_order_id}|${razorpay_payment_id}`
-          )
-          .digest("hex");
-
-      const generatedBuffer =
-        Buffer.from(
-          generatedSignature,
-          "utf8"
+      const orderWeight =
+        validatedItems.reduce(
+          (total, item) => {
+            return (
+              total +
+              Number(item.weight || 0) *
+                Number(
+                  item.quantity || 1
+                )
+            );
+          },
+          0
         );
 
-      const receivedBuffer =
-        Buffer.from(
-          razorpay_signature,
-          "utf8"
+      /* ===================================================
+         NEW CUSTOMER
+      =================================================== */
+
+      if (!customer) {
+        const customerCount =
+          await customerModel.countDocuments();
+
+        const nextNumber =
+          customerCount + 1;
+
+        const customerId =
+          `CUS${String(
+            nextNumber
+          ).padStart(6, "0")}`;
+
+        customer =
+          await customerModel.create({
+            customerId,
+
+            userId:
+              req.userId,
+
+            firstName:
+              normalizedAddress.firstName,
+
+            lastName:
+              normalizedAddress.lastName,
+
+            phone:
+              normalizedAddress.phone,
+
+            address:
+              normalizedAddress.address,
+
+            city:
+              normalizedAddress.city,
+
+            state:
+              normalizedAddress.state,
+
+            zipcode:
+              normalizedAddress.zipcode,
+
+            country:
+              normalizedAddress.country,
+
+            totalOrders: 1,
+
+            totalSpent:
+              newOrder.orderStatus !==
+              "Cancelled"
+                ? calculatedAmount
+                : 0,
+
+            totalWeight:
+              orderWeight,
+
+            lastOrder:
+              Date.now(),
+          });
+
+        console.log(
+          "✅ New customer created:",
+          customer.customerId
         );
-
-      if (
-        generatedBuffer.length !==
-          receivedBuffer.length ||
-        !crypto.timingSafeEqual(
-          generatedBuffer,
-          receivedBuffer
-        )
-      ) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "Payment verification failed",
-        });
       }
 
-      /* -----------------------------------------------
-         DUPLICATE PAYMENT
-      ----------------------------------------------- */
-
-      const existingOrder =
-        await orderModel.findOne({
-          $or: [
-            {
-              razorpayOrderId:
-                razorpay_order_id,
-            },
-
-            {
-              razorpayPaymentId:
-                razorpay_payment_id,
-            },
-          ],
-        });
-
-      if (existingOrder) {
-        return res.json({
-          success: true,
-
-          message:
-            "Payment already processed",
-
-          order:
-            existingOrder,
-        });
-      }
-
-      /* -----------------------------------------------
-         USER
-      ----------------------------------------------- */
-
-      const user =
-        await userModel.findById(
-          req.userId
-        );
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-
-          message:
-            "User not found",
-        });
-      }
-
-      /* -----------------------------------------------
-         ADDRESS
-      ----------------------------------------------- */
-
-      if (
-        !orderData.address
-      ) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "Delivery address is required",
-        });
-      }
-
-      const normalizedAddress =
-        normalizeAddress(
-          orderData.address,
-          user
-        );
-
-      const addressError =
-        validateAddress(
-          normalizedAddress
-        );
-
-      if (addressError) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            addressError,
-        });
-      }
-
-      /* -----------------------------------------------
-         PRODUCTS
-         Recalculate everything from MongoDB.
-      ----------------------------------------------- */
-
-      const result =
-        await validateOrderItems(
-          orderData.items
-        );
-
-      validatedItems =
-        result.validatedItems;
-
-      const subtotal =
-        result.subtotal;
-
-      /* -----------------------------------------------
-         DELIVERY
-      ----------------------------------------------- */
-
-      const deliveryFee =
-        normalizeDeliveryFee(
-          orderData.deliveryFee
-        );
-
-      const calculatedAmount =
-        roundMoney(
-          subtotal +
-            deliveryFee
-        );
-
-      if (
-        calculatedAmount <= 0
-      ) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "Invalid order amount",
-        });
-      }
-
-      /* -----------------------------------------------
-         FETCH RAZORPAY ORDER
-      ----------------------------------------------- */
-
-      let razorpayOrder;
-
-      try {
-        razorpayOrder =
-          await razorpay.orders.fetch(
-            razorpay_order_id
-          );
-      } catch (error) {
-        console.error(
-          "❌ Unable to fetch Razorpay order:",
-          error
-        );
-
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "Unable to validate Razorpay order",
-        });
-      }
-
-      /* -----------------------------------------------
-         VERIFY CURRENCY
-      ----------------------------------------------- */
-
-      if (
-        razorpayOrder.currency !==
-        "INR"
-      ) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "Invalid payment currency",
-        });
-      }
-
-      /* -----------------------------------------------
-         VERIFY PAYMENT AMOUNT
-      ----------------------------------------------- */
-
-      const razorpayAmount =
-        Number(
-          razorpayOrder.amount
-        ) / 100;
-
-      if (
-        Math.abs(
-          razorpayAmount -
-            calculatedAmount
-        ) > 0.01
-      ) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "Payment amount does not match the order total",
-        });
-      }
-
-      /* -----------------------------------------------
-         REDUCE STOCK
-      ----------------------------------------------- */
-
-      await reduceOrderStock(
-        validatedItems
-      );
-
-      stockReduced = true;
-
-      /* -----------------------------------------------
-         SAVE USER ADDRESS
-      ----------------------------------------------- */
-
-      user.phone =
-        normalizedAddress.phone;
-
-      user.address =
-        normalizedAddress;
-
-      /* -----------------------------------------------
-         CREATE ORDER
-      ----------------------------------------------- */
-
-      const newOrder =
-        new orderModel({
-          userId:
-            req.userId,
-
-          items:
-            validatedItems,
-
-          subtotal,
-
-          deliveryFee,
-
-          amount:
-            calculatedAmount,
-
-          address:
-            normalizedAddress,
-
-          paymentMethod:
-            "Razorpay",
-
-          paymentStatus:
-            "Paid",
-
-          orderStatus:
-            "Order Placed",
-
-          razorpayOrderId:
-            razorpay_order_id,
-
-          razorpayPaymentId:
-            razorpay_payment_id,
-
-          razorpaySignature:
-            razorpay_signature,
-
-          date:
-            Date.now(),
-        });
-
-      await newOrder.save();
-
-      /* -----------------------------------------------
-         CLEAR CART
-      ----------------------------------------------- */
-
-      user.cartData = {};
-
-      await user.save();
-
-      return res.status(201).json({
-        success: true,
-
-        message:
-          "Payment verified and order placed successfully",
-
-        order:
-          newOrder,
-      });
-    } catch (error) {
-      /* -----------------------------------------------
-         ROLLBACK STOCK
-      ----------------------------------------------- */
-
-      if (
-        stockReduced &&
-        validatedItems.length > 0
-      ) {
-        try {
-          await restoreOrderStock(
-            validatedItems
-          );
-        } catch (restoreError) {
-          console.error(
-            "❌ Payment stock rollback failed:",
-            restoreError
-          );
+      /* ===================================================
+         EXISTING CUSTOMER
+      =================================================== */
+
+      else {
+        customer.firstName =
+          normalizedAddress.firstName;
+
+        customer.lastName =
+          normalizedAddress.lastName;
+
+        customer.phone =
+          normalizedAddress.phone;
+
+        customer.address =
+          normalizedAddress.address;
+
+        customer.city =
+          normalizedAddress.city;
+
+        customer.state =
+          normalizedAddress.state;
+
+        customer.zipcode =
+          normalizedAddress.zipcode;
+
+        customer.country =
+          normalizedAddress.country;
+
+        customer.totalOrders =
+          Number(
+            customer.totalOrders || 0
+          ) + 1;
+
+        if (
+          newOrder.orderStatus !==
+          "Cancelled"
+        ) {
+          customer.totalSpent =
+            Number(
+              customer.totalSpent || 0
+            ) +
+            calculatedAmount;
         }
+
+        customer.totalWeight =
+          Number(
+            customer.totalWeight || 0
+          ) +
+          orderWeight;
+
+        customer.lastOrder =
+          Date.now();
+
+        await customer.save();
+
+        console.log(
+          "✅ Existing customer updated:",
+          customer.customerId
+        );
       }
-
+    } catch (customerError) {
+      /*
+       * Do not fail an already-paid order because
+       * customer profile saving failed.
+       */
       console.error(
-        "❌ Payment verification error:",
-        error
+        "❌ Customer save error:",
+        customerError
       );
-
-      return res.status(500).json({
-        success: false,
-
-        message:
-          error?.message ||
-          "Unable to verify payment",
-      });
     }
-  };
+
+    /* =====================================================
+       CLEAR USER CART
+    ===================================================== */
+
+    user.cartData = {};
+
+    await user.save();
+
+    /* =====================================================
+       SUCCESS
+    ===================================================== */
+
+    return res.status(200).json({
+      success: true,
+
+      message:
+        "Payment verified and order placed successfully",
+
+      order: newOrder,
+    });
+  } catch (error) {
+    console.error(
+      "Verify payment error:",
+      error
+    );
+
+    /* =====================================================
+       RESTORE STOCK IF IT WAS REDUCED
+       BUT ORDER CREATION FAILED
+    ===================================================== */
+
+    if (stockReduced) {
+      try {
+        const items =
+          Array.isArray(
+            req.body?.orderData?.items
+          )
+            ? req.body.orderData.items
+            : [];
+
+        const validatedItems =
+          await validateOrderItems(
+            items
+          );
+
+        await restoreOrderStock(
+          validatedItems
+        );
+
+        console.log(
+          "✅ Stock restored after payment verification error"
+        );
+      } catch (restoreError) {
+        console.error(
+          "❌ Failed to restore stock:",
+          restoreError
+        );
+      }
+    }
+
+    return res.status(500).json({
+      success: false,
+
+      message:
+        error.message ||
+        "Unable to verify payment",
+    });
+  }
+};
 
 /* =========================================================
-   EXPORTS
+   EXPORT
 ========================================================= */
 
 export {

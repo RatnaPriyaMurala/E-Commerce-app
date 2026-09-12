@@ -22,8 +22,9 @@ const Add = ({ token }) => {
   // =========================
   // BASIC PRODUCT STATES
   // =========================
-  const [category, setCategory] = useState("Live Fish");
-  const [subCategory, setSubCategory] = useState("Boneless Fish");
+
+  const [category, setCategory] = useState("Fresh Water Fish");
+  const [subCategory, setSubCategory] = useState("");
 
   const [name, setName] = useState("");
   const [overview, setOverview] = useState("");
@@ -36,11 +37,13 @@ const Add = ({ token }) => {
   // =========================
   // IMAGE
   // =========================
+
   const [image, setImage] = useState(null);
 
   // =========================
   // WEIGHT
   // =========================
+
   const [weight, setWeight] = useState({
     min: "",
     max: "",
@@ -49,6 +52,7 @@ const Add = ({ token }) => {
   // =========================
   // DESCRIPTION
   // =========================
+
   const [description, setDescription] = useState({
     proteins: "",
     calories: "",
@@ -63,6 +67,7 @@ const Add = ({ token }) => {
   // =========================
   // PREPARATION OPTIONS
   // =========================
+
   const [preparationOptions, setPreparationOptions] = useState([]);
   const [customPreparation, setCustomPreparation] = useState("");
 
@@ -73,11 +78,26 @@ const Add = ({ token }) => {
   };
 
   // ==========================================================
+  // CATEGORY TYPES
+  // ==========================================================
+
+  const categoriesWithoutPreparation = [
+    "Dry Fish",
+    "Dry Prawns",
+    "Pickles",
+  ];
+
+  const requiresPreparation = !categoriesWithoutPreparation.includes(
+    category
+  );
+
+  // ==========================================================
   // HELPERS FOR PREPARATION OPTIONS
   // ==========================================================
 
   const getPreparationName = (option) => {
     if (typeof option === "string") return option;
+
     return option?.name || "";
   };
 
@@ -100,12 +120,16 @@ const Add = ({ token }) => {
   useEffect(() => {
     if (!editingProduct) return;
 
-    setCategory(editingProduct.category || "Live Fish");
-    setSubCategory(editingProduct.subCategory || "Boneless Fish");
+    setCategory(editingProduct.category || "Fresh Water Fish");
+
+    setSubCategory(editingProduct.subCategory || "");
 
     setName(editingProduct.name || "");
+
     setOverview(editingProduct.overview || "");
+
     setPrice(editingProduct.price ?? "");
+
     setStock(editingProduct.stock ?? 0);
 
     setIsAvailable(
@@ -120,15 +144,24 @@ const Add = ({ token }) => {
         : false
     );
 
-    // Load weight
-    if (editingProduct.minQuantity || editingProduct.maxQuantity) {
+    // ========================================================
+    // LOAD WEIGHT
+    // ========================================================
+
+    if (
+      editingProduct.minQuantity !== undefined ||
+      editingProduct.maxQuantity !== undefined
+    ) {
       setWeight({
         min: editingProduct.minQuantity ?? "",
         max: editingProduct.maxQuantity ?? "",
       });
     }
 
-    // Load description
+    // ========================================================
+    // LOAD DESCRIPTION
+    // ========================================================
+
     setDescription({
       proteins: editingProduct.description?.proteins || "",
       calories: editingProduct.description?.calories || "",
@@ -141,8 +174,7 @@ const Add = ({ token }) => {
     });
 
     // ========================================================
-    // IMPORTANT:
-    // Normalize old string preparation options into objects.
+    // LOAD PREPARATION OPTIONS
     // ========================================================
 
     setPreparationOptions(
@@ -205,7 +237,8 @@ const Add = ({ token }) => {
     setPreparationOptions((current) => {
       const exists = current.some(
         (item) =>
-          getPreparationName(item).toLowerCase() === option.toLowerCase()
+          getPreparationName(item).toLowerCase() ===
+          option.toLowerCase()
       );
 
       if (exists) {
@@ -240,7 +273,8 @@ const Add = ({ token }) => {
 
     const alreadyExists = preparationOptions.some(
       (option) =>
-        getPreparationName(option).toLowerCase() === cleaned.toLowerCase()
+        getPreparationName(option).toLowerCase() ===
+        cleaned.toLowerCase()
     );
 
     if (alreadyExists) {
@@ -311,6 +345,23 @@ const Add = ({ token }) => {
   };
 
   // ==========================================================
+  // CATEGORY CHANGE
+  // ==========================================================
+
+  const handleCategoryChange = (value) => {
+    setCategory(value);
+
+    // Clear preparations when category changes
+    setPreparationOptions([]);
+    setCustomPreparation("");
+
+    // Dry products and pickles don't use preparation
+    if (categoriesWithoutPreparation.includes(value)) {
+      setPreparationOptions([]);
+    }
+  };
+
+  // ==========================================================
   // SUBMIT
   // ==========================================================
 
@@ -342,7 +393,14 @@ const Add = ({ token }) => {
         return;
       }
 
-      if (preparationOptions.length === 0) {
+      // -----------------------------------------
+      // PREPARATION VALIDATION
+      // -----------------------------------------
+      // Only products that support preparation
+      // need at least one preparation option.
+      // -----------------------------------------
+
+      if (requiresPreparation && preparationOptions.length === 0) {
         toast.error("Please select at least one preparation option");
         return;
       }
@@ -350,35 +408,25 @@ const Add = ({ token }) => {
       // -----------------------------------------
       // NORMALIZE PREPARATION OPTIONS
       // -----------------------------------------
-      //
-      // MongoDB schema expects:
-      //
-      // [
-      //   {
-      //     name: "Whole & Cleaned",
-      //     pricePerKg: 500
-      //   }
-      // ]
-      //
-      // NOT:
-      //
-      // ["Whole & Cleaned"]
-      //
-      // -----------------------------------------
 
-      const finalPreparationOptions = preparationOptions
-        .map((option) => ({
-          name: getPreparationName(option).trim(),
-          pricePerKg: getPreparationPrice(option),
-        }))
-        .filter(
-          (option) =>
-            option.name &&
-            Number.isFinite(option.pricePerKg) &&
-            option.pricePerKg >= 0
-        );
+      const finalPreparationOptions = requiresPreparation
+        ? preparationOptions
+            .map((option) => ({
+              name: getPreparationName(option).trim(),
+              pricePerKg: getPreparationPrice(option),
+            }))
+            .filter(
+              (option) =>
+                option.name &&
+                Number.isFinite(option.pricePerKg) &&
+                option.pricePerKg >= 0
+            )
+        : [];
 
-      if (finalPreparationOptions.length === 0) {
+      if (
+        requiresPreparation &&
+        finalPreparationOptions.length === 0
+      ) {
         toast.error("Please add a valid preparation option");
         return;
       }
@@ -390,18 +438,25 @@ const Add = ({ token }) => {
       const formData = new FormData();
 
       formData.append("name", name.trim());
+
       formData.append("overview", overview.trim());
 
       formData.append("category", category);
-      formData.append("subCategory", subCategory);
+
+      formData.append("subCategory", subCategory.trim());
 
       formData.append("price", Number(price));
+
       formData.append("stock", Number(stock));
 
       formData.append("isAvailable", isAvailable);
+
       formData.append("bestseller", bestseller);
 
-      // Weight
+      // -----------------------------------------
+      // WEIGHT
+      // -----------------------------------------
+
       formData.append(
         "minQuantity",
         weight.min !== "" ? Number(weight.min) : 0.5
@@ -412,7 +467,10 @@ const Add = ({ token }) => {
         weight.max !== "" ? Number(weight.max) : 10
       );
 
-      // Description
+      // -----------------------------------------
+      // DESCRIPTION
+      // -----------------------------------------
+
       formData.append(
         "description",
         JSON.stringify({
@@ -427,9 +485,11 @@ const Add = ({ token }) => {
         })
       );
 
-      // ======================================================
-      // IMPORTANT FIX
-      // ======================================================
+      // -----------------------------------------
+      // PREPARATION OPTIONS
+      // -----------------------------------------
+      // Dry Fish, Dry Prawns and Pickles send []
+      // -----------------------------------------
 
       formData.append(
         "preparationOptions",
@@ -477,12 +537,18 @@ const Add = ({ token }) => {
             : "Product added successfully"
         );
 
-        // Clear form
+        // -----------------------------------------
+        // CLEAR FORM
+        // -----------------------------------------
+
         setName("");
         setOverview("");
         setPrice("");
         setStock(0);
         setImage(null);
+
+        setCategory("Fresh Water Fish");
+        setSubCategory("");
 
         setWeight({
           min: "",
@@ -502,10 +568,15 @@ const Add = ({ token }) => {
         setCustomPreparation("");
         setBenefitInput("");
 
-        // Go back to product list
+        // -----------------------------------------
+        // GO BACK TO PRODUCT LIST
+        // -----------------------------------------
+
         navigate("/list");
       } else {
-        toast.error(response.data.message || "Something went wrong");
+        toast.error(
+          response.data.message || "Something went wrong"
+        );
       }
     } catch (error) {
       console.error("Product submit error:", error);
@@ -531,7 +602,8 @@ const Add = ({ token }) => {
   // ==========================================================
 
   const currentPresets =
-    preparationPresets[getPreparationType()] || preparationPresets.fish;
+    preparationPresets[getPreparationType()] ||
+    preparationPresets.fish;
 
   // ==========================================================
   // UI
@@ -584,6 +656,7 @@ const Add = ({ token }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
         {/* IMAGE */}
+
         <div className="bg-white border rounded-2xl p-5">
           <h2 className="font-semibold text-gray-800 mb-4">
             Product Image
@@ -649,6 +722,7 @@ const Add = ({ token }) => {
         </div>
 
         {/* BASIC DETAILS */}
+
         <div className="bg-white border rounded-2xl p-5">
           <h2 className="font-semibold text-gray-800 mb-5">
             Basic Information
@@ -656,6 +730,7 @@ const Add = ({ token }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* NAME */}
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Product Name
@@ -672,6 +747,7 @@ const Add = ({ token }) => {
             </div>
 
             {/* CATEGORY */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Category
@@ -679,23 +755,47 @@ const Add = ({ token }) => {
 
               <select
                 value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  setPreparationOptions([]);
-                }}
+                onChange={(e) =>
+                  handleCategoryChange(e.target.value)
+                }
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black"
               >
-                <option value="Live Fish">Live Fish</option>
-                <option value="Prawns">Prawns</option>
-                <option value="Crabs">Crabs</option>
-                <option value="Sea Fish">Sea Fish</option>
-                <option value="Freshwater Fish">
-                  Freshwater Fish
+                <option value="Fresh Water Fish">
+                  Fresh Water Fish
+                </option>
+
+                <option value="Sea Fish">
+                  Sea Fish
+                </option>
+
+                <option value="Kolkata Fish">
+                  Kolkata Fish
+                </option>
+
+                <option value="Prawns">
+                  Prawns
+                </option>
+
+                <option value="Crabs">
+                  Crabs
+                </option>
+
+                <option value="Dry Fish">
+                  Dry Fish
+                </option>
+
+                <option value="Dry Prawns">
+                  Dry Prawns
+                </option>
+
+                <option value="Pickles">
+                  Pickles
                 </option>
               </select>
             </div>
 
             {/* SUB CATEGORY */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Sub Category
@@ -704,13 +804,16 @@ const Add = ({ token }) => {
               <input
                 type="text"
                 value={subCategory}
-                onChange={(e) => setSubCategory(e.target.value)}
-                placeholder="Example: Boneless Fish"
+                onChange={(e) =>
+                  setSubCategory(e.target.value)
+                }
+                placeholder="Example: Rohu"
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black"
               />
             </div>
 
             {/* PRICE */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Price per KG (₹)
@@ -728,6 +831,7 @@ const Add = ({ token }) => {
             </div>
 
             {/* STOCK */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Stock
@@ -744,6 +848,7 @@ const Add = ({ token }) => {
             </div>
 
             {/* OVERVIEW */}
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Product Overview
@@ -761,12 +866,15 @@ const Add = ({ token }) => {
           </div>
 
           {/* STATUS */}
+
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer hover:bg-gray-50">
               <input
                 type="checkbox"
                 checked={isAvailable}
-                onChange={(e) => setIsAvailable(e.target.checked)}
+                onChange={(e) =>
+                  setIsAvailable(e.target.checked)
+                }
                 className="w-5 h-5"
               />
 
@@ -785,7 +893,9 @@ const Add = ({ token }) => {
               <input
                 type="checkbox"
                 checked={bestseller}
-                onChange={(e) => setBestseller(e.target.checked)}
+                onChange={(e) =>
+                  setBestseller(e.target.checked)
+                }
                 className="w-5 h-5"
               />
 
@@ -865,118 +975,129 @@ const Add = ({ token }) => {
           PREPARATION OPTIONS
       ====================================================== */}
 
-      <div className="bg-white border rounded-2xl p-5 mt-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
-          <div>
-            <h2 className="font-semibold text-gray-800">
-              Preparation Options
-            </h2>
+      {requiresPreparation && (
+        <div className="bg-white border rounded-2xl p-5 mt-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+            <div>
+              <h2 className="font-semibold text-gray-800">
+                Preparation Options
+              </h2>
 
-            <p className="text-sm text-gray-500 mt-1">
-              Select how customers can request this product.
-            </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Select how customers can request this product.
+              </p>
+            </div>
+
+            <span className="text-xs bg-gray-100 px-3 py-1.5 rounded-full text-gray-600">
+              {preparationOptions.length} selected
+            </span>
           </div>
 
-          <span className="text-xs bg-gray-100 px-3 py-1.5 rounded-full text-gray-600">
-            {preparationOptions.length} selected
-          </span>
-        </div>
+          {/* PRESETS */}
 
-        {/* PRESETS */}
-        <div className="mb-6">
-          <p className="text-sm font-medium text-gray-700 mb-3">
-            Common Options
-          </p>
-
-          <div className="flex flex-wrap gap-2">
-            {currentPresets.map((option) => {
-              const selected = preparationOptions.some(
-                (item) =>
-                  getPreparationName(item).toLowerCase() ===
-                  option.toLowerCase()
-              );
-
-              return (
-                <button
-                  type="button"
-                  key={option}
-                  onClick={() => togglePreparation(option)}
-                  className={`px-4 py-2 rounded-lg border text-sm transition ${
-                    selected
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-gray-700 border-gray-300 hover:border-black"
-                  }`}
-                >
-                  {selected ? "✓ " : "+ "}
-                  {option}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* CUSTOM OPTION */}
-        <div className="border-t pt-5">
-          <p className="text-sm font-medium text-gray-700 mb-3">
-            Add Custom Preparation
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 max-w-2xl">
-            <input
-              type="text"
-              value={customPreparation}
-              onChange={(e) => setCustomPreparation(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addCustomPreparation();
-                }
-              }}
-              placeholder="Example: Boneless Cut"
-              className="flex-1 border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black"
-            />
-
-            <button
-              type="button"
-              onClick={addCustomPreparation}
-              className="flex items-center justify-center gap-2 px-5 py-3 bg-gray-900 text-white rounded-lg hover:bg-black"
-            >
-              <FaPlus />
-              Add
-            </button>
-          </div>
-        </div>
-
-        {/* SELECTED OPTIONS */}
-        {preparationOptions.length > 0 && (
-          <div className="border-t mt-6 pt-5">
+          <div className="mb-6">
             <p className="text-sm font-medium text-gray-700 mb-3">
-              Selected Options
+              Common Options
             </p>
 
             <div className="flex flex-wrap gap-2">
-              {preparationOptions.map((option, index) => (
-                <div
-                  key={`${getPreparationName(option)}-${index}`}
-                  className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2"
-                >
-                  <span className="text-sm text-gray-700">
-                    {getPreparationName(option)}
-                  </span>
+              {currentPresets.map((option) => {
+                const selected = preparationOptions.some(
+                  (item) =>
+                    getPreparationName(item).toLowerCase() ===
+                    option.toLowerCase()
+                );
 
+                return (
                   <button
                     type="button"
-                    onClick={() => removePreparation(option)}
-                    className="text-gray-400 hover:text-red-600"
+                    key={option}
+                    onClick={() =>
+                      togglePreparation(option)
+                    }
+                    className={`px-4 py-2 rounded-lg border text-sm transition ${
+                      selected
+                        ? "bg-black text-white border-black"
+                        : "bg-white text-gray-700 border-gray-300 hover:border-black"
+                    }`}
                   >
-                    <FaTimes />
+                    {selected ? "✓ " : "+ "}
+                    {option}
                   </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* CUSTOM OPTION */}
+
+          <div className="border-t pt-5">
+            <p className="text-sm font-medium text-gray-700 mb-3">
+              Add Custom Preparation
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 max-w-2xl">
+              <input
+                type="text"
+                value={customPreparation}
+                onChange={(e) =>
+                  setCustomPreparation(e.target.value)
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomPreparation();
+                  }
+                }}
+                placeholder="Example: Boneless Cut"
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black"
+              />
+
+              <button
+                type="button"
+                onClick={addCustomPreparation}
+                className="flex items-center justify-center gap-2 px-5 py-3 bg-gray-900 text-white rounded-lg hover:bg-black"
+              >
+                <FaPlus />
+                Add
+              </button>
+            </div>
+          </div>
+
+          {/* SELECTED OPTIONS */}
+
+          {preparationOptions.length > 0 && (
+            <div className="border-t mt-6 pt-5">
+              <p className="text-sm font-medium text-gray-700 mb-3">
+                Selected Options
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {preparationOptions.map((option, index) => (
+                  <div
+                    key={`${getPreparationName(option)}-${index}`}
+                    className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2"
+                  >
+                    <span className="text-sm text-gray-700">
+                      {getPreparationName(option)}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removePreparation(option)
+                      }
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ======================================================
           DESCRIPTION DETAILS
@@ -989,6 +1110,7 @@ const Add = ({ token }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* PROTEINS */}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Proteins
@@ -998,7 +1120,10 @@ const Add = ({ token }) => {
               type="text"
               value={description.proteins}
               onChange={(e) =>
-                handleDescriptionChange("proteins", e.target.value)
+                handleDescriptionChange(
+                  "proteins",
+                  e.target.value
+                )
               }
               placeholder="Example: 20g per 100g"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black"
@@ -1006,6 +1131,7 @@ const Add = ({ token }) => {
           </div>
 
           {/* CALORIES */}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Calories
@@ -1015,7 +1141,10 @@ const Add = ({ token }) => {
               type="text"
               value={description.calories}
               onChange={(e) =>
-                handleDescriptionChange("calories", e.target.value)
+                handleDescriptionChange(
+                  "calories",
+                  e.target.value
+                )
               }
               placeholder="Example: 120 kcal"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black"
@@ -1023,6 +1152,7 @@ const Add = ({ token }) => {
           </div>
 
           {/* VITAMINS */}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Vitamins
@@ -1032,7 +1162,10 @@ const Add = ({ token }) => {
               type="text"
               value={description.vitamins}
               onChange={(e) =>
-                handleDescriptionChange("vitamins", e.target.value)
+                handleDescriptionChange(
+                  "vitamins",
+                  e.target.value
+                )
               }
               placeholder="Example: Vitamin D, B12"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black"
@@ -1040,6 +1173,7 @@ const Add = ({ token }) => {
           </div>
 
           {/* MINERALS */}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Minerals
@@ -1049,7 +1183,10 @@ const Add = ({ token }) => {
               type="text"
               value={description.minerals}
               onChange={(e) =>
-                handleDescriptionChange("minerals", e.target.value)
+                handleDescriptionChange(
+                  "minerals",
+                  e.target.value
+                )
               }
               placeholder="Example: Iron, Zinc"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black"
@@ -1057,6 +1194,7 @@ const Add = ({ token }) => {
           </div>
 
           {/* USES */}
+
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Uses
@@ -1065,7 +1203,10 @@ const Add = ({ token }) => {
             <textarea
               value={description.uses}
               onChange={(e) =>
-                handleDescriptionChange("uses", e.target.value)
+                handleDescriptionChange(
+                  "uses",
+                  e.target.value
+                )
               }
               placeholder="Example: Suitable for curry, fry and biryani..."
               rows={3}
@@ -1087,7 +1228,9 @@ const Add = ({ token }) => {
             <input
               type="text"
               value={benefitInput}
-              onChange={(e) => setBenefitInput(e.target.value)}
+              onChange={(e) =>
+                setBenefitInput(e.target.value)
+              }
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();

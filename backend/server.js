@@ -44,6 +44,7 @@ const app = express();
 // CORS
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://e-commerce-6tngljf2u-e-commerce-team.vercel.app",
 ];
 
