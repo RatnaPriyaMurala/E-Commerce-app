@@ -16,13 +16,13 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="relative mt-10 sm:mt-12 bg-slate-950 text-white rounded-t-2xl overflow-hidden">
+    <footer className="relative mt-8 sm:mt-10 bg-slate-950 text-white rounded-t-2xl overflow-hidden">
 
       {/* MAIN FOOTER */}
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-6">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-7 sm:pt-8 pb-5">
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-7">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
 
           {/* BRAND */}
 
@@ -36,11 +36,11 @@ const Footer = () => {
               />
             </Link>
 
-            <p className="mt-3 text-[11px] sm:text-xs text-gray-400 leading-5 max-w-sm">
+            <p className="mt-2.5 text-[11px] sm:text-xs text-gray-400 leading-5 max-w-sm">
               Freshwater fish, seawater fish, prawns and crabs sourced carefully and packed hygienically.
             </p>
 
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-800/50 text-cyan-300 px-2.5 py-1.5 rounded-full text-[10px]">
+            <div className="mt-2.5 inline-flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-800/50 text-cyan-300 px-2.5 py-1.5 rounded-full text-[10px]">
               <FaFish />
               Freshness Delivered
             </div>
@@ -49,11 +49,11 @@ const Footer = () => {
           {/* COMPANY */}
 
           <div>
-            <h3 className="text-sm font-bold mb-3">
+            <h3 className="text-sm font-bold mb-2.5">
               Company
             </h3>
 
-            <ul className="space-y-2 text-[11px] text-gray-400">
+            <ul className="space-y-1.5 text-[11px] text-gray-400">
 
               <li>
                 <Link
@@ -101,11 +101,11 @@ const Footer = () => {
           {/* POLICIES */}
 
           <div>
-            <h3 className="text-sm font-bold mb-3">
+            <h3 className="text-sm font-bold mb-2.5">
               Policies
             </h3>
 
-            <ul className="space-y-2 text-[11px] text-gray-400">
+            <ul className="space-y-1.5 text-[11px] text-gray-400">
 
               <li>
                 <Link
@@ -150,11 +150,11 @@ const Footer = () => {
 
           <div className="col-span-2 lg:col-span-1">
 
-            <h3 className="text-sm font-bold mb-3">
+            <h3 className="text-sm font-bold mb-2.5">
               Contact Us
             </h3>
 
-            <div className="space-y-2.5 text-[11px] text-gray-400">
+            <div className="space-y-2 text-[11px] text-gray-400">
 
               <a
                 href="tel:+919954833369"
@@ -200,7 +200,7 @@ const Footer = () => {
 
             {/* SOCIAL */}
 
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-2.5">
 
               <button
                 type="button"
@@ -232,7 +232,7 @@ const Footer = () => {
 
         {/* TRUST STRIP */}
 
-        <div className="mt-6 pt-4 border-t border-slate-800">
+        <div className="mt-5 pt-3 border-t border-slate-800">
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9px] sm:text-[10px] text-gray-500">
 
@@ -264,7 +264,7 @@ const Footer = () => {
 
       <div className="border-t border-slate-800">
 
-        <div className="max-w-7xl mx-auto px-4 py-3 text-center">
+        <div className="max-w-7xl mx-auto px-4 py-2.5 text-center">
 
           <p className="text-[9px] sm:text-[10px] text-gray-500">
             © {new Date().getFullYear()}{" "}

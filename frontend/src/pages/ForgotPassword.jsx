@@ -1,24 +1,18 @@
 import React, { useContext, useState } from "react";
-import axios from "axios";
-import {
-  FaEnvelope,
-  FaLock,
-  FaKey,
-} from "react-icons/fa";
-import { toast } from "react-toastify";
 import { ShopContext } from "../context/ShopContext";
+import { FaKey, FaArrowLeft } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 const ForgotPassword = () => {
-  const {
-    backendUrl,
-    navigate,
-  } = useContext(ShopContext);
+  const { backendUrl, navigate } = useContext(ShopContext);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const resetPassword = async () => {
+  const resetPassword = async (e) => {
+    e.preventDefault();
+
     if (!email.trim()) {
       toast.error("Please enter your email address");
       return;
@@ -37,122 +31,124 @@ const ForgotPassword = () => {
     try {
       setLoading(true);
 
-      const response = await axios.post(
-        backendUrl + "/api/user/reset-password",
+      const response = await fetch(
+        `${backendUrl}/api/user/reset-password`,
         {
-          email: email.trim(),
-          password,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email.trim(),
+            password,
+          }),
         }
       );
 
-      if (response.data.success) {
-        toast.success("Password changed successfully");
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message || "Password changed successfully");
 
         setEmail("");
         setPassword("");
 
         navigate("/login");
       } else {
-        toast.error(
-          response.data.message || "Unable to reset password"
-        );
+        toast.error(data.message || "Unable to reset password");
       }
     } catch (error) {
-      console.log(error);
-
-      toast.error(
-        error.response?.data?.message ||
-        "Something went wrong. Please try again."
-      );
+      console.error(error);
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-700 via-cyan-700 to-blue-800 px-5 py-12">
+    <div className="min-h-screen border-t bg-gradient-to-b from-cyan-50 via-white to-sky-50 flex items-center justify-center py-8 px-3">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-cyan-50 flex items-center justify-center">
+              <FaKey className="text-3xl text-cyan-600" />
+            </div>
 
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 sm:p-10">
+            <h1 className="mt-4 text-2xl sm:text-3xl font-bold text-gray-800">
+              Change Password
+            </h1>
 
-        {/* Header */}
-        <div className="text-center">
-
-          <div className="mx-auto w-20 h-20 rounded-full bg-teal-100 flex items-center justify-center">
-            <FaKey className="text-4xl text-teal-700" />
+            <p className="mt-2 text-sm text-gray-500 leading-5">
+              Enter your registered email and choose a new password.
+            </p>
           </div>
 
-          <h2 className="text-3xl font-bold mt-6 text-gray-800">
-            Reset Password
-          </h2>
+          <form onSubmit={resetPassword} className="mt-7 space-y-4">
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-semibold text-gray-700 mb-1.5"
+              >
+                Email Address
+              </label>
 
-          <p className="text-gray-500 mt-3 leading-6">
-            Enter your registered email and create a new password.
-          </p>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+                autoComplete="email"
+              />
+            </div>
 
-        </div>
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-semibold text-gray-700 mb-1.5"
+              >
+                New Password
+              </label>
 
-        {/* Form */}
-        <div className="mt-10 space-y-6">
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter new password"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+                autoComplete="new-password"
+              />
 
-          {/* Email */}
-          <div className="flex items-center border border-gray-200 rounded-xl px-4 py-3 focus-within:border-teal-500 focus-within:ring-4 focus-within:ring-teal-100 transition">
+              <p className="mt-1.5 text-[11px] text-gray-400">
+                Password must contain at least 6 characters.
+              </p>
+            </div>
 
-            <FaEnvelope className="text-gray-500 shrink-0" />
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full rounded-xl py-3 font-semibold text-sm transition ${
+                loading
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-cyan-600 text-white hover:bg-cyan-700"
+              }`}
+            >
+              {loading ? "Changing Password..." : "Change Password"}
+            </button>
+          </form>
 
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="ml-4 w-full outline-none text-gray-700"
-              autoComplete="email"
-            />
-
-          </div>
-
-          {/* New Password */}
-          <div className="flex items-center border border-gray-200 rounded-xl px-4 py-3 focus-within:border-teal-500 focus-within:ring-4 focus-within:ring-teal-100 transition">
-
-            <FaLock className="text-gray-500 shrink-0" />
-
-            <input
-              type="password"
-              placeholder="New Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="ml-4 w-full outline-none text-gray-700"
-              autoComplete="new-password"
-            />
-
-          </div>
-
-          {/* Reset Button */}
-          <button
-            type="button"
-            onClick={resetPassword}
-            disabled={loading}
-            className={`w-full py-4 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-700 text-white font-semibold transition ${
-              loading
-                ? "opacity-70 cursor-not-allowed"
-                : "hover:scale-[1.02] hover:shadow-lg"
-            }`}
-          >
-            {loading ? "Changing Password..." : "Change Password"}
-          </button>
-
-          {/* Back to Login */}
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="w-full text-sm text-gray-500 hover:text-teal-700 transition"
+            className="mt-4 w-full flex items-center justify-center gap-2 text-sm font-semibold text-gray-600 hover:text-cyan-700 transition"
           >
+            <FaArrowLeft className="text-xs" />
             Back to Login
           </button>
-
         </div>
-
       </div>
-
     </div>
   );
 };

@@ -27,9 +27,9 @@ const ProductWeightSelector = ({
     selectedWeight === ""
   ) {
     return (
-      <div className="mt-3 flex items-center gap-3 rounded-xl bg-cyan-50 border border-cyan-100 p-4">
-        <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0">
-          <FaWeightHanging className="text-cyan-600" />
+      <div className="mt-2.5 flex items-center gap-2.5 rounded-xl bg-cyan-50 border border-cyan-100 p-3">
+        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
+          <FaWeightHanging className="text-cyan-600 text-sm" />
         </div>
 
         <div>
@@ -37,7 +37,7 @@ const ProductWeightSelector = ({
             Select your quantity
           </p>
 
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-[11px] text-gray-500 mt-0.5">
             Choose between {min} KG and {max} KG
           </p>
         </div>
@@ -53,9 +53,9 @@ const ProductWeightSelector = ({
 
   if (stock <= 0) {
     return (
-      <div className="mt-3 flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 p-4">
-        <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0">
-          <FaExclamationTriangle className="text-red-500" />
+      <div className="mt-2.5 flex items-center gap-2.5 rounded-xl bg-red-50 border border-red-200 p-3">
+        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
+          <FaExclamationTriangle className="text-red-500 text-sm" />
         </div>
 
         <div>
@@ -63,7 +63,7 @@ const ProductWeightSelector = ({
             Product unavailable
           </p>
 
-          <p className="text-xs text-red-500 mt-1">
+          <p className="text-[11px] text-red-500 mt-0.5">
             This product is currently out of stock.
           </p>
         </div>
@@ -77,9 +77,9 @@ const ProductWeightSelector = ({
 
   if (weight < min) {
     return (
-      <div className="mt-3 flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 p-4">
-        <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0">
-          <FaExclamationTriangle className="text-red-500" />
+      <div className="mt-2.5 flex items-center gap-2.5 rounded-xl bg-red-50 border border-red-200 p-3">
+        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
+          <FaExclamationTriangle className="text-red-500 text-sm" />
         </div>
 
         <div>
@@ -87,7 +87,7 @@ const ProductWeightSelector = ({
             Minimum order is {min} KG
           </p>
 
-          <p className="text-xs text-red-500 mt-1">
+          <p className="text-[11px] text-red-500 mt-0.5">
             Please increase the quantity before adding to cart.
           </p>
         </div>
@@ -101,9 +101,9 @@ const ProductWeightSelector = ({
 
   if (weight > max) {
     return (
-      <div className="mt-3 flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 p-4">
-        <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0">
-          <FaExclamationTriangle className="text-red-500" />
+      <div className="mt-2.5 flex items-center gap-2.5 rounded-xl bg-red-50 border border-red-200 p-3">
+        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
+          <FaExclamationTriangle className="text-red-500 text-sm" />
         </div>
 
         <div>
@@ -111,7 +111,7 @@ const ProductWeightSelector = ({
             Maximum available is {max} KG
           </p>
 
-          <p className="text-xs text-red-500 mt-1">
+          <p className="text-[11px] text-red-500 mt-0.5">
             Please reduce the quantity to continue.
           </p>
         </div>
@@ -124,9 +124,9 @@ const ProductWeightSelector = ({
   // ============================================================
 
   return (
-    <div className="mt-3 flex items-center gap-3 rounded-xl bg-green-50 border border-green-200 p-4">
-      <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0">
-        <FaCheckCircle className="text-green-500" />
+    <div className="mt-2.5 flex items-center gap-2.5 rounded-xl bg-green-50 border border-green-200 p-3">
+      <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
+        <FaCheckCircle className="text-green-500 text-sm" />
       </div>
 
       <div>
@@ -134,7 +134,7 @@ const ProductWeightSelector = ({
           {weight} KG is available
         </p>
 
-        <p className="text-xs text-green-600 mt-1">
+        <p className="text-[11px] text-green-600 mt-0.5">
           Ready to add to your cart.
         </p>
       </div>

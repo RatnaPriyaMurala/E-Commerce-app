@@ -9,6 +9,7 @@ import {
   useParams,
   Link,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
 import {
@@ -37,6 +38,7 @@ import RelatedProducts from "../components/RelatedProducts";
 const Product = () => {
   const { productId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const {
     products = [],
@@ -388,6 +390,64 @@ const requiresPreparation =
   }
 };
 
+
+const handleBuyNow = () => {
+  if (isOutOfStock) return;
+
+  if (
+    requiresPreparation &&
+    !isPreparationSelected
+  ) {
+    window.alert(
+      "Please select a preparation option before buying this product."
+    );
+    return;
+  }
+
+  if (
+    !weight ||
+    weight < safeMin ||
+    weight > availableMax
+  ) {
+    window.alert(
+      "Please select a valid quantity."
+    );
+    return;
+  }
+
+  const buyNowItem = {
+    _id: productData._id,
+
+    name: productData.name,
+
+    image: Array.isArray(productData.image)
+      ? productData.image[0] || ""
+      : productData.image || "",
+
+    /*
+     * Use the selected preparation price
+     * when one exists.
+     */
+    price: Number(
+      currentPricePerKg || 0
+    ),
+
+    weight: Number(weight),
+
+    quantity: 1,
+
+    preparation: requiresPreparation
+      ? selectedPreparation
+      : "",
+  };
+
+  navigate("/place-order", {
+    state: {
+      buyNowItem,
+    },
+  });
+};
+
   // ============================================================
   // SMALL ACCORDION COMPONENT
   // ============================================================
@@ -441,7 +501,7 @@ const requiresPreparation =
   // ============================================================
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-8 overflow-hidden">
+    <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-5 overflow-hidden">
 
       {/* ========================================================
           BREADCRUMB
@@ -589,7 +649,7 @@ const requiresPreparation =
 
           {/* STOCK */}
 
-          <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="grid grid-cols-3 gap-2 mt-4">
 
             <div className="rounded-lg bg-green-50 border border-green-100 px-2.5 py-2">
               <p className="text-[9px] text-gray-500">
@@ -844,39 +904,69 @@ const requiresPreparation =
 
           {/* ADD TO CART */}
 
-          <div className="mt-3">
+         {/* ADD TO CART + BUY NOW */}
 
-            {!isOutOfStock ? (
-              <button
-                type="button"
-                disabled={
-  (requiresPreparation &&
-    !isPreparationSelected) ||
-  weight <= 0 ||
-  weight > availableStock
-}
-                onClick={handleAddToCart}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base shadow-md flex items-center justify-center gap-2"
-              >
-                <FaShoppingCart />
+<div className="mt-3">
 
-                {requiresPreparation &&
-!isPreparationSelected
-  ? "SELECT PREPARATION TO CONTINUE"
-  : editCart
-  ? "UPDATE CART"
-  : "ADD TO CART"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="w-full py-3.5 rounded-xl bg-gray-400 text-white font-bold text-sm"
-              >
-                OUT OF STOCK
-              </button>
-            )}
-          </div>
+  {!isOutOfStock ? (
+    <div className="space-y-2.5">
+
+      {/* ADD TO CART / UPDATE CART */}
+      <button
+        type="button"
+        disabled={
+          (requiresPreparation &&
+            !isPreparationSelected) ||
+          weight <= 0 ||
+          weight > availableStock
+        }
+        onClick={handleAddToCart}
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base shadow-md flex items-center justify-center gap-2 transition"
+      >
+        <FaShoppingCart />
+
+        {requiresPreparation &&
+        !isPreparationSelected
+          ? "SELECT PREPARATION TO CONTINUE"
+          : editCart
+          ? "UPDATE CART"
+          : "ADD TO CART"}
+      </button>
+
+      {/* BUY NOW */}
+      {!editCart && (
+        <button
+          type="button"
+          disabled={
+            (requiresPreparation &&
+              !isPreparationSelected) ||
+            weight <= 0 ||
+            weight > availableStock
+          }
+          onClick={handleBuyNow}
+          className="w-full py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base shadow-md flex items-center justify-center gap-2 transition"
+        >
+          <FaCreditCard />
+
+          {requiresPreparation &&
+          !isPreparationSelected
+            ? "SELECT PREPARATION TO CONTINUE"
+            : "BUY NOW"}
+        </button>
+      )}
+
+    </div>
+  ) : (
+    <button
+      type="button"
+      disabled
+      className="w-full py-3.5 rounded-xl bg-gray-400 text-white font-bold text-sm"
+    >
+      OUT OF STOCK
+    </button>
+  )}
+
+</div>
 
           {/* ASSURANCE */}
 
@@ -932,7 +1022,7 @@ const requiresPreparation =
           RELATED PRODUCTS — MOVED UP
       ======================================================== */}
 
-      <div className="mt-6">
+      <div className="mt-4">
         <RelatedProducts
           category={productData.category}
           subCategory={productData.subCategory}
@@ -944,7 +1034,7 @@ const requiresPreparation =
           PRODUCT INFORMATION ACCORDIONS
       ======================================================== */}
 
-      <div className="mt-5 space-y-2">
+     <div className="mt-4 space-y-2">
 
         {/* NUTRITION */}
 
@@ -1135,7 +1225,7 @@ const requiresPreparation =
           CUSTOMER FEEDBACK — COMPACT
       ======================================================== */}
 
-      <div className="mt-5 bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+      <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-xl p-4">
 
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center">
@@ -1162,7 +1252,7 @@ const requiresPreparation =
           WHY CHOOSE US — NOW AT BOTTOM
       ======================================================== */}
 
-      <div className="mt-5 rounded-xl bg-gradient-to-r from-cyan-700 to-blue-800 text-white overflow-hidden">
+      <div className="mt-4 rounded-xl bg-gradient-to-r from-cyan-700 to-blue-800 text-white overflow-hidden">
 
         <button
           type="button"
@@ -1246,7 +1336,7 @@ const requiresPreparation =
           BACK TO MENU
       ======================================================== */}
 
-      <div className="flex justify-center mt-5">
+      <div className="flex justify-center mt-4">
         <Link
           to="/menu"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold shadow-sm hover:text-cyan-700 transition text-xs"

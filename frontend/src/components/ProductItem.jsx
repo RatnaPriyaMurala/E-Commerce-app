@@ -17,12 +17,19 @@ const ProductItem = ({
   price,
   preparationOptions = [],
 }) => {
-  const { currency } =
-    useContext(ShopContext);
+  const { currency } = useContext(ShopContext);
+
+  /* ============================================================
+     IMAGE
+  ============================================================ */
 
   const displayImage = Array.isArray(image)
     ? image[0]
     : image;
+
+  /* ============================================================
+     PREPARATION OPTIONS
+  ============================================================ */
 
   const getPreparationName = (option) => {
     if (typeof option === "string") {
@@ -49,120 +56,307 @@ const ProductItem = ({
   const hasPreparationOptions =
     validPreparationNames.length > 0;
 
+  /* ============================================================
+     PRODUCT CARD
+  ============================================================ */
+
   return (
     <Link
       to={`/product/${id}`}
-      className="group block bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
+      className="
+        group
+        block
+        overflow-hidden
+        rounded-2xl
+        border
+        border-gray-100
+        bg-white
+        shadow-sm
+        transition-all
+        duration-200
+        hover:-translate-y-1
+        hover:shadow-lg
+      "
     >
-      {/* IMAGE */}
+      {/* ======================================================
+          IMAGE
+      ====================================================== */}
 
       <div className="relative overflow-hidden bg-gray-100">
 
         {displayImage ? (
           <img
             src={displayImage}
-            alt={
-              name || "Fresh seafood"
-            }
+            alt={name || "Fresh seafood"}
             loading="lazy"
-            className="w-full h-44 sm:h-52 object-cover transition-transform duration-500 group-hover:scale-105"
+            className="
+              h-32
+              w-full
+              object-cover
+              transition-transform
+              duration-500
+              group-hover:scale-105
+              sm:h-44
+            "
           />
         ) : (
-          <div className="w-full h-44 sm:h-52 flex items-center justify-center bg-cyan-50">
+          <div
+            className="
+              flex
+              h-32
+              w-full
+              items-center
+              justify-center
+              bg-cyan-50
+              sm:h-44
+            "
+          >
             <FaFish className="text-5xl text-cyan-300" />
           </div>
         )}
 
-        {/* Fresh badge */}
-
-        <div className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 bg-white/95 text-cyan-700 text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full shadow">
-          <FaFish />
-          Fresh
-        </div>
-
-        {/* Quality */}
+        {/* ==================================================
+            FRESH BADGE
+        ================================================== */}
 
         <div
-          className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/95 flex items-center justify-center shadow"
-          title="Quality Checked"
+          className="
+            absolute
+            left-2
+            top-2
+            inline-flex
+            items-center
+            gap-1
+            rounded-full
+            bg-white/95
+            px-2
+            py-1
+            text-[8px]
+            font-bold
+            text-cyan-700
+            shadow
+            sm:left-2.5
+            sm:top-2.5
+            sm:text-[10px]
+          "
         >
-          <FaCheckCircle className="text-green-500 text-xs" />
+          <FaFish />
+
+          <span>
+            Fresh
+          </span>
         </div>
 
-        {/* Preparation */}
+        {/* ==================================================
+            QUALITY CHECKED
+        ================================================== */}
+
+        <div
+          className="
+            absolute
+            right-2
+            top-2
+            flex
+            h-6
+            w-6
+            items-center
+            justify-center
+            rounded-full
+            bg-white/95
+            shadow
+            sm:right-2.5
+            sm:top-2.5
+            sm:h-7
+            sm:w-7
+          "
+          title="Quality Checked"
+        >
+          <FaCheckCircle className="text-[10px] text-green-500 sm:text-xs" />
+        </div>
+
+        {/* ==================================================
+            PREPARATION AVAILABLE
+        ================================================== */}
 
         {hasPreparationOptions && (
-          <div className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 bg-black/65 text-white text-[9px] font-semibold px-2 py-1 rounded-full">
-            <FaCut className="text-cyan-300" />
-            Preparation Available
+          <div
+            className="
+              absolute
+              bottom-2
+              left-2
+              inline-flex
+              max-w-[calc(100%-1rem)]
+              items-center
+              gap-1
+              rounded-full
+              bg-black/65
+              px-2
+              py-1
+              text-[8px]
+              font-semibold
+              text-white
+              backdrop-blur-sm
+              sm:bottom-2.5
+              sm:left-2.5
+              sm:text-[9px]
+            "
+          >
+            <FaCut className="shrink-0 text-[9px] text-cyan-300" />
+
+            <span className="truncate">
+              Preparation Available
+            </span>
           </div>
         )}
       </div>
 
-      {/* INFORMATION */}
+      {/* ======================================================
+          PRODUCT INFORMATION
+      ====================================================== */}
 
-      <div className="p-3.5">
+      <div className="p-2.5 sm:p-3">
+
+        {/* PRODUCT NAME */}
 
         <h3
-          className="font-bold text-base text-gray-800 line-clamp-1 group-hover:text-cyan-700 transition"
+          className="
+            line-clamp-1
+            text-sm
+            font-bold
+            text-gray-800
+            transition
+            group-hover:text-cyan-700
+            sm:text-base
+          "
           title={name}
         >
           {name || "Seafood Product"}
         </h3>
 
-        <p className="mt-1 text-[11px] text-gray-500 line-clamp-1">
-          Quality seafood, carefully selected for your order
-        </p>
+        {/* ====================================================
+            PREPARATION OPTIONS
+
+            Useful information, but kept compact.
+        ==================================================== */}
 
         {hasPreparationOptions && (
-          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-gray-500">
-            <FaCut className="text-cyan-600 shrink-0" />
+          <div className="mt-1.5 flex items-center gap-1 text-[9px] text-gray-500 sm:mt-2 sm:text-[10px]">
+            <FaCut className="shrink-0 text-cyan-600" />
 
             <span className="line-clamp-1">
               {validPreparationNames
                 .slice(0, 2)
                 .join(" • ")}
 
-              {validPreparationNames.length >
-                2 && " • More"}
+              {validPreparationNames.length > 2 &&
+                " • More"}
             </span>
           </div>
         )}
 
-        <div className="flex items-end justify-between gap-2 mt-3">
+        {/* ====================================================
+            PRICE + VIEW BUTTON
+        ==================================================== */}
 
-          <div>
-            <p className="text-[9px] text-gray-400">
+        <div
+          className="
+            mt-2
+            flex
+            items-center
+            justify-between
+            gap-2
+            sm:mt-2.5
+          "
+        >
+          {/* PRICE */}
+
+          <div className="min-w-0">
+
+            <p className="text-[8px] text-gray-400 sm:text-[9px]">
               Starting from
             </p>
 
-            <p className="mt-0.5 text-xl font-extrabold text-cyan-700">
+            <p
+              className="
+                mt-0.5
+                whitespace-nowrap
+                text-lg
+                font-extrabold
+                text-cyan-700
+                sm:text-xl
+              "
+            >
               {currency}
-              {Number(
-                price || 0
-              ).toLocaleString("en-IN")}
+              {Number(price || 0).toLocaleString("en-IN")}
 
-              <span className="text-[10px] font-medium text-gray-400 ml-1">
+              <span
+                className="
+                  ml-1
+                  text-[9px]
+                  font-medium
+                  text-gray-400
+                  sm:text-[10px]
+                "
+              >
                 / KG
               </span>
             </p>
           </div>
 
-          <div className="w-9 h-9 rounded-full bg-cyan-600 text-white flex items-center justify-center group-hover:bg-blue-700 transition">
-            <FaArrowRight className="text-xs" />
+          {/* VIEW BUTTON */}
+
+          <div
+            className="
+              flex
+              h-8
+              w-8
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              bg-cyan-600
+              text-white
+              transition
+              group-hover:bg-blue-700
+              sm:h-9
+              sm:w-9
+            "
+          >
+            <FaArrowRight className="text-[10px] sm:text-xs" />
           </div>
         </div>
 
-        <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[9px] text-gray-500">
+        {/* ====================================================
+            DESKTOP-ONLY SUPPORTING INFORMATION
+
+            Hidden on mobile to keep cards compact.
+        ==================================================== */}
+
+        <div
+          className="
+            mt-2.5
+            hidden
+            items-center
+            justify-between
+            border-t
+            border-gray-100
+            pt-2
+            text-[9px]
+            text-gray-500
+            sm:flex
+          "
+        >
           <span className="flex items-center gap-1">
             <FaCheckCircle className="text-green-500" />
+
             Quality Checked
           </span>
 
-          <span className="text-cyan-700 font-semibold">
+          <span className="font-semibold text-cyan-700">
             View Details
           </span>
         </div>
+
       </div>
     </Link>
   );

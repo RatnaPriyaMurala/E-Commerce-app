@@ -1,6 +1,6 @@
 import React from "react";
 
-import Hero from "../components/Hero";
+import PromoSlider from "../components/PromoSlider";
 import LatestAdded from "../components/LatestAdded";
 import BestSeller from "../components/BestSeller";
 import OurSpecialItems from "../components/OurSpecialItems";
@@ -12,10 +12,13 @@ const Home = () => {
     <main className="overflow-hidden bg-white">
 
       {/* =====================================================
-          HERO
+          PROMOTIONAL SLIDER
+          
+          Replaces the old large Hero.
+          The first slide uses the existing hero image.
       ===================================================== */}
 
-      <Hero />
+      <PromoSlider />
 
       {/* =====================================================
           LATEST PRODUCTS
@@ -23,9 +26,9 @@ const Home = () => {
 
       <section
         aria-labelledby="latest-products"
-        className="bg-white py-12 sm:py-16 lg:py-20"
+        className="bg-white py-8 sm:py-10 lg:py-12"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
           <LatestAdded />
         </div>
       </section>
@@ -36,9 +39,9 @@ const Home = () => {
 
       <section
         aria-labelledby="best-sellers"
-        className="bg-gray-50 py-12 sm:py-16 lg:py-20"
+        className="bg-gray-50 py-8 sm:py-10 lg:py-12"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
           <BestSeller />
         </div>
       </section>
@@ -49,9 +52,9 @@ const Home = () => {
 
       <section
         aria-labelledby="special-items"
-        className="bg-white py-12 sm:py-16 lg:py-20"
+        className="bg-white py-8 sm:py-10 lg:py-12"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
           <OurSpecialItems />
         </div>
       </section>
@@ -64,7 +67,7 @@ const Home = () => {
         aria-labelledby="our-policy"
         className="bg-gradient-to-b from-slate-50 to-white"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
           <OurPolicy />
         </div>
       </section>
@@ -77,7 +80,7 @@ const Home = () => {
         aria-labelledby="newsletter"
         className="bg-cyan-50"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
           <NewsLetterBox />
         </div>
       </section>

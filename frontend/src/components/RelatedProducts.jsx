@@ -1,3 +1,4 @@
+
 import React, { useContext, useEffect, useState } from "react";
 import { ShopContext } from "../context/ShopContext";
 import ProductItem from "./ProductItem";
@@ -58,29 +59,29 @@ const RelatedProducts = ({
   if (!related.length) return null;
 
   return (
-    <section className="relative mt-20 sm:mt-24 py-14 sm:py-16 px-4 sm:px-6 lg:px-8 overflow-hidden rounded-[2rem] bg-gradient-to-b from-white via-cyan-50/60 to-sky-100/70">
+    <section className="relative mt-4 sm:mt-5 py-6 sm:py-8 px-3 sm:px-5 lg:px-6 overflow-hidden rounded-2xl bg-gradient-to-b from-white via-cyan-50/60 to-sky-100/70">
 
       {/* =====================================================
           DECORATIVE BACKGROUND
       ===================================================== */}
 
-      <div className="absolute -top-24 -right-24 w-72 h-72 bg-cyan-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-20 -right-20 w-56 h-56 bg-cyan-300/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-blue-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-56 h-56 bg-blue-300/20 rounded-full blur-3xl pointer-events-none" />
 
       {/* =====================================================
           SECTION HEADING
       ===================================================== */}
 
-      <div className="relative z-10 text-center mb-10 sm:mb-12">
+      <div className="relative z-10 text-center mb-5 sm:mb-6">
 
         {/* Small Badge */}
 
-        <div className="inline-flex items-center gap-2 bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full border border-cyan-200 shadow-sm">
+        <div className="inline-flex items-center gap-1.5 bg-cyan-100 text-cyan-700 px-3 py-1.5 rounded-full border border-cyan-200 shadow-sm">
 
-          <FaFish className="text-cyan-600" />
+          <FaFish className="text-xs text-cyan-600" />
 
-          <span className="text-sm font-semibold">
+          <span className="text-xs font-semibold">
             Fresh Recommendations
           </span>
 
@@ -88,7 +89,7 @@ const RelatedProducts = ({
 
         {/* Heading */}
 
-        <h2 className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-800 tracking-tight">
+        <h2 className="mt-2.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-800 tracking-tight">
 
           You May{" "}
 
@@ -100,10 +101,10 @@ const RelatedProducts = ({
 
         {/* Description */}
 
-        <p className="mt-4 max-w-2xl mx-auto text-sm sm:text-base text-gray-500 leading-7">
+        <p className="mt-2 max-w-xl mx-auto text-xs sm:text-sm text-gray-500 leading-5">
 
           Fresh seafood carefully selected based on your current
-          selection. Discover more delicious choices for your next meal.
+          selection. Discover more choices for your next meal.
 
         </p>
 
@@ -113,12 +114,12 @@ const RelatedProducts = ({
           RELATED PRODUCTS
       ===================================================== */}
 
-      <div className="relative z-10 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-7">
+      <div className="relative z-10 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
 
         {related.map((item, index) => (
           <div
             key={item._id}
-            className="relative group transition-all duration-500 hover:-translate-y-2"
+            className="relative group transition-all duration-300 hover:-translate-y-1"
             style={{
               animationDelay: `${index * 80}ms`,
             }}
@@ -126,7 +127,7 @@ const RelatedProducts = ({
 
             {/* Product Card */}
 
-            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl hover:border-cyan-200 transition-all duration-500">
+            <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg hover:border-cyan-200 transition-all duration-300">
 
               <ProductItem
                 id={item._id}
@@ -146,15 +147,15 @@ const RelatedProducts = ({
           BOTTOM MESSAGE
       ===================================================== */}
 
-      <div className="relative z-10 flex justify-center mt-10">
+      <div className="relative z-10 flex justify-center mt-5">
 
-        <div className="inline-flex items-center gap-2 text-sm text-gray-500">
+        <div className="inline-flex items-center gap-2 text-xs text-gray-500">
 
           <span>
             Explore more fresh seafood from our collection
           </span>
 
-          <FaArrowRight className="text-cyan-600 transition-transform duration-300 hover:translate-x-1" />
+          <FaArrowRight className="text-cyan-600" />
 
         </div>
 

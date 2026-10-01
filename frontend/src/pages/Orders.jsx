@@ -1,398 +1,1501 @@
-import React, { useContext, useEffect, useState } from "react";
+
+import React, {
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useLocation } from "react-router-dom";
+
+import Title from "../components/Title";
+import { ShopContext } from "../context/ShopContext";
+import { assets } from "../assets/assets";
 
 import {
-  FaBoxOpen,
-  FaCalendarAlt,
-  FaMoneyBillWave,
+  FaMapMarkerAlt,
+  FaUser,
+  FaCreditCard,
   FaTruck,
-  FaTimesCircle,
-  FaSyncAlt,
+  FaShieldAlt,
+  FaPhoneAlt,
   FaCheckCircle,
-  FaCut,
-  FaWeightHanging,
+  FaLock,
+  FaShoppingBag,
+  FaMobileAlt,
 } from "react-icons/fa";
 
-import { ShopContext } from "../context/ShopContext";
-import Title from "../components/Title";
+const PlaceOrder = () => {
+  const location = useLocation();
 
-const Orders = () => {
+  /*
+   * BUY NOW DATA
+   *
+   * Product.jsx sends the selected product here.
+   * Normal cart checkout does not send buyNowItem.
+   */
+  const buyNowItem = location.state?.buyNowItem || null;
+
+  const isBuyNow = Boolean(buyNowItem);
+
   const {
+    navigate,
     backendUrl,
+    products,
+    cartItems,
     token,
-    currency,
+    getCartAmount,
+    setCartItems,
+    currency = "₹",
   } = useContext(ShopContext);
 
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
-  // ==========================
-  // LOAD ORDERS
-  // ==========================
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    alternatePhone: "",
+    deliveryPoint: "",
+    city: "",
+    state: "",
+    zipcode: "",
+    landmark: "",
+  });
 
-  const getOrders = async () => {
-    try {
-      setLoading(true);
+  /* ============================================================
+     CART / TOTAL
+  ============================================================ */
 
-      const response = await axios.post(
-        backendUrl + "/api/order/userorders",
-        {},
-        {
-          headers: {
-            token,
-          },
-        }
+  const cartAmount = useMemo(() => {
+    /*
+     * BUY NOW
+     *
+     * Calculate only the selected Buy Now product.
+     */
+    if (isBuyNow && buyNowItem) {
+      return Number(
+        (
+          Number(buyNowItem.price || 0) *
+          Number(buyNowItem.weight || 0) *
+          Number(buyNowItem.quantity || 1)
+        ).toFixed(2)
       );
+    }
 
-      if (response.data.success) {
-        setOrders(response.data.orders || []);
-      } else {
-        toast.error(
-          response.data.message || "Unable to load orders"
+    /*
+     * NORMAL CART CHECKOUT
+     */
+    return Number(getCartAmount?.() || 0);
+  }, [
+    isBuyNow,
+    buyNowItem,
+    getCartAmount,
+  ]);
+
+  /*
+   * Existing backend uses fixed ₹10 delivery fee.
+   */
+  const deliveryAmount = 10;
+
+  const totalAmount = useMemo(() => {
+    if (cartAmount <= 0) return 0;
+
+    return Number(
+      (cartAmount + deliveryAmount).toFixed(2)
+    );
+  }, [cartAmount]);
+
+  /* ============================================================
+     BUILD ORDER ITEMS
+  ============================================================ */
+
+  const orderItems = useMemo(() => {
+    /*
+     * ==========================================================
+     * BUY NOW MODE
+     *
+     * Use ONLY the selected Buy Now product.
+     * Existing cart is completely ignored.
+     * ==========================================================
+     */
+
+    if (isBuyNow && buyNowItem) {
+      return [
+        {
+          _id: buyNowItem._id,
+
+          name: buyNowItem.name,
+
+          image: Array.isArray(buyNowItem.image)
+            ? buyNowItem.image[0] || ""
+            : buyNowItem.image || "",
+
+          price: Number(
+            buyNowItem.price || 0
+          ),
+
+          weight: Number(
+            buyNowItem.weight || 0
+          ),
+
+          quantity: Number(
+            buyNowItem.quantity || 1
+          ),
+
+          preparation: String(
+            buyNowItem.preparation || ""
+          ).trim(),
+        },
+      ];
+    }
+
+    /*
+     * ==========================================================
+     * NORMAL CART CHECKOUT
+     * ==========================================================
+     */
+
+    const items = [];
+
+    if (
+      !products?.length ||
+      !cartItems ||
+      typeof cartItems !== "object"
+    ) {
+      return items;
+    }
+
+    Object.entries(cartItems).forEach(
+      ([productId, productCart]) => {
+        const product = products.find(
+          (item) => item._id === productId
+        );
+
+        if (!product || !productCart) return;
+
+        Object.entries(productCart).forEach(
+          ([lineKey, lineItem]) => {
+            let weight = 0;
+            let quantity = 0;
+            let preparation = "";
+
+            let pricePerKg = Number(
+              product.price || 0
+            );
+
+            /*
+             * NEW CART FORMAT
+             */
+            if (
+              lineItem &&
+              typeof lineItem === "object"
+            ) {
+              weight = Number(
+                lineItem.weight || 0
+              );
+
+              quantity = Number(
+                lineItem.quantity || 1
+              );
+
+              preparation = String(
+                lineItem.preparation || ""
+              ).trim();
+
+              pricePerKg = Number(
+                lineItem.pricePerKg ??
+                  product.price ??
+                  0
+              );
+            }
+
+            /*
+             * OLD CART FORMAT
+             */
+            else {
+              weight = Number(lineKey);
+
+              quantity = Number(
+                lineItem || 0
+              );
+
+              preparation = "";
+
+              pricePerKg = Number(
+                product.price || 0
+              );
+            }
+
+            if (
+              !Number.isFinite(weight) ||
+              weight <= 0 ||
+              !Number.isFinite(quantity) ||
+              quantity <= 0
+            ) {
+              return;
+            }
+
+            items.push({
+              _id: product._id,
+
+              name: product.name,
+
+              image: Array.isArray(
+                product.image
+              )
+                ? product.image[0] || ""
+                : product.image || "",
+
+              price: pricePerKg,
+
+              weight,
+
+              quantity,
+
+              preparation,
+            });
+          }
         );
       }
-    } catch (error) {
-      console.log(error);
-
-      toast.error(
-        error.response?.data?.message ||
-          "Unable to load orders"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ==========================
-  // CANCEL ORDER
-  // ==========================
-
-  const cancelOrder = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this order?"
     );
 
-    if (!confirmed) return;
+    return items;
+  }, [
+    isBuyNow,
+    buyNowItem,
+    products,
+    cartItems,
+  ]);
 
+  /* ============================================================
+     LOAD CUSTOMER PROFILE
+  ============================================================ */
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!token) return;
+
+      try {
+        setLoadingProfile(true);
+
+        const response = await axios.get(
+          `${backendUrl}/api/user/profile`,
+          {
+            headers: {
+              token,
+            },
+          }
+        );
+
+        if (response.data?.success) {
+          const user = response.data.user;
+
+          setFormData((previous) => ({
+            ...previous,
+
+            firstName:
+              user?.address?.firstName ||
+              user?.name?.split(" ")?.[0] ||
+              "",
+
+            lastName:
+              user?.address?.lastName ||
+              user?.name
+                ?.split(" ")
+                ?.slice(1)
+                ?.join(" ") ||
+              "",
+
+            phone:
+              user?.address?.phone ||
+              user?.phone ||
+              "",
+
+            alternatePhone:
+              user?.address?.alternatePhone ||
+              "",
+
+            deliveryPoint:
+              user?.address?.deliveryPoint ||
+              "",
+
+            city:
+              user?.address?.city ||
+              "",
+
+            state:
+              user?.address?.state ||
+              "",
+
+            zipcode:
+              user?.address?.zipcode ||
+              "",
+
+            landmark:
+              user?.address?.landmark ||
+              "",
+          }));
+        }
+      } catch (error) {
+        console.error(
+          "Checkout profile error:",
+          error
+        );
+
+        const status =
+          error?.response?.status;
+
+        if (
+          status === 401 ||
+          status === 403
+        ) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+
+          toast.error(
+            "Your session has expired. Please login again."
+          );
+
+          navigate("/login");
+        }
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, [
+    token,
+    backendUrl,
+    navigate,
+  ]);
+
+  /* ============================================================
+     INPUT HANDLER
+  ============================================================ */
+
+  const handleChange = (event) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  /* ============================================================
+     PHONE NORMALIZER
+  ============================================================ */
+
+  const normalizePhone = (value) => {
+    return String(value || "")
+      .replace(/\D/g, "")
+      .slice(-10);
+  };
+
+  /* ============================================================
+     VALIDATE CHECKOUT
+  ============================================================ */
+
+  const validateCheckout = () => {
+    if (!token) {
+      toast.error(
+        "Please login before placing your order."
+      );
+
+      navigate("/login");
+
+      return false;
+    }
+
+    if (!orderItems.length) {
+      toast.error(
+        isBuyNow
+          ? "Unable to continue with this product."
+          : "Your cart is empty."
+      );
+
+      navigate("/menu");
+
+      return false;
+    }
+
+    if (cartAmount <= 0) {
+      toast.error(
+        "Your order amount is invalid."
+      );
+
+      return false;
+    }
+
+    /* ----------------------------------------------------------
+       PREPARATION VALIDATION
+    ---------------------------------------------------------- */
+
+    for (const item of orderItems) {
+      const product = products?.find(
+        (productItem) =>
+          productItem._id === item._id
+      );
+
+      const category =
+        product?.category?.trim() || "";
+
+      const categoriesWithoutPreparation = [
+        "Dry Fish",
+        "Dry Prawns",
+        "Pickles",
+      ];
+
+      const requiresPreparation =
+        !categoriesWithoutPreparation.includes(
+          category
+        );
+
+      if (
+        requiresPreparation &&
+        !item.preparation?.trim()
+      ) {
+        toast.error(
+          `Please select a preparation option for ${item.name}.`
+        );
+
+        return false;
+      }
+    }
+
+    /* ----------------------------------------------------------
+       CUSTOMER NAME
+    ---------------------------------------------------------- */
+
+    if (
+      !formData.firstName.trim()
+    ) {
+      toast.error(
+        "Please enter your first name."
+      );
+
+      return false;
+    }
+
+    /* ----------------------------------------------------------
+       PRIMARY PHONE
+    ---------------------------------------------------------- */
+
+    const phone =
+      normalizePhone(
+        formData.phone
+      );
+
+    if (!phone) {
+      toast.error(
+        "Please enter your phone number."
+      );
+
+      return false;
+    }
+
+    if (phone.length !== 10) {
+      toast.error(
+        "Please enter a valid 10-digit phone number."
+      );
+
+      return false;
+    }
+
+    /* ----------------------------------------------------------
+       ALTERNATE PHONE
+    ---------------------------------------------------------- */
+
+    const alternatePhone =
+      normalizePhone(
+        formData.alternatePhone
+      );
+
+    if (
+      alternatePhone &&
+      alternatePhone.length !== 10
+    ) {
+      toast.error(
+        "Please enter a valid 10-digit alternate phone number."
+      );
+
+      return false;
+    }
+
+    if (
+      alternatePhone &&
+      alternatePhone === phone
+    ) {
+      toast.error(
+        "Alternate phone number should be different from your primary number."
+      );
+
+      return false;
+    }
+
+    /* ----------------------------------------------------------
+       DELIVERY POINT
+    ---------------------------------------------------------- */
+
+    if (
+      !formData.deliveryPoint.trim()
+    ) {
+      toast.error(
+        "Please enter your bus stop or delivery point."
+      );
+
+      return false;
+    }
+
+    /* ----------------------------------------------------------
+       CITY
+    ---------------------------------------------------------- */
+
+    if (
+      !formData.city.trim()
+    ) {
+      toast.error(
+        "Please enter your city."
+      );
+
+      return false;
+    }
+
+    /* ----------------------------------------------------------
+       STATE
+    ---------------------------------------------------------- */
+
+    if (
+      !formData.state.trim()
+    ) {
+      toast.error(
+        "Please enter your state."
+      );
+
+      return false;
+    }
+
+    /* ----------------------------------------------------------
+       PINCODE
+    ---------------------------------------------------------- */
+
+    const zipcode =
+      formData.zipcode.trim();
+
+    if (!zipcode) {
+      toast.error(
+        "Please enter your pincode."
+      );
+
+      return false;
+    }
+
+    if (!/^\d{6}$/.test(zipcode)) {
+      toast.error(
+        "Please enter a valid 6-digit pincode."
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
+  /* ============================================================
+     AUTH ERROR HANDLER
+  ============================================================ */
+
+  const handleAuthError = (error) => {
+    const status =
+      error?.response?.status;
+
+    if (
+      status === 401 ||
+      status === 403
+    ) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      setCartItems({});
+
+      toast.error(
+        "Your session has expired. Please login again."
+      );
+
+      navigate("/login");
+
+      return true;
+    }
+
+    return false;
+  };
+
+  /* ============================================================
+     RAZORPAY PAYMENT
+  ============================================================ */
+
+  const displayRazorpay = async (
+    orderData
+  ) => {
     try {
-      const response = await axios.post(
-        backendUrl + "/api/order/cancel",
-        {
-          orderId: id,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            token,
+      if (!window.Razorpay) {
+        toast.error(
+          "Razorpay is not loaded. Please refresh the page and try again."
+        );
+
+        setPlacingOrder(false);
+
+        return;
+      }
+
+      /*
+       * Backend calculates the real amount.
+       */
+      const response =
+        await axios.post(
+          `${backendUrl}/api/payment/create-order`,
+          {
+            items: orderData.items,
+
+            deliveryFee:
+              orderData.deliveryFee,
           },
+          {
+            headers: {
+              token,
+            },
+          }
+        );
+
+      if (
+        !response.data?.success
+      ) {
+        toast.error(
+          response.data?.message ||
+            "Unable to create payment."
+        );
+
+        setPlacingOrder(false);
+
+        return;
+      }
+
+      const razorpayOrder =
+        response.data.order;
+
+      if (!razorpayOrder?.id) {
+        toast.error(
+          "Invalid payment order received from server."
+        );
+
+        setPlacingOrder(false);
+
+        return;
+      }
+
+      const razorpayKey =
+        import.meta.env
+          .VITE_RAZORPAY_KEY;
+
+      if (!razorpayKey) {
+        toast.error(
+          "Razorpay configuration is missing."
+        );
+
+        setPlacingOrder(false);
+
+        return;
+      }
+
+      const customerName = [
+        formData.firstName.trim(),
+        formData.lastName.trim(),
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      const options = {
+        key: razorpayKey,
+
+        amount:
+          razorpayOrder.amount,
+
+        currency:
+          razorpayOrder.currency ||
+          "INR",
+
+        order_id:
+          razorpayOrder.id,
+
+        name:
+          "Sri Lakshmi Narasimha Live Fish & Sea Foods",
+
+        description:
+          "Seafood Order",
+
+        prefill: {
+          name: customerName,
+
+          contact:
+            normalizePhone(
+              formData.phone
+            ),
+        },
+
+        notes: {
+          deliveryPoint:
+            formData.deliveryPoint,
+
+          city:
+            formData.city,
+
+          state:
+            formData.state,
+
+          pincode:
+            formData.zipcode,
+        },
+
+        theme: {
+          color: "#0891B2",
+        },
+
+        modal: {
+          ondismiss: () => {
+            setPlacingOrder(false);
+
+            toast.info(
+              "Payment window closed. Your order was not placed."
+            );
+          },
+        },
+
+        /* ------------------------------------------------------
+           PAYMENT SUCCESS
+        ------------------------------------------------------ */
+
+        handler: async (
+          paymentResponse
+        ) => {
+          try {
+            const verifyResponse =
+              await axios.post(
+                `${backendUrl}/api/payment/verify`,
+                {
+                  razorpay_order_id:
+                    paymentResponse.razorpay_order_id,
+
+                  razorpay_payment_id:
+                    paymentResponse.razorpay_payment_id,
+
+                  razorpay_signature:
+                    paymentResponse.razorpay_signature,
+
+                  orderData,
+                },
+                {
+                  headers: {
+                    token,
+                  },
+                }
+              );
+
+            if (
+              verifyResponse.data
+                ?.success
+            ) {
+              /*
+               * NORMAL CART CHECKOUT
+               *
+               * Clear the cart only when the
+               * customer checked out the cart.
+               */
+              if (!isBuyNow) {
+                setCartItems({});
+
+                localStorage.removeItem(
+                  "cartItems"
+                );
+              }
+
+              /*
+               * BUY NOW CHECKOUT
+               *
+               * Existing cart remains untouched.
+               */
+
+              toast.success(
+                "Payment successful! Your order has been placed."
+              );
+
+              navigate("/orders");
+            } else {
+              toast.error(
+                verifyResponse.data
+                  ?.message ||
+                  "Payment verification failed."
+              );
+
+              setPlacingOrder(false);
+
+              navigate(
+                "/payment-failed"
+              );
+            }
+          } catch (error) {
+            console.error(
+              "Payment verification error:",
+              error
+            );
+
+            if (
+              handleAuthError(error)
+            ) {
+              setPlacingOrder(false);
+
+              return;
+            }
+
+            toast.error(
+              error?.response?.data
+                ?.message ||
+                "Payment verification failed."
+            );
+
+            setPlacingOrder(false);
+
+            navigate(
+              "/payment-failed"
+            );
+          }
+        },
+      };
+
+      const paymentObject =
+        new window.Razorpay(
+          options
+        );
+
+      paymentObject.on(
+        "payment.failed",
+        (paymentError) => {
+          console.error(
+            "Razorpay payment failed:",
+            paymentError
+          );
+
+          setPlacingOrder(false);
+
+          toast.error(
+            paymentError?.error
+              ?.description ||
+              "Payment failed. Please try again."
+          );
+
+          navigate(
+            "/payment-failed"
+          );
         }
       );
 
-      if (response.data.success) {
-        toast.success(response.data.message);
-        getOrders();
-      } else {
-        toast.error(response.data.message);
-      }
+      paymentObject.open();
     } catch (error) {
-      console.log(error);
-
-      toast.error(
-        error.response?.data?.message ||
-          "Unable to cancel order"
+      console.error(
+        "Razorpay checkout error:",
+        error
       );
+
+      if (
+        !handleAuthError(error)
+      ) {
+        toast.error(
+          error?.response?.data
+            ?.message ||
+            "Unable to start payment."
+        );
+      }
+
+      setPlacingOrder(false);
     }
   };
 
-  // ==========================
-  // LOAD ORDERS ON LOGIN
-  // ==========================
+  /* ============================================================
+     PLACE ORDER
+  ============================================================ */
 
-  useEffect(() => {
-    if (token) {
-      getOrders();
-    } else {
-      setOrders([]);
-      setLoading(false);
+  const placeOrder = async () => {
+    if (placingOrder) return;
+
+    if (!validateCheckout()) {
+      return;
     }
-  }, [token]);
 
-  // ==========================
-  // TOTAL ORDER WEIGHT
-  // ==========================
+    const normalizedPhone =
+      normalizePhone(
+        formData.phone
+      );
 
-  const getTotalWeight = (items = []) => {
-    return items.reduce((total, item) => {
-      const weight = Number(item.weight || 0);
-      const quantity = Number(item.quantity || 1);
+    const normalizedAlternatePhone =
+      normalizePhone(
+        formData.alternatePhone
+      );
 
-      return total + weight * quantity;
-    }, 0);
+    /*
+     * Keep address structure compatible
+     * with the existing backend.
+     */
+    const normalizedAddress = {
+      firstName:
+        formData.firstName.trim(),
+
+      lastName:
+        formData.lastName.trim(),
+
+      phone:
+        normalizedPhone,
+
+      alternatePhone:
+        normalizedAlternatePhone,
+
+      deliveryPoint:
+        formData.deliveryPoint.trim(),
+
+      city:
+        formData.city.trim(),
+
+      state:
+        formData.state.trim(),
+
+      zipcode:
+        formData.zipcode.trim(),
+
+      landmark:
+        formData.landmark.trim(),
+
+      address: [
+        formData.deliveryPoint.trim(),
+
+        formData.landmark.trim()
+          ? `Landmark: ${formData.landmark.trim()}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(", "),
+
+      country: "India",
+    };
+
+    const orderData = {
+      /*
+       * In Buy Now mode this contains only
+       * the Buy Now product.
+       *
+       * In normal checkout this contains
+       * the existing cart items.
+       */
+      items: orderItems,
+
+      amount:
+        totalAmount,
+
+      deliveryFee:
+        deliveryAmount,
+
+      address:
+        normalizedAddress,
+    };
+
+    try {
+      setPlacingOrder(true);
+
+      await displayRazorpay(
+        orderData
+      );
+    } catch (error) {
+      console.error(
+        "Place order error:",
+        error
+      );
+
+      if (
+        !handleAuthError(error)
+      ) {
+        toast.error(
+          error?.response?.data
+            ?.message ||
+            "Unable to place order."
+        );
+      }
+
+      setPlacingOrder(false);
+    }
   };
 
-  // ==========================
-  // LOADING
-  // ==========================
+  /* ============================================================
+     EMPTY CART GUARD
+  ============================================================ */
 
-  if (loading) {
+  /*
+   * Do NOT show the empty-cart message
+   * during Buy Now checkout.
+   */
+  if (
+    !isBuyNow &&
+    (
+      !cartItems ||
+      Object.keys(cartItems).length === 0
+    )
+  ) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-[70vh] flex items-center justify-center px-4 py-16">
+        <div className="text-center max-w-md">
 
-        <div className="text-center">
+          <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-cyan-50 flex items-center justify-center">
+            <FaShoppingBag className="text-3xl text-cyan-600" />
+          </div>
 
-          <div className="w-12 h-12 border-4 border-slate-200 border-t-cyan-700 rounded-full animate-spin mx-auto mb-4"></div>
-
-          <h2 className="text-xl font-bold text-slate-700">
-            Loading Your Orders...
+          <h2 className="text-2xl font-bold text-gray-800">
+            Your cart is empty
           </h2>
 
-        </div>
+          <p className="mt-3 text-gray-500">
+            Add some seafood to your cart
+            before proceeding to checkout.
+          </p>
 
+          <button
+            type="button"
+            onClick={() =>
+              navigate("/menu")
+            }
+            className="mt-7 px-7 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-semibold transition"
+          >
+            Browse Seafood
+          </button>
+
+        </div>
       </div>
     );
   }
 
+  /* ============================================================
+     UI
+  ============================================================ */
+
   return (
-    <div className="border-t border-slate-200 bg-slate-50 min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50 py-8 sm:py-12">
 
-      {/* ==========================
-          HEADER
-      ========================== */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
-      <div className="bg-gradient-to-r from-cyan-700 via-teal-700 to-emerald-700 rounded-3xl p-6 md:p-8 text-white shadow-xl mb-10">
+        {/* HEADER */}
 
-        <div className="flex items-center gap-4">
+        <div className="mb-8 sm:mb-10">
 
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+          <Title
+            text1="CHECKOUT"
+            text2="DETAILS"
+          />
 
-            <FaBoxOpen className="text-2xl md:text-3xl" />
-
-          </div>
-
-          <div>
-
-            <h1 className="text-2xl md:text-3xl font-bold">
-              My Orders
-            </h1>
-
-            <p className="text-cyan-100 mt-2 text-sm md:text-base">
-              Track your seafood orders and monitor their delivery status.
-            </p>
-
-          </div>
-
-        </div>
-
-      </div>
-
-      <Title text1="MY" text2="ORDERS" />
-
-      {/* ==========================
-          EMPTY ORDERS
-      ========================== */}
-
-      {orders.length === 0 ? (
-
-        <div className="bg-white rounded-3xl shadow-lg p-10 md:p-16 mt-10 text-center">
-
-          <div className="w-24 h-24 mx-auto rounded-full bg-cyan-100 flex items-center justify-center">
-
-            <FaBoxOpen className="text-5xl text-cyan-700" />
-
-          </div>
-
-          <h2 className="text-2xl font-bold mt-6">
-            No Orders Yet
-          </h2>
-
-          <p className="text-slate-500 mt-3 max-w-lg mx-auto">
-            Looks like you haven't ordered any seafood yet.
-            Browse our collection and place your first order.
+          <p className="mt-3 text-sm sm:text-base text-gray-500 max-w-2xl">
+            Enter your contact and delivery-point
+            details, confirm your seafood preparation
+            choices, and complete your payment securely.
           </p>
 
-          <button
-            onClick={() => {
-              window.location.href = "/menu";
-            }}
-            className="mt-8 bg-gradient-to-r from-cyan-700 to-emerald-700 text-white px-8 py-3 rounded-xl hover:scale-105 transition"
-          >
-            Explore Products
-          </button>
-
         </div>
 
-      ) : (
+        <div className="grid lg:grid-cols-[1.55fr_0.95fr] gap-6 lg:gap-8">
 
-        /* ==========================
-           ORDERS LIST
-        ========================== */
+          {/* ====================================================
+              LEFT
+          ==================================================== */}
 
-        orders.map((order) => {
+          <div className="space-y-6">
 
-          const items = Array.isArray(order.items)
-            ? order.items
-            : [];
+            {/* CUSTOMER INFORMATION */}
 
-          return (
-            <div
-              key={order._id}
-              className="bg-white rounded-3xl shadow-lg border border-slate-200 p-5 md:p-7 mt-8"
-            >
+            <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-              {/* ==========================
-                  ORDER TOP
-              ========================== */}
+              <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white flex items-center gap-3">
 
-              <div className="flex flex-col lg:flex-row lg:justify-between gap-8">
+                <FaUser />
 
-                {/* ORDER INFORMATION */}
+                <div>
 
-                <div className="space-y-3">
+                  <h2 className="font-bold text-base sm:text-lg">
+                    Customer Information
+                  </h2>
 
-                  <div className="flex items-center gap-3">
-
-                    <FaBoxOpen className="text-cyan-700" />
-
-                    <h2 className="text-lg md:text-xl font-bold">
-                      Order #
-                      {String(order._id || "")
-                        .slice(-8)
-                        .toUpperCase()}
-                    </h2>
-
-                  </div>
-
-                  <p className="text-sm text-slate-500 break-all">
-                    {order._id}
+                  <p className="text-xs text-cyan-100 mt-0.5">
+                    Your contact details
                   </p>
 
-                  <div className="flex items-center gap-3 text-slate-600">
+                </div>
 
-                    <FaCalendarAlt />
+              </div>
 
-                    <span>
-                      {order.date
-                        ? new Date(
-                            order.date
-                          ).toLocaleString("en-IN")
-                        : "Date unavailable"}
-                    </span>
+              <div className="p-5 sm:p-6 space-y-5">
+
+                {loadingProfile && (
+                  <div className="text-sm text-cyan-600 bg-cyan-50 border border-cyan-100 rounded-xl px-4 py-3">
+                    Loading your saved details...
+                  </div>
+                )}
+
+                {/* NAME */}
+
+                <div className="grid sm:grid-cols-2 gap-4">
+
+                  <div>
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      First Name
+                      <span className="text-red-500 ml-1">
+                        *
+                      </span>
+                    </label>
+
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={
+                        formData.firstName
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Enter first name"
+                      autoComplete="given-name"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+                    />
+
+                  </div>
+
+                  <div>
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name
+                    </label>
+
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={
+                        formData.lastName
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Enter last name"
+                      autoComplete="family-name"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+                    />
 
                   </div>
 
                 </div>
 
-                {/* PAYMENT + STATUS */}
+                {/* PRIMARY PHONE */}
 
-                <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
+                <div>
 
-                  {/* AMOUNT */}
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
 
-                  <div className="bg-slate-50 rounded-2xl p-5">
+                    <FaPhoneAlt className="text-gray-400" />
 
-                    <div className="flex items-center gap-2 mb-2">
+                    Phone Number
 
-                      <FaMoneyBillWave className="text-green-600" />
+                    <span className="text-red-500">
+                      *
+                    </span>
 
-                      <span className="font-semibold">
-                        Amount
-                      </span>
+                  </label>
 
+                  <div className="flex">
+
+                    <div className="flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-xl text-sm text-gray-600">
+                      +91
                     </div>
 
-                    <p className="text-2xl font-bold text-green-700">
-                      {currency}
-                      {order.amount}
-                    </p>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={
+                        formData.phone
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="10-digit mobile number"
+                      maxLength={10}
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      className="w-full border border-gray-200 rounded-r-xl px-4 py-3 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+                    />
 
                   </div>
 
-                  {/* STATUS */}
+                </div>
 
-                  <div className="bg-slate-50 rounded-2xl p-5">
+                {/* ALTERNATE PHONE */}
 
-                    <div className="flex items-center gap-2 mb-2">
+                <div>
 
-                      <FaTruck className="text-cyan-700" />
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
 
-                      <span className="font-semibold">
-                        Status
-                      </span>
+                    <FaMobileAlt className="text-gray-400" />
 
-                    </div>
+                    Alternate Phone Number
 
-                    <span
-                      className={`
-                        inline-flex
-                        items-center
-                        gap-2
-                        px-4
-                        py-2
-                        rounded-full
-                        text-sm
-                        font-semibold
-
-                        ${
-                          order.orderStatus ===
-                          "Delivered"
-                            ? "bg-green-100 text-green-700"
-
-                            : order.orderStatus ===
-                              "Cancelled"
-                            ? "bg-red-100 text-red-700"
-
-                            : "bg-yellow-100 text-yellow-700"
-                        }
-                      `}
-                    >
-
-                      {order.orderStatus ===
-                      "Delivered" ? (
-                        <FaCheckCircle />
-                      ) : order.orderStatus ===
-                        "Cancelled" ? (
-                        <FaTimesCircle />
-                      ) : (
-                        <FaTruck />
-                      )}
-
-                      {order.orderStatus}
-
+                    <span className="text-xs font-normal text-gray-400">
+                      (Optional)
                     </span>
 
-                    {/* PAYMENT STATUS */}
+                  </label>
 
-                    <p className="text-sm text-slate-500 mt-3">
+                  <div className="flex">
 
-                      Payment:
+                    <div className="flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-xl text-sm text-gray-600">
+                      +91
+                    </div>
 
-                      <span
-                        className={`font-semibold ml-2 ${
-                          order.paymentStatus === "Paid"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {order.paymentStatus ||
-                          "Unknown"}
+                    <input
+                      type="tel"
+                      name="alternatePhone"
+                      value={
+                        formData.alternatePhone
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Alternative 10-digit number"
+                      maxLength={10}
+                      inputMode="numeric"
+                      className="w-full border border-gray-200 rounded-r-xl px-4 py-3 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+                    />
+
+                  </div>
+
+                  <p className="text-xs text-gray-400 mt-2">
+                    Useful if our delivery team cannot
+                    reach your primary number.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </section>
+
+            {/* ==================================================
+                DELIVERY POINT
+            ================================================== */}
+
+            <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+              <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center gap-3">
+
+                <FaMapMarkerAlt />
+
+                <div>
+
+                  <h2 className="font-bold text-base sm:text-lg">
+                    Delivery Point
+                  </h2>
+
+                  <p className="text-xs text-emerald-100 mt-0.5">
+                    Where should we meet you for delivery?
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div className="p-5 sm:p-6 space-y-5">
+
+                {/* DELIVERY POINT */}
+
+                <div>
+
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+
+                    Bus Stop / Delivery Point
+
+                    <span className="text-red-500 ml-1">
+                      *
+                    </span>
+
+                  </label>
+
+                  <input
+                    type="text"
+                    name="deliveryPoint"
+                    value={
+                      formData.deliveryPoint
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    placeholder="e.g. Dilsukhnagar Bus Stop"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                  />
+
+                  <p className="text-xs text-gray-400 mt-2">
+                    Enter the bus stop or agreed delivery
+                    point where you will receive your order.
+                  </p>
+
+                </div>
+
+                {/* CITY / STATE */}
+
+                <div className="grid sm:grid-cols-2 gap-4">
+
+                  <div>
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+
+                      City
+
+                      <span className="text-red-500 ml-1">
+                        *
                       </span>
 
+                    </label>
+
+                    <input
+                      type="text"
+                      name="city"
+                      value={
+                        formData.city
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Hyderabad"
+                      autoComplete="address-level2"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                    />
+
+                  </div>
+
+                  <div>
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+
+                      State
+
+                      <span className="text-red-500 ml-1">
+                        *
+                      </span>
+
+                    </label>
+
+                    <input
+                      type="text"
+                      name="state"
+                      value={
+                        formData.state
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Telangana"
+                      autoComplete="address-level1"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                    />
+
+                  </div>
+
+                </div>
+
+                {/* PINCODE */}
+
+                <div className="sm:w-1/2">
+
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+
+                    Pincode
+
+                    <span className="text-red-500 ml-1">
+                      *
+                    </span>
+
+                  </label>
+
+                  <input
+                    type="text"
+                    name="zipcode"
+                    value={
+                      formData.zipcode
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    placeholder="6-digit pincode"
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoComplete="postal-code"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                  />
+
+                </div>
+
+                {/* LANDMARK */}
+
+                <div>
+
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+
+                    Landmark / Delivery Instructions
+
+                    <span className="text-xs font-normal text-gray-400 ml-2">
+                      (Optional)
+                    </span>
+
+                  </label>
+
+                  <textarea
+                    name="landmark"
+                    value={
+                      formData.landmark
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    placeholder="e.g. Near the main entrance, beside ABC shop"
+                    rows={3}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none resize-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                  />
+
+                </div>
+
+                {/* DELIVERY NOTICE */}
+
+                <div className="flex gap-3 rounded-xl bg-amber-50 border border-amber-100 p-4">
+
+                  <FaMapMarkerAlt className="text-amber-500 mt-0.5 shrink-0" />
+
+                  <div>
+
+                    <p className="text-sm font-semibold text-amber-800">
+                      Delivery Point Instructions
                     </p>
 
-                    {/* PAYMENT METHOD */}
-
-                    {order.paymentMethod && (
-                      <p className="text-sm text-slate-500 mt-1">
-
-                        Method:
-
-                        <span className="font-semibold ml-2">
-                          {order.paymentMethod}
-                        </span>
-
-                      </p>
-                    )}
+                    <p className="text-xs text-amber-700 mt-1 leading-5">
+                      Please provide a clear bus stop or
+                      agreed delivery point and a nearby
+                      landmark. Our delivery team may
+                      contact you if they need additional
+                      directions.
+                    </p>
 
                   </div>
 
@@ -400,315 +1503,380 @@ const Orders = () => {
 
               </div>
 
-              {/* ==========================
-                  ORDER SUMMARY
-              ========================== */}
+            </section>
 
-              <div className="mt-8 border-t pt-6">
+            {/* ==================================================
+                PACKING
+            ================================================== */}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <section className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-100 rounded-2xl p-5 sm:p-6">
 
-                  <div className="bg-cyan-50 rounded-xl p-4">
+              <div className="flex items-start gap-3">
 
-                    <p className="text-xs uppercase text-slate-500">
-                      Items
-                    </p>
+                <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
 
-                    <p className="text-lg font-bold text-slate-800 mt-1">
-                      {items.length}
-                    </p>
-
-                  </div>
-
-                  <div className="bg-orange-50 rounded-xl p-4">
-
-                    <p className="text-xs uppercase text-slate-500">
-                      Total Weight
-                    </p>
-
-                    <p className="text-lg font-bold text-slate-800 mt-1">
-                      {getTotalWeight(items)} KG
-                    </p>
-
-                  </div>
-
-                  <div className="bg-green-50 rounded-xl p-4">
-
-                    <p className="text-xs uppercase text-slate-500">
-                      Order Total
-                    </p>
-
-                    <p className="text-lg font-bold text-green-700 mt-1">
-                      {currency}
-                      {order.amount}
-                    </p>
-
-                  </div>
+                  <FaTruck className="text-cyan-600 text-lg" />
 
                 </div>
 
-              </div>
+                <div>
 
-              {/* ==========================
-                  ORDERED PRODUCTS
-              ========================== */}
-
-              <div className="mt-8 border-t pt-8 space-y-5">
-
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-
-                  <h3 className="font-bold text-xl text-slate-800">
-                    Ordered Products
+                  <h3 className="font-bold text-gray-800">
+                    Seafood Packing & Dispatch
                   </h3>
 
-                  <p className="text-sm text-slate-500">
-                    Your selected preparation is shown below.
+                  <p className="text-sm text-gray-500 mt-1">
+                    Your selected seafood preparation
+                    will be packed carefully before dispatch.
                   </p>
 
                 </div>
 
-                {items.map((item, index) => {
+              </div>
 
-                  const image = Array.isArray(item.image)
-                    ? item.image[0]
-                    : item.image;
+              <div className="grid sm:grid-cols-2 gap-3 mt-5">
 
-                  const quantity =
-                    Number(item.quantity || 1);
+                {[
+                  "Preparation selected by you",
+                  "Food-grade packaging",
+                  "Careful seafood handling",
+                  "Delivery team may contact you",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-center gap-2 text-sm text-gray-600"
+                  >
 
-                  const weight =
-                    Number(item.weight || 0);
+                    <FaCheckCircle className="text-emerald-500 shrink-0" />
 
-                  const totalWeight =
-                    weight * quantity;
+                    {item}
 
-                  const preparation =
-                    item.preparation ||
-                    "Preparation not specified";
-
-                  return (
-                    <div
-                      key={
-                        item._id ||
-                        `${item.productId || item.name}-${item.weight}-${item.preparation}-${index}`
-                      }
-                      className="
-                        flex
-                        flex-col
-                        md:flex-row
-                        gap-5
-                        bg-slate-50
-                        rounded-2xl
-                        p-5
-                        hover:shadow-lg
-                        transition
-                      "
-                    >
-
-                      {/* ==========================
-                          PRODUCT IMAGE
-                      ========================== */}
-
-                      <div className="w-full md:w-32 h-48 md:h-32 rounded-2xl overflow-hidden bg-white border shrink-0">
-
-                        {image ? (
-
-                          <img
-                            src={image}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display =
-                                "none";
-                            }}
-                          />
-
-                        ) : (
-
-                          <div className="w-full h-full flex items-center justify-center">
-
-                            <FaBoxOpen
-                              className="text-4xl text-slate-300"
-                            />
-
-                          </div>
-
-                        )}
-
-                      </div>
-
-                      {/* ==========================
-                          PRODUCT DETAILS
-                      ========================== */}
-
-                      <div className="flex-1">
-
-                        <h3 className="text-xl font-bold text-slate-800">
-                          {item.name}
-                        </h3>
-
-                        {/* PRODUCT INFORMATION */}
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-
-                          <div>
-
-                            <p className="text-xs uppercase text-slate-500">
-                              Price / KG
-                            </p>
-
-                            <p className="font-semibold text-slate-800">
-                              {currency}
-                              {item.price}
-                            </p>
-
-                          </div>
-
-                          <div>
-
-                            <p className="text-xs uppercase text-slate-500">
-                              Quantity
-                            </p>
-
-                            <p className="font-semibold text-slate-800">
-                              {quantity}
-                            </p>
-
-                          </div>
-
-                          <div>
-
-                            <p className="text-xs uppercase text-slate-500 flex items-center gap-1">
-                              <FaWeightHanging />
-                              Weight
-                            </p>
-
-                            <p className="font-semibold text-slate-800">
-                              {weight} KG
-                            </p>
-
-                          </div>
-
-                        </div>
-
-                        {quantity > 1 && (
-                          <p className="text-sm text-slate-500 mt-3">
-                            Total weight for this item:{" "}
-                            <span className="font-semibold text-slate-700">
-                              {totalWeight} KG
-                            </span>
-                          </p>
-                        )}
-
-                        {/* ==========================
-                            PREPARATION
-                        ========================== */}
-
-                        <div className="mt-5">
-
-                          <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2 flex items-center gap-2">
-
-                            <FaCut className="text-cyan-700" />
-
-                            Selected Preparation
-
-                          </p>
-
-                          <div className="inline-flex items-center bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-2.5">
-
-                            <span className="font-bold text-cyan-800">
-                              {preparation}
-                            </span>
-
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                  );
-                })}
+                  </div>
+                ))}
 
               </div>
 
-              {/* ==========================
-                  BOTTOM ACTIONS
-              ========================== */}
+            </section>
 
-              <div className="flex flex-col md:flex-row justify-between items-center gap-5 mt-8 border-t pt-6">
+          </div>
 
-                {/* REFRESH */}
+          {/* ====================================================
+              RIGHT
+          ==================================================== */}
 
-                <button
-                  onClick={getOrders}
-                  className="
-                    flex
-                    items-center
-                    justify-center
-                    gap-2
-                    bg-cyan-700
-                    hover:bg-cyan-800
-                    text-white
-                    px-6
-                    py-3
-                    rounded-xl
-                    transition
-                    w-full
-                    md:w-auto
-                  "
-                >
+          <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
 
-                  <FaSyncAlt />
+            {/* PAYMENT */}
 
-                  Refresh Orders
+            <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-                </button>
+              <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center gap-3">
 
-                {/* CANCEL */}
+                <FaCreditCard />
 
-                {order.orderStatus ===
-                  "Order Placed" && (
+                <div>
 
-                  <button
-                    onClick={() =>
-                      cancelOrder(order._id)
-                    }
-                    className="
-                      flex
-                      items-center
-                      justify-center
-                      gap-2
-                      bg-red-600
-                      hover:bg-red-700
-                      text-white
-                      px-6
-                      py-3
-                      rounded-xl
-                      transition
-                      w-full
-                      md:w-auto
-                    "
-                  >
+                  <h2 className="font-bold text-base sm:text-lg">
+                    Payment Method
+                  </h2>
 
-                    <FaTimesCircle />
+                  <p className="text-xs text-indigo-100 mt-0.5">
+                    Secure online payment
+                  </p>
 
-                    Cancel Order
+                </div>
 
-                  </button>
+              </div>
 
+              <div className="p-5 sm:p-6">
+
+                <div className="w-full rounded-2xl border-2 border-cyan-600 bg-cyan-50 p-4 sm:p-5">
+
+                  <div className="flex items-center justify-between gap-3">
+
+                    <div className="flex items-center gap-3">
+
+                      <span className="w-5 h-5 rounded-full border-2 border-cyan-600 flex items-center justify-center">
+
+                        <span className="w-2.5 h-2.5 rounded-full bg-cyan-600" />
+
+                      </span>
+
+                      <img
+                        src={
+                          assets.razorpay_logo
+                        }
+                        alt="Razorpay"
+                        className="h-7 sm:h-8 object-contain"
+                      />
+
+                    </div>
+
+                    <span className="text-[11px] sm:text-xs text-gray-500 text-right">
+                      UPI
+                      <br className="sm:hidden" />
+                      {" "}• Cards • Wallets
+                    </span>
+
+                  </div>
+
+                  <p className="mt-3 ml-8 text-xs text-gray-500">
+                    Pay securely using Razorpay.
+                    Available payment methods are
+                    shown during payment.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </section>
+
+            {/* ORDER SUMMARY */}
+
+            <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+
+              <div className="flex items-center justify-between mb-5">
+
+                <div>
+
+                  <h2 className="text-lg font-bold text-gray-800">
+                    Order Summary
+                  </h2>
+
+                  <p className="text-xs text-gray-400 mt-1">
+                    {orderItems.length} item
+                    {orderItems.length !== 1
+                      ? "s"
+                      : ""}{" "}
+                    in your order
+                  </p>
+
+                </div>
+
+                <FaShoppingBag className="text-cyan-600 text-xl" />
+
+              </div>
+
+              {/* ITEMS */}
+
+              <div className="space-y-3 mb-6 max-h-80 overflow-y-auto pr-1">
+
+                {orderItems.map(
+                  (item, index) => (
+                    <div
+                      key={`${item._id}-${item.weight}-${item.preparation}-${index}`}
+                      className="flex items-center gap-3 bg-gray-50 rounded-xl p-3"
+                    >
+
+                      <div className="w-14 h-14 rounded-lg bg-white overflow-hidden shrink-0">
+
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <FaShoppingBag className="text-gray-300" />
+                          </div>
+                        )}
+
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+
+                        <p className="font-semibold text-sm text-gray-800 truncate">
+                          {item.name}
+                        </p>
+
+                        <p className="text-xs text-gray-500 mt-1">
+                          {item.weight} kg ×{" "}
+                          {item.quantity}
+                        </p>
+
+                        <p className="text-xs font-medium text-cyan-700 mt-1">
+                          Preparation:{" "}
+                          {item.preparation ||
+                            "Not selected"}
+                        </p>
+
+                      </div>
+
+                      <p className="font-bold text-sm text-gray-800 whitespace-nowrap">
+
+                        {currency}
+
+                        {(
+                          Number(
+                            item.price || 0
+                          ) *
+                          Number(
+                            item.weight || 0
+                          ) *
+                          Number(
+                            item.quantity || 1
+                          )
+                        ).toFixed(2)}
+
+                      </p>
+
+                    </div>
+                  )
                 )}
 
               </div>
 
+              {/* ==================================================
+                  SUBTOTAL
+                  
+                  IMPORTANT:
+                  Do NOT use <CartTotal /> here.
+                  cartAmount works for both:
+                  - normal cart checkout
+                  - Buy Now checkout
+              ================================================== */}
+
+              <div className="flex items-center justify-between">
+
+                <span className="text-sm text-gray-600">
+                  Subtotal
+                </span>
+
+                <span className="font-semibold text-gray-800">
+                  {currency}
+                  {cartAmount.toFixed(2)}
+                </span>
+
+              </div>
+
+              {/* FIXED DELIVERY FEE */}
+
+              <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+
+                <div className="flex items-center gap-2">
+
+                  <FaTruck className="text-cyan-600" />
+
+                  <span className="text-sm text-gray-600">
+                    Delivery
+                  </span>
+
+                </div>
+
+                <span className="font-semibold text-gray-800">
+                  {currency}10.00
+                </span>
+
+              </div>
+
+              {/* TOTAL */}
+
+              <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
+
+                <span className="font-bold text-gray-800">
+                  Total Amount
+                </span>
+
+                <span className="text-xl font-extrabold text-cyan-700">
+                  {currency}
+                  {totalAmount.toFixed(2)}
+                </span>
+
+              </div>
+
+            </section>
+
+            {/* SECURITY */}
+
+            <div className="rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-white p-5">
+
+              <div className="flex items-center gap-3">
+
+                <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
+
+                  <FaShieldAlt className="text-xl" />
+
+                </div>
+
+                <div>
+
+                  <h3 className="font-bold">
+                    Secure Checkout
+                  </h3>
+
+                  <p className="text-xs text-emerald-50 mt-1">
+                    Your payment is processed
+                    securely through Razorpay.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/20 text-xs text-emerald-50">
+
+                <FaLock />
+
+                Secure payment processing
+
+              </div>
+
             </div>
-          );
-        })
 
-      )}
+            {/* PLACE ORDER */}
 
+            <button
+              type="button"
+              onClick={placeOrder}
+              disabled={placingOrder}
+              className={`w-full rounded-2xl py-4 px-5 text-base sm:text-lg font-bold text-white shadow-lg transition flex items-center justify-center gap-3 ${
+                placingOrder
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 active:scale-[0.99]"
+              }`}
+            >
+
+              {placingOrder ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+
+                  Opening Payment...
+                </>
+              ) : (
+                <>
+                  Proceed to Secure Payment
+
+                  <span>
+                    →
+                  </span>
+                </>
+              )}
+
+            </button>
+
+            {/* FINAL TOTAL */}
+
+            <div className="text-center">
+
+              <p className="text-xs text-gray-400">
+                Total payable amount
+              </p>
+
+              <p className="text-xl font-extrabold text-gray-800 mt-1">
+                {currency}
+                {totalAmount.toFixed(2)}
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };
 
-export default Orders;
+export default PlaceOrder;

@@ -2,10 +2,12 @@ import React, {
   useContext,
   useMemo,
   useState,
+  useEffect,
 } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { assets } from "../assets/assets";
 import ProductItem from "../components/ProductItem";
+import { useSearchParams } from "react-router-dom";
 import {
   FaFish,
   FaTimes,
@@ -29,14 +31,43 @@ const CATEGORIES = [
 ];
 
 const Menu = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const {
     products = [],
     search = "",
     showSearch = false,
   } = useContext(ShopContext);
 
-  const [category, setCategory] = useState([]);
+  // ============================================================
+  // STATE
+  // ============================================================
+
+  const [category, setCategory] = useState(() => {
+    const urlCategory = searchParams.get("category");
+
+    return urlCategory ? [urlCategory] : [];
+  });
+
   const [sortType, setSortType] = useState("relevant");
+
+  // Mobile category dropdown
+  const [showMobileCategories, setShowMobileCategories] =
+    useState(false);
+
+  // ============================================================
+  // READ CATEGORY FROM URL
+  // ============================================================
+
+  useEffect(() => {
+    const urlCategory = searchParams.get("category");
+
+    if (urlCategory) {
+      setCategory([urlCategory]);
+    } else {
+      setCategory([]);
+    }
+  }, [searchParams]);
 
   // ============================================================
   // TOGGLE CATEGORY
@@ -57,6 +88,7 @@ const Menu = () => {
   const clearFilters = () => {
     setCategory([]);
     setSortType("relevant");
+    setSearchParams({});
   };
 
   // ============================================================
@@ -67,6 +99,16 @@ const Menu = () => {
     setCategory((prev) =>
       prev.filter((item) => item !== value)
     );
+
+    const currentCategory = searchParams.get("category");
+
+    if (
+      currentCategory &&
+      currentCategory.toLowerCase() ===
+        String(value).toLowerCase()
+    ) {
+      setSearchParams({});
+    }
   };
 
   // ============================================================
@@ -155,117 +197,128 @@ const Menu = () => {
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-white">
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-20">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 pt-3 sm:pt-5 pb-8 sm:pb-10">
 
-        {/* ======================================================
-            HEADER
-        ====================================================== */}
 
-        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-cyan-700 via-cyan-800 to-blue-900 text-white shadow-xl mb-8 sm:mb-10">
+       {/* ======================================================
+    MOBILE CATEGORY BUTTON
+    ====================================================== */}
 
-          {/* Decorative circles */}
+<div className="lg:hidden mb-4 relative">
 
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-cyan-400/20 blur-2xl" />
+  {/* SMALL CATEGORY BUTTON */}
 
-          <div className="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-blue-400/20 blur-3xl" />
+  <button
+    type="button"
+    onClick={() =>
+      setShowMobileCategories((prev) => !prev)
+    }
+    className={`w-[82px] h-[64px] flex flex-col items-center justify-center gap-1.5 rounded-xl bg-white border shadow-sm transition ${
+      showMobileCategories
+        ? "border-cyan-500 ring-2 ring-cyan-50"
+        : "border-gray-200"
+    }`}
+  >
 
-          <div className="relative p-7 sm:p-10 lg:p-12">
+    <span className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center text-cyan-700">
+      <FaFish className="text-sm" />
+    </span>
 
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+    <span className="text-[11px] font-bold text-gray-800 leading-none">
+      Categories
+    </span>
 
-              {/* Heading */}
+  </button>
 
-              <div className="max-w-3xl">
+  {/* ==================================================
+      MOBILE CATEGORY DROPDOWN
+      ================================================== */}
 
-                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 rounded-full text-sm font-semibold text-cyan-100">
-                  <FaFish />
-                  Fresh Seafood Collection
-                </div>
+  {showMobileCategories && (
+    <div className="absolute left-0 top-[78px] z-50 w-[230px] bg-white rounded-xl border border-gray-200 shadow-xl p-2.5">
 
-                <h1 className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
+      <div className="grid grid-cols-1 gap-0.5">
 
-                  Fresh Fish Delivered
+        {CATEGORIES.map((item) => {
+          const checked =
+            category.includes(item);
 
-                  <span className="block text-cyan-200">
-                    To Your Doorstep
-                  </span>
+          return (
+            <label
+              key={item}
+              className={`flex items-center gap-2 cursor-pointer rounded-lg px-2.5 py-2 transition ${
+                checked
+                  ? "bg-cyan-50 text-cyan-800"
+                  : "hover:bg-gray-50 text-gray-600"
+              }`}
+            >
 
-                </h1>
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => {
+                  toggleCategory(item);
 
-                <p className="mt-4 text-cyan-100 leading-7 text-sm sm:text-base max-w-2xl">
-                  Explore premium fresh water fish,
-                  sea fish, Kolkata fish, prawns, crabs,
-                  dry fish, dry prawns and pickles sourced
-                  from trusted suppliers and carefully
-                  handled for quality and freshness.
-                </p>
+                  // Automatically close dropdown
+                  setShowMobileCategories(false);
+                }}
+                className="w-3.5 h-3.5 accent-cyan-700 shrink-0"
+              />
 
-              </div>
+              <span className="text-xs font-medium">
+                {item}
+              </span>
 
-              {/* Product Count */}
+              {checked && (
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-600 shrink-0" />
+              )}
 
-              <div className="shrink-0 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl px-8 py-6 text-center min-w-[170px]">
+            </label>
+          );
+        })}
 
-                <p className="text-sm text-cyan-100">
-                  Products Found
-                </p>
+      </div>
 
-                <p className="mt-1 text-4xl sm:text-5xl font-extrabold">
-                  {filterProducts.length}
-                </p>
+    </div>
+  )}
 
-                <p className="mt-1 text-xs text-cyan-200">
-                  Fresh options available
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
+</div>
 
         {/* ======================================================
             MAIN CONTENT
-        ====================================================== */}
+            ====================================================== */}
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 
           {/* ====================================================
-              CATEGORIES SIDEBAR
-          ==================================================== */}
+              DESKTOP CATEGORIES SIDEBAR
+              ==================================================== */}
 
-          <aside className="lg:w-72 shrink-0">
+          <aside className="hidden lg:block lg:w-64 shrink-0">
 
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-6 lg:sticky lg:top-24">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 lg:sticky lg:top-24">
 
-              {/* ONLY ONE CATEGORIES HEADING */}
-
-              <h2 className="font-bold text-xl text-gray-800 mb-5">
+              <h2 className="font-bold text-lg text-gray-800 mb-4">
                 Categories
               </h2>
 
-              {/* CATEGORY LIST */}
-
-              <div className="space-y-3">
+              <div className="space-y-2">
 
                 {CATEGORIES.map((item) => {
-
                   const checked =
                     category.includes(item);
 
                   return (
                     <label
                       key={item}
-                      className={`flex items-center justify-between gap-3 cursor-pointer rounded-xl px-3 py-2.5 transition ${
+                      className={`flex items-center justify-between gap-3 cursor-pointer rounded-lg px-2.5 py-2 transition ${
                         checked
                           ? "bg-cyan-50 text-cyan-800"
                           : "hover:bg-gray-50 text-gray-600"
                       }`}
                     >
 
-                      <span className="flex items-center gap-3">
+                      <span className="flex items-center gap-2.5">
 
                         <input
                           type="checkbox"
@@ -276,14 +329,14 @@ const Menu = () => {
                           className="w-4 h-4 accent-cyan-700"
                         />
 
-                        <span className="text-sm font-medium">
+                        <span className="text-xs sm:text-sm font-medium">
                           {item}
                         </span>
 
                       </span>
 
                       {checked && (
-                        <span className="w-2 h-2 rounded-full bg-cyan-600" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-600" />
                       )}
 
                     </label>
@@ -298,36 +351,22 @@ const Menu = () => {
 
           {/* ====================================================
               PRODUCT AREA
-          ==================================================== */}
+              ==================================================== */}
 
           <section className="flex-1 min-w-0">
 
             {/* ==================================================
                 TOP CONTROLS
-            ================================================== */}
+                ================================================== */}
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
 
               <div>
 
-                <p className="text-sm text-gray-500">
-
-                  Showing{" "}
-
-                  <span className="font-bold text-gray-800">
-                    {filterProducts.length}
-                  </span>{" "}
-
-                  seafood{" "}
-
-                  {filterProducts.length === 1
-                    ? "product"
-                    : "products"}
-
-                </p>
+                {/* SEARCH RESULT ONLY */}
 
                 {showSearch && search.trim() && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-cyan-700">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-cyan-700">
 
                     <FaSearch />
 
@@ -354,7 +393,7 @@ const Menu = () => {
                   onChange={(e) =>
                     setSortType(e.target.value)
                   }
-                  className="appearance-none w-full sm:w-auto min-w-[210px] bg-white border border-gray-200 rounded-xl px-5 py-3 pr-10 outline-none text-sm font-semibold text-gray-700 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100 transition"
+                  className="appearance-none w-full sm:w-auto min-w-[190px] bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-9 outline-none text-xs sm:text-sm font-semibold text-gray-700 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100 transition"
                 >
 
                   <option value="relevant">
@@ -371,7 +410,7 @@ const Menu = () => {
 
                 </select>
 
-                <FaChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs" />
+                <FaChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs" />
 
               </div>
 
@@ -379,24 +418,23 @@ const Menu = () => {
 
             {/* ==================================================
                 ACTIVE CATEGORY
-            ================================================== */}
+                ================================================== */}
 
             {category.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 mb-7">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
 
                 <span className="text-xs font-semibold text-gray-500 mr-1">
                   Active:
                 </span>
 
                 {category.map((item) => (
-
                   <button
                     type="button"
                     key={item}
                     onClick={() =>
                       removeCategory(item)
                     }
-                    className="inline-flex items-center gap-2 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-100 px-3 py-2 rounded-full text-xs font-semibold transition"
+                    className="inline-flex items-center gap-2 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-100 px-2.5 py-1.5 rounded-full text-[10px] sm:text-xs font-semibold transition"
                   >
 
                     {item}
@@ -404,7 +442,6 @@ const Menu = () => {
                     <FaTimes />
 
                   </button>
-
                 ))}
 
               </div>
@@ -412,27 +449,27 @@ const Menu = () => {
 
             {/* ==================================================
                 PRODUCTS
-            ================================================== */}
+                ================================================== */}
 
             {filterProducts.length === 0 ? (
 
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm py-20 px-6 text-center">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-12 sm:py-16 px-5 text-center">
 
-                <div className="w-20 h-20 mx-auto rounded-full bg-cyan-50 flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto rounded-full bg-cyan-50 flex items-center justify-center">
 
                   <img
                     src={assets.search_icon}
                     alt=""
-                    className="w-10 h-10 opacity-50"
+                    className="w-8 h-8 opacity-50"
                   />
 
                 </div>
 
-                <h2 className="mt-6 text-2xl sm:text-3xl font-extrabold text-gray-800">
+                <h2 className="mt-4 text-xl sm:text-2xl font-extrabold text-gray-800">
                   No Products Found
                 </h2>
 
-                <p className="mt-3 text-gray-500 max-w-md mx-auto leading-6">
+                <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto leading-5">
                   We couldn't find seafood matching
                   your current search or category.
                   Try changing your selection.
@@ -441,23 +478,19 @@ const Menu = () => {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="mt-7 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-7 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                  className="mt-5 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all"
                 >
-
                   <FaTimes />
-
                   Clear Filters
-
                 </button>
 
               </div>
 
             ) : (
 
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
 
                 {filterProducts.map((item) => (
-
                   <ProductItem
                     key={item._id}
                     id={item._id}
@@ -465,7 +498,6 @@ const Menu = () => {
                     image={item.image}
                     price={item.price}
                   />
-
                 ))}
 
               </div>

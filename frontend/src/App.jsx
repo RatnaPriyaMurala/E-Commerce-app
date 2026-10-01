@@ -43,11 +43,6 @@ import SearchBar from "./components/SearchBar";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// =========================
-// BACKEND URL
-// =========================
-
-export const backendUrl = "http://localhost:4000";
 
 
 // =========================
@@ -55,10 +50,8 @@ export const backendUrl = "http://localhost:4000";
 // =========================
 
 const App = () => {
-
   return (
-
-    <div className="px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]">
+    <div className="min-h-screen px-3 sm:px-[3vw] md:px-[4vw] lg:px-[5vw]">
 
       {/* =========================
           TOAST NOTIFICATIONS
@@ -234,9 +227,7 @@ const App = () => {
       <Footer />
 
     </div>
-
   );
-
 };
 
 export default App;

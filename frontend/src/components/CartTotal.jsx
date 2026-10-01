@@ -22,7 +22,7 @@ const CartTotal = () => {
   const total = subtotal > 0 ? subtotal + delivery : 0;
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
       {/* =====================================================
           TITLE
       ===================================================== */}
@@ -36,21 +36,21 @@ const CartTotal = () => {
           SUMMARY
       ===================================================== */}
 
-      <div className="mt-8 space-y-5">
+      <div className="mt-5 space-y-4">
         {/* SUBTOTAL */}
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center">
-              <FaReceipt className="text-cyan-600" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 text-gray-600">
+            <div className="w-9 h-9 rounded-lg bg-cyan-50 flex items-center justify-center">
+              <FaReceipt className="text-cyan-600 text-sm" />
             </div>
 
-            <span className="font-medium">
+            <span className="font-medium text-sm">
               Subtotal
             </span>
           </div>
 
-          <span className="font-semibold text-gray-800">
+          <span className="font-semibold text-sm text-gray-800">
             {currency}
             {subtotal.toFixed(2)}
           </span>
@@ -60,26 +60,26 @@ const CartTotal = () => {
 
         {/* DELIVERY */}
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <FaTruck className="text-blue-600" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 text-gray-600">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+              <FaTruck className="text-blue-600 text-sm" />
             </div>
 
             <div>
-              <span className="font-medium block">
+              <span className="font-medium block text-sm">
                 Delivery
               </span>
 
               {subtotal > 0 && (
-                <span className="text-xs text-gray-400">
+                <span className="text-[11px] text-gray-400">
                   Fresh seafood delivery
                 </span>
               )}
             </div>
           </div>
 
-          <span className="font-semibold text-gray-800">
+          <span className="font-semibold text-sm text-gray-800">
             {currency}
             {delivery.toFixed(2)}
           </span>
@@ -89,26 +89,26 @@ const CartTotal = () => {
 
         {/* TOTAL */}
 
-        <div className="rounded-2xl bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-100 p-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-cyan-600 flex items-center justify-center">
-                <FaWallet className="text-white" />
+        <div className="rounded-xl bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-100 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-lg bg-cyan-600 flex items-center justify-center">
+                <FaWallet className="text-white text-sm" />
               </div>
 
               <div>
-                <p className="font-bold text-gray-800">
+                <p className="font-bold text-sm text-gray-800">
                   Total Amount
                 </p>
 
-                <div className="flex items-center gap-1.5 mt-1 text-xs text-green-600">
+                <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-green-600">
                   <FaCheckCircle />
                   Secure checkout
                 </div>
               </div>
             </div>
 
-            <span className="text-xl sm:text-2xl font-extrabold text-cyan-700">
+            <span className="text-lg sm:text-xl font-extrabold text-cyan-700">
               {currency}
               {total.toFixed(2)}
             </span>
@@ -121,7 +121,7 @@ const CartTotal = () => {
       ===================================================== */}
 
       {subtotal > 0 && (
-        <p className="mt-6 text-xs sm:text-sm text-gray-400 text-center leading-5">
+        <p className="mt-4 text-[11px] sm:text-xs text-gray-400 text-center leading-5">
           Final delivery charges may vary depending on your
           delivery location.
         </p>

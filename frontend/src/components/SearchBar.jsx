@@ -36,20 +36,20 @@ const SearchBar = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-teal-600 to-cyan-700 py-8 shadow-lg">
-      <div className="max-w-5xl mx-auto flex items-center gap-4 px-5">
+    <div className="bg-gradient-to-r from-teal-600 to-cyan-700 py-4 sm:py-5 shadow-md">
+      <div className="max-w-5xl mx-auto flex items-center gap-2.5 sm:gap-3 px-3 sm:px-5">
 
         {/* SEARCH INPUT */}
-        <div className="flex-1 bg-white rounded-full flex items-center px-5 py-4 shadow-lg">
+        <div className="flex-1 bg-white rounded-full flex items-center px-4 py-2.5 sm:px-5 sm:py-3 shadow-md">
 
-          <FaSearch className="text-gray-500 mr-4" />
+          <FaSearch className="text-gray-500 mr-3 text-sm sm:text-base" />
 
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search fresh fish, prawns, crabs..."
-            className="flex-1 outline-none bg-transparent"
+            className="flex-1 outline-none bg-transparent text-sm sm:text-base"
           />
 
         </div>
@@ -63,8 +63,10 @@ const SearchBar = () => {
           }}
           aria-label="Close search"
           className="
-            w-12
-            h-12
+            w-10
+            h-10
+            sm:w-11
+            sm:h-11
             rounded-full
             bg-white
             flex
@@ -75,9 +77,10 @@ const SearchBar = () => {
             hover:scale-105
             transition-all
             duration-200
+            shrink-0
           "
         >
-          <FaTimes />
+          <FaTimes className="text-sm" />
         </button>
 
       </div>

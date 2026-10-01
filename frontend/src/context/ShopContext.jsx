@@ -449,8 +449,18 @@ const getPreparationPrice = (product, preparation) => {
      PRODUCTS
   ============================================================ */
 
+    /* ============================================================
+     PRODUCTS
+  ============================================================ */
+
   const getProducts = useCallback(
     async () => {
+      if (!backendUrl) {
+        setProducts([]);
+        setError("Backend URL is not configured.");
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -459,25 +469,21 @@ const getPreparationPrice = (product, preparation) => {
           `${backendUrl}/api/product/list`
         );
 
-        console.log(
-          "✅ PRODUCT RESPONSE:",
-          response.data
-        );
-
         if (response.data?.success) {
-  const allProducts = response.data.products || [];
+          const allProducts =
+            response.data.products || [];
 
-  // Only show products that are available for orders.
-  // Products marked isAvailable: false remain in MongoDB
-  // and can be enabled again later from Admin.
-  const availableProducts = allProducts.filter(
-    (product) =>
-      product?.isAvailable !== false &&
-      Number(product?.stock || 0) > 0
-  );
+          // Only show products that are available
+          // and currently have stock.
+          const availableProducts =
+            allProducts.filter(
+              (product) =>
+                product?.isAvailable !== false &&
+                Number(product?.stock || 0) > 0
+            );
 
-  setProducts(availableProducts);
-} else {
+          setProducts(availableProducts);
+        } else {
           setProducts([]);
 
           setError(
@@ -495,7 +501,7 @@ const getPreparationPrice = (product, preparation) => {
 
         setError(
           error?.response?.data?.message ||
-            error.message ||
+            error?.message ||
             "Unable to load products."
         );
       } finally {
@@ -505,6 +511,13 @@ const getPreparationPrice = (product, preparation) => {
     [backendUrl]
   );
 
+  /* ============================================================
+     LOAD PRODUCTS ON APP START
+  ============================================================ */
+
+  useEffect(() => {
+    getProducts();
+  }, [getProducts]);
   /* ============================================================
      LOAD PRODUCTS ON APP START
   ============================================================ */

@@ -2,6 +2,7 @@ import React from "react";
 import Title from "../components/Title";
 import { assets } from "../assets/assets";
 import NewsLetterBox from "../components/NewsLetterBox";
+
 import {
   FaMapMarkerAlt,
   FaPhoneAlt,
@@ -12,136 +13,115 @@ import {
 
 const Contact = () => {
   return (
-    <div className="bg-gradient-to-b from-slate-50 via-white to-cyan-50">
+    <div className="border-t">
+      <section className="py-8 sm:py-10">
+        <div className="text-center mb-7">
+          <Title text1="CONTACT" text2="US" />
 
-      <div className="max-w-7xl mx-auto px-6 py-16">
-
-        {/* Header */}
-        <div className="text-center mb-14">
-          <Title text1={"CONTACT"} text2={"US"} />
-
-          <p className="text-gray-500 mt-4 max-w-2xl mx-auto">
-            We'd love to hear from you. Reach out anytime and we'll happily
-            answer your questions.
+          <p className="max-w-2xl mx-auto mt-2 text-xs sm:text-sm text-gray-500 leading-5 sm:leading-6">
+            Have a question about our seafood, delivery or services?
+            We would love to hear from you.
           </p>
         </div>
 
-        {/* Main Content */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-
-          {/* Contact Image */}
-          <div className="rounded-3xl overflow-hidden shadow-2xl">
+        <div className="grid md:grid-cols-2 gap-7 items-start">
+          <div>
             <img
               src={assets.contact_us}
-              alt="Contact Bezawada Cuts"
-              className="w-full h-full object-cover hover:scale-105 duration-500"
+              alt="Contact us"
+              className="w-full rounded-2xl shadow-md object-cover"
             />
           </div>
 
-          {/* Contact Information */}
-          <div className="space-y-8">
-
-            {/* Store Information */}
-            <div className="bg-white rounded-3xl shadow-lg p-8">
-
-              <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                Visit Our Store
+          <div className="space-y-5">
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
+                Store Information
               </h2>
 
-              <div className="space-y-6">
-
-                {/* Address */}
-                <div className="flex gap-5">
-                  <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center shrink-0">
-                    <FaMapMarkerAlt className="text-cyan-700" />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0">
+                    <FaMapMarkerAlt className="text-cyan-600" />
                   </div>
 
                   <div>
-                    <h3 className="font-semibold">
+                    <h3 className="font-semibold text-gray-800">
                       Address
                     </h3>
 
-                    <p className="text-gray-500">
-                      2343-4 Jagathgiri Gutta
-                      <br />
-                      Kukatpally,
-                      <br />
-                      Medchal-Malkajgiri,
-                      <br />
-                      Telangana, India
+                    <p className="mt-1 text-sm text-gray-500 leading-5">
+                      Sri Lakshmi Narasimha Live Fish and Sea Foods,
+                      Moula Ali / ECIL, Hyderabad, Telangana.
                     </p>
                   </div>
                 </div>
 
-                {/* Phone */}
-                <div className="flex gap-5">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
-                    <FaPhoneAlt className="text-green-700" />
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0">
+                    <FaPhoneAlt className="text-cyan-600 text-sm" />
                   </div>
 
                   <div>
-                    <h3 className="font-semibold">
+                    <h3 className="font-semibold text-gray-800">
                       Phone
                     </h3>
 
-                    <p className="text-gray-500">
-                      +91 9954833369
+                    <p className="mt-1 text-sm text-gray-500">
+                      Contact us for orders and enquiries.
                     </p>
                   </div>
                 </div>
 
-                {/* Email */}
-                <div className="flex gap-5">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                    <FaEnvelope className="text-orange-600" />
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0">
+                    <FaEnvelope className="text-cyan-600 text-sm" />
                   </div>
 
                   <div>
-                    <h3 className="font-semibold">
+                    <h3 className="font-semibold text-gray-800">
                       Email
                     </h3>
 
-                    <p className="text-gray-500">
-                      priyalivefish@gmail.com
+                    <p className="mt-1 text-sm text-gray-500">
+                      We are happy to assist with your questions.
                     </p>
                   </div>
                 </div>
-
               </div>
             </div>
 
-            {/* Careers */}
-            <div className="bg-gradient-to-r from-cyan-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl">
+            <div className="bg-cyan-50 border border-cyan-100 rounded-2xl p-5 sm:p-6">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0">
+                  <FaBriefcase className="text-cyan-600" />
+                </div>
 
-              <div className="flex items-center gap-4 mb-4">
-                <FaBriefcase className="text-2xl" />
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                    Careers
+                  </h2>
 
-                <h3 className="text-2xl font-bold">
-                  Careers
-                </h3>
+                  <p className="mt-2 text-sm text-gray-600 leading-6">
+                    Interested in working with us? Explore available
+                    opportunities and become part of our growing team.
+                  </p>
+
+                  <button
+                    type="button"
+                    className="mt-4 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition"
+                  >
+                    Explore Jobs
+                    <FaArrowRight className="text-xs" />
+                  </button>
+                </div>
               </div>
-
-              <p className="text-cyan-100 leading-7">
-                Join our growing seafood family and build your career with us.
-                We are always looking for passionate people.
-              </p>
-
-              <button
-                type="button"
-                className="mt-6 bg-white text-cyan-700 px-6 py-3 rounded-xl font-semibold hover:scale-105 duration-300 flex items-center gap-3"
-              >
-                Explore Jobs
-                <FaArrowRight />
-              </button>
-
             </div>
-
           </div>
         </div>
-      </div>
 
-      <NewsLetterBox />
-
+        <NewsLetterBox />
+      </section>
     </div>
   );
 };
