@@ -45,7 +45,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  "https://e-commerce-cm4626w1w-e-commerce-team.vercel.app",
+  "https://e-commerce-d8m9k6xub-e-commerce-team.vercel.app",
 ];
 
 app.use(
