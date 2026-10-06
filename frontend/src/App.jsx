@@ -23,7 +23,7 @@ import Login from "./pages/Login";
 import PlaceOrder from "./pages/PlaceOrder";
 import Orders from "./pages/Orders";
 import ForgotPassword from "./pages/ForgotPassword";
-import Profile from "./pages/profile";
+import Profile from "./pages/Profile";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
 import Favorites from "./pages/Favorites";
