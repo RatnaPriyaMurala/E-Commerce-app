@@ -55,24 +55,14 @@ const Product = () => {
   const editCart = location.state?.editCart === true;
   const editCartLineKey = location.state?.lineKey || "";
   const editCartWeight = Number(location.state?.weight || 0);
-  const editCartPreparation =
-    location.state?.preparation || "";
+  const editCartPreparation = location.state?.preparation || "";
 
   // Collapsible sections
-  const [showPreparation, setShowPreparation] =
-    useState(false);
-
-  const [showNutrition, setShowNutrition] =
-    useState(false);
-
-  const [showBenefits, setShowBenefits] =
-    useState(false);
-
-  const [showDescription, setShowDescription] =
-    useState(false);
-
-  const [showWhyChoose, setShowWhyChoose] =
-    useState(false);
+  const [showPreparation, setShowPreparation] = useState(false);
+  const [showNutrition, setShowNutrition] = useState(false);
+  const [showBenefits, setShowBenefits] = useState(false);
+  const [showDescription, setShowDescription] = useState(false);
+  const [showWhyChoose, setShowWhyChoose] = useState(false);
 
   // ============================================================
   // LOAD PRODUCT
@@ -96,9 +86,7 @@ const Product = () => {
     );
 
     if (editCart && editCartWeight > 0) {
-      setWeight(
-        Math.min(editCartWeight, stock)
-      );
+      setWeight(Math.min(editCartWeight, stock));
     } else {
       setWeight(
         stock > 0
@@ -108,9 +96,7 @@ const Product = () => {
     }
 
     if (editCart && editCartPreparation) {
-      setSelectedPreparation(
-        editCartPreparation
-      );
+      setSelectedPreparation(editCartPreparation);
     } else {
       setSelectedPreparation("");
     }
@@ -154,9 +140,7 @@ const Product = () => {
 
         return {
           name: String(option || "").trim(),
-          pricePerKg: Number(
-            productData.price ?? 0
-          ),
+          pricePerKg: Number(productData.price ?? 0),
         };
       })
       .filter(
@@ -173,13 +157,13 @@ const Product = () => {
 
   if (!productData) {
     return (
-      <div className="min-h-[45vh] flex items-center justify-center px-4">
+      <div className="flex min-h-[40vh] items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-14 h-14 mx-auto rounded-full bg-cyan-50 flex items-center justify-center animate-pulse">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-cyan-50 animate-pulse">
             <FaFish className="text-2xl text-cyan-600" />
           </div>
 
-          <p className="mt-3 text-sm text-gray-500 font-medium">
+          <p className="mt-3 text-sm font-medium text-gray-500">
             Loading fresh product...
           </p>
         </div>
@@ -225,16 +209,16 @@ const Product = () => {
   const hasPreparationOptions =
     preparationOptions.length > 0;
 
-    const categoriesWithoutPreparation = [
-  "Dry Fish",
-  "Dry Prawns",
-  "Pickles",
-];
+  const categoriesWithoutPreparation = [
+    "Dry Fish",
+    "Dry Prawns",
+    "Pickles",
+  ];
 
-const requiresPreparation =
-  !categoriesWithoutPreparation.includes(
-    productData.category?.trim()
-  );
+  const requiresPreparation =
+    !categoriesWithoutPreparation.includes(
+      productData.category?.trim()
+    );
 
   const isPreparationSelected =
     selectedPreparation.trim().length > 0;
@@ -342,111 +326,110 @@ const requiresPreparation =
   // ADD / UPDATE CART
   // ============================================================
 
- const handleAddToCart = async () => {
-  if (isOutOfStock) return;
+  const handleAddToCart = async () => {
+    if (isOutOfStock) return;
 
-  if (
-    requiresPreparation &&
-    !isPreparationSelected
-  ) {
-    window.alert(
-      "Please select a preparation option before adding this product to your cart."
-    );
-    return;
-  }
-
-  if (
-    !weight ||
-    weight < safeMin ||
-    weight > availableMax
-  ) {
-    window.alert(
-      "Please select a valid quantity."
-    );
-    return;
-  }
-
-  try {
-    if (editCart && editCartLineKey) {
-      await removeFromCart(
-        productData._id,
-        editCartLineKey,
-        editCartPreparation
+    if (
+      requiresPreparation &&
+      !isPreparationSelected
+    ) {
+      window.alert(
+        "Please select a preparation option before adding this product to your cart."
       );
+      return;
     }
 
-    await addToCart(
-      productData._id,
-      weight,
-      requiresPreparation
-        ? selectedPreparation
-        : ""
-    );
-  } catch (error) {
-    console.error(
-      "❌ Cart update error:",
-      error
-    );
-  }
-};
+    if (
+      !weight ||
+      weight < safeMin ||
+      weight > availableMax
+    ) {
+      window.alert(
+        "Please select a valid quantity."
+      );
+      return;
+    }
 
+    try {
+      if (editCart && editCartLineKey) {
+        await removeFromCart(
+          productData._id,
+          editCartLineKey,
+          editCartPreparation
+        );
+      }
 
-const handleBuyNow = () => {
-  if (isOutOfStock) return;
-
-  if (
-    requiresPreparation &&
-    !isPreparationSelected
-  ) {
-    window.alert(
-      "Please select a preparation option before buying this product."
-    );
-    return;
-  }
-
-  if (
-    !weight ||
-    weight < safeMin ||
-    weight > availableMax
-  ) {
-    window.alert(
-      "Please select a valid quantity."
-    );
-    return;
-  }
-
-  const buyNowItem = {
-    _id: productData._id,
-
-    name: productData.name,
-
-    image: Array.isArray(productData.image)
-      ? productData.image[0] || ""
-      : productData.image || "",
-
-    /*
-     * Use the selected preparation price
-     * when one exists.
-     */
-    price: Number(
-      currentPricePerKg || 0
-    ),
-
-    weight: Number(weight),
-
-    quantity: 1,
-
-    preparation: requiresPreparation
-      ? selectedPreparation
-      : "",
+      await addToCart(
+        productData._id,
+        weight,
+        requiresPreparation
+          ? selectedPreparation
+          : ""
+      );
+    } catch (error) {
+      console.error(
+        "❌ Cart update error:",
+        error
+      );
+    }
   };
 
-  navigate("/place-order", {
-    state: {
-      buyNowItem,
-    },
-  });
-};
+  // ============================================================
+  // BUY NOW
+  // ============================================================
+
+  const handleBuyNow = () => {
+    if (isOutOfStock) return;
+
+    if (
+      requiresPreparation &&
+      !isPreparationSelected
+    ) {
+      window.alert(
+        "Please select a preparation option before buying this product."
+      );
+      return;
+    }
+
+    if (
+      !weight ||
+      weight < safeMin ||
+      weight > availableMax
+    ) {
+      window.alert(
+        "Please select a valid quantity."
+      );
+      return;
+    }
+
+    const buyNowItem = {
+      _id: productData._id,
+
+      name: productData.name,
+
+      image: Array.isArray(productData.image)
+        ? productData.image[0] || ""
+        : productData.image || "",
+
+      price: Number(
+        currentPricePerKg || 0
+      ),
+
+      weight: Number(weight),
+
+      quantity: 1,
+
+      preparation: requiresPreparation
+        ? selectedPreparation
+        : "",
+    };
+
+    navigate("/place-order", {
+      state: {
+        buyNowItem,
+      },
+    });
+  };
 
   // ============================================================
   // SMALL ACCORDION COMPONENT
@@ -464,11 +447,11 @@ const handleBuyNow = () => {
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center justify-between gap-3 text-left px-4 py-3.5"
+      className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left"
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex min-w-0 items-center gap-2.5">
         <div
-          className={`w-9 h-9 shrink-0 rounded-lg ${iconBg} flex items-center justify-center`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}
         >
           <span className={iconColor}>
             {icon}
@@ -476,12 +459,12 @@ const handleBuyNow = () => {
         </div>
 
         <div className="min-w-0">
-          <h2 className="font-bold text-sm sm:text-base text-gray-800">
+          <h2 className="text-sm font-bold text-gray-800 sm:text-base">
             {title}
           </h2>
 
           {subtitle && (
-            <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">
+            <p className="mt-0.5 truncate text-[11px] text-gray-500 sm:text-xs">
               {subtitle}
             </p>
           )}
@@ -489,9 +472,9 @@ const handleBuyNow = () => {
       </div>
 
       {open ? (
-        <FaChevronUp className="shrink-0 text-gray-400 text-xs" />
+        <FaChevronUp className="shrink-0 text-xs text-gray-400" />
       ) : (
-        <FaChevronDown className="shrink-0 text-gray-400 text-xs" />
+        <FaChevronDown className="shrink-0 text-xs text-gray-400" />
       )}
     </button>
   );
@@ -501,16 +484,16 @@ const handleBuyNow = () => {
   // ============================================================
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 pt-3 sm:pt-5 pb-5 overflow-hidden">
+    <div className="mx-auto max-w-7xl overflow-hidden px-3 pb-4 pt-2 sm:px-5 sm:pb-5 sm:pt-3 lg:px-8">
 
       {/* ========================================================
           BREADCRUMB
       ======================================================== */}
 
-      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-gray-500 mb-3 overflow-hidden">
+      <div className="mb-2.5 flex items-center gap-1.5 overflow-hidden text-[11px] text-gray-500 sm:text-xs">
         <Link
           to="/"
-          className="hover:text-cyan-600 shrink-0"
+          className="shrink-0 hover:text-cyan-600"
         >
           Home
         </Link>
@@ -519,14 +502,14 @@ const handleBuyNow = () => {
 
         <Link
           to="/menu"
-          className="hover:text-cyan-600 shrink-0"
+          className="shrink-0 hover:text-cyan-600"
         >
           Menu
         </Link>
 
         <span>/</span>
 
-        <span className="text-cyan-700 font-medium truncate">
+        <span className="truncate font-medium text-cyan-700">
           {productData.name}
         </span>
       </div>
@@ -535,21 +518,21 @@ const handleBuyNow = () => {
           MAIN PRODUCT
       ======================================================== */}
 
-      <div className="grid lg:grid-cols-2 gap-5 lg:gap-8 items-start">
+      <div className="grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
 
         {/* IMAGE */}
 
         <div className="lg:sticky lg:top-20">
-          <div className="relative bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+          <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
 
             {productData.bestseller && (
-              <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-amber-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
+              <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow">
                 <FaStar />
                 Bestseller
               </div>
             )}
 
-            <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-white/95 text-cyan-700 px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
+            <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold text-cyan-700 shadow">
               <FaCheckCircle className="text-green-500" />
 
               {isOutOfStock
@@ -562,16 +545,16 @@ const handleBuyNow = () => {
                 <img
                   src={productData.image[0]}
                   alt={productData.name}
-                  className="w-full h-[260px] sm:h-[350px] lg:h-[440px] object-cover"
+                  className="h-[250px] w-full object-cover sm:h-[330px] lg:h-[420px]"
                 />
               ) : (
-                <div className="w-full h-[260px] sm:h-[350px] lg:h-[440px] flex items-center justify-center bg-cyan-50">
+                <div className="flex h-[250px] w-full items-center justify-center bg-cyan-50 sm:h-[330px] lg:h-[420px]">
                   <FaFish className="text-6xl text-cyan-300" />
                 </div>
               )}
             </div>
 
-            <div className="px-4 py-2.5 border-t border-gray-100 flex justify-between gap-3 text-[10px] sm:text-xs text-gray-500">
+            <div className="flex justify-between gap-3 border-t border-gray-100 px-4 py-2 text-[10px] text-gray-500 sm:text-xs">
               <span className="flex items-center gap-1.5">
                 <FaSnowflake className="text-cyan-600" />
                 Hygienically Packed
@@ -588,25 +571,23 @@ const handleBuyNow = () => {
         {/* INFORMATION */}
 
         <div>
-
-          <span className="inline-flex items-center gap-1.5 text-cyan-700 font-bold uppercase tracking-wide text-[10px] sm:text-xs">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-cyan-700 sm:text-xs">
             <FaFish />
             {categoryName}
           </span>
 
-          <h1 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-800 leading-tight">
+          <h1 className="mt-1 text-2xl font-extrabold leading-tight text-gray-800 sm:text-3xl lg:text-4xl">
             {productData.name}
           </h1>
 
-          <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-5">
+          <p className="mt-1.5 text-xs leading-5 text-gray-600 sm:text-sm">
             {descriptionText}
           </p>
 
           {/* PRICE */}
 
-          <div className="mt-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 text-white px-4 py-3.5 shadow-md">
-
-            <p className="text-[10px] text-cyan-100 uppercase tracking-wide">
+          <div className="mt-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 px-4 py-3 text-white shadow-md">
+            <p className="text-[10px] uppercase tracking-wide text-cyan-100">
               {isPreparationSelected
                 ? `${selectedPreparation} price`
                 : "Base price"}
@@ -614,14 +595,14 @@ const handleBuyNow = () => {
 
             <div className="flex items-end justify-between gap-3">
               <div className="flex items-end gap-1.5">
-                <span className="text-2xl sm:text-3xl font-extrabold">
+                <span className="text-2xl font-extrabold sm:text-3xl">
                   {currency}
                   {currentPricePerKg.toLocaleString(
                     "en-IN"
                   )}
                 </span>
 
-                <span className="text-xs text-cyan-100 mb-1">
+                <span className="mb-1 text-xs text-cyan-100">
                   / KG
                 </span>
               </div>
@@ -632,7 +613,7 @@ const handleBuyNow = () => {
                     Estimated total
                   </p>
 
-                  <p className="font-bold text-sm">
+                  <p className="text-sm font-bold">
                     {currency}
                     {estimatedTotal.toLocaleString(
                       "en-IN",
@@ -649,9 +630,8 @@ const handleBuyNow = () => {
 
           {/* STOCK */}
 
-          <div className="grid grid-cols-3 gap-2 mt-4">
-
-            <div className="rounded-lg bg-green-50 border border-green-100 px-2.5 py-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-lg border border-green-100 bg-green-50 px-2.5 py-2">
               <p className="text-[9px] text-gray-500">
                 Available
               </p>
@@ -660,11 +640,12 @@ const handleBuyNow = () => {
                 {Math.max(
                   0,
                   availableStock
-                ).toFixed(1)} KG
+                ).toFixed(1)}{" "}
+                KG
               </p>
             </div>
 
-            <div className="rounded-lg bg-cyan-50 border border-cyan-100 px-2.5 py-2">
+            <div className="rounded-lg border border-cyan-100 bg-cyan-50 px-2.5 py-2">
               <p className="text-[9px] text-gray-500">
                 Min Order
               </p>
@@ -674,7 +655,7 @@ const handleBuyNow = () => {
               </p>
             </div>
 
-            <div className="rounded-lg bg-orange-50 border border-orange-100 px-2.5 py-2">
+            <div className="rounded-lg border border-orange-100 bg-orange-50 px-2.5 py-2">
               <p className="text-[9px] text-gray-500">
                 Max Order
               </p>
@@ -687,16 +668,15 @@ const handleBuyNow = () => {
 
           {/* QUANTITY */}
 
-          <div className="mt-3 bg-white rounded-xl border border-gray-100 shadow-sm p-3.5">
-
-            <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="mt-2.5 rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+            <div className="mb-2.5 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
-                  <FaWeightHanging className="text-cyan-700 text-xs" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-100">
+                  <FaWeightHanging className="text-xs text-cyan-700" />
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-sm text-gray-800">
+                  <h3 className="text-sm font-bold text-gray-800">
                     Select Quantity
                   </h3>
 
@@ -712,7 +692,6 @@ const handleBuyNow = () => {
             </div>
 
             <div className="flex items-center justify-center gap-3">
-
               <button
                 type="button"
                 onClick={() =>
@@ -724,7 +703,7 @@ const handleBuyNow = () => {
                   isOutOfStock ||
                   weight <= safeMin
                 }
-                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-lg font-bold"
+                className="h-9 w-9 rounded-full bg-gray-100 text-lg font-bold hover:bg-gray-200 disabled:opacity-40"
               >
                 −
               </button>
@@ -751,10 +730,10 @@ const handleBuyNow = () => {
                       );
                     }
                   }}
-                  className="w-24 text-center border border-gray-200 rounded-lg py-2 px-2 text-sm font-bold outline-none focus:border-cyan-500"
+                  className="w-24 rounded-lg border border-gray-200 px-2 py-2 text-center text-sm font-bold outline-none focus:border-cyan-500"
                 />
 
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 pointer-events-none">
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">
                   KG
                 </span>
               </div>
@@ -770,207 +749,194 @@ const handleBuyNow = () => {
                   isOutOfStock ||
                   weight >= availableMax
                 }
-                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-lg font-bold"
+                className="h-9 w-9 rounded-full bg-gray-100 text-lg font-bold hover:bg-gray-200 disabled:opacity-40"
               >
                 +
               </button>
             </div>
           </div>
 
-          {/* ====================================================
-              PREPARATION COLLAPSIBLE
-          ==================================================== */}
-{requiresPreparation && (
-          <div className="mt-3 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          {/* PREPARATION */}
 
-            <AccordionHeader
-              icon={<FaCut />}
-              title="Choose Preparation"
-              subtitle={
-                isPreparationSelected
-                  ? `${selectedPreparation} • ${currency}${currentPricePerKg}/KG`
-                  : "Select how you want it prepared"
-              }
-              open={showPreparation}
-              onClick={() =>
-                setShowPreparation(
-                  !showPreparation
-                )
-              }
-            />
+          {requiresPreparation && (
+            <div className="mt-2.5 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+              <AccordionHeader
+                icon={<FaCut />}
+                title="Choose Preparation"
+                subtitle={
+                  isPreparationSelected
+                    ? `${selectedPreparation} • ${currency}${currentPricePerKg}/KG`
+                    : "Select how you want it prepared"
+                }
+                open={showPreparation}
+                onClick={() =>
+                  setShowPreparation(
+                    !showPreparation
+                  )
+                }
+              />
 
-            {showPreparation && (
-              <div className="px-3.5 pb-3.5 border-t border-gray-100">
+              {showPreparation && (
+                <div className="border-t border-gray-100 px-3.5 pb-3">
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-[10px] text-gray-500">
+                      Preparation is required
+                    </span>
 
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-[10px] text-gray-500">
-                    Preparation is required
-                  </span>
+                    <span className="text-[10px] font-bold text-red-500">
+                      Required
+                    </span>
+                  </div>
 
-                  <span className="text-[10px] font-bold text-red-500">
-                    Required
-                  </span>
-                </div>
+                  {hasPreparationOptions ? (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {preparationOptions.map(
+                        (option) => {
+                          const isSelected =
+                            selectedPreparation ===
+                            option.name;
 
-                {hasPreparationOptions ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {preparationOptions.map(
-                      (option) => {
-                        const isSelected =
-                          selectedPreparation ===
-                          option.name;
+                          return (
+                            <button
+                              key={option.name}
+                              type="button"
+                              onClick={() => {
+                                setSelectedPreparation(
+                                  option.name
+                                );
+                                setShowPreparation(
+                                  false
+                                );
+                              }}
+                              disabled={
+                                isOutOfStock
+                              }
+                              className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
+                                isSelected
+                                  ? "border-cyan-600 bg-cyan-50"
+                                  : "border-gray-100 bg-gray-50 hover:border-cyan-200"
+                              }`}
+                            >
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span
+                                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                                    isSelected
+                                      ? "border-cyan-600 bg-cyan-600"
+                                      : "border-gray-300 bg-white"
+                                  }`}
+                                >
+                                  {isSelected && (
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                                  )}
+                                </span>
 
-                        return (
-                          <button
-                            key={option.name}
-                            type="button"
-                            onClick={() => {
-                              setSelectedPreparation(
-                                option.name
-                              );
-                              setShowPreparation(
-                                false
-                              );
-                            }}
-                            disabled={
-                              isOutOfStock
-                            }
-                            className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
-                              isSelected
-                                ? "border-cyan-600 bg-cyan-50"
-                                : "border-gray-100 bg-gray-50 hover:border-cyan-200"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className={`truncate text-xs font-semibold ${
+                                    isSelected
+                                      ? "text-cyan-800"
+                                      : "text-gray-700"
+                                  }`}
+                                >
+                                  {option.name}
+                                </span>
+                              </div>
 
-                              <span
-                                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                  isSelected
-                                    ? "border-cyan-600 bg-cyan-600"
-                                    : "border-gray-300 bg-white"
-                                }`}
-                              >
-                                {isSelected && (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                              <span className="shrink-0 text-[10px] font-semibold text-gray-500">
+                                {currency}
+                                {option.pricePerKg.toLocaleString(
+                                  "en-IN"
                                 )}
+                                /KG
                               </span>
-
-                              <span
-                                className={`text-xs font-semibold truncate ${
-                                  isSelected
-                                    ? "text-cyan-800"
-                                    : "text-gray-700"
-                                }`}
-                              >
-                                {option.name}
-                              </span>
-                            </div>
-
-                            <span className="text-[10px] font-semibold text-gray-500 shrink-0">
-                              {currency}
-                              {option.pricePerKg.toLocaleString(
-                                "en-IN"
-                              )}
-                              /KG
-                            </span>
-                          </button>
-                        );
-                      }
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-                    <div className="flex gap-2">
-                      <FaInfoCircle className="text-amber-500 mt-0.5 shrink-0" />
-
-                      <p className="text-xs text-amber-700">
-                        Preparation options are not configured for this product.
-                      </p>
+                            </button>
+                          );
+                        }
+                      )}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <div className="flex gap-2">
+                        <FaInfoCircle className="mt-0.5 shrink-0 text-amber-500" />
+
+                        <p className="text-xs text-amber-700">
+                          Preparation options are not configured for this product.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isPreparationSelected && (
+                <div className="flex items-center gap-1.5 px-3.5 pb-3 text-[11px] font-semibold text-cyan-700">
+                  <FaCheckCircle className="text-green-500" />
+                  Selected: {selectedPreparation}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ADD TO CART + BUY NOW */}
+
+          <div className="mt-2.5">
+            {!isOutOfStock ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={
+                    (requiresPreparation &&
+                      !isPreparationSelected) ||
+                    weight <= 0 ||
+                    weight > availableStock
+                  }
+                  onClick={handleAddToCart}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 py-3 text-sm font-bold text-white shadow-md transition hover:from-cyan-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-400 sm:text-base"
+                >
+                  <FaShoppingCart />
+
+                  {requiresPreparation &&
+                  !isPreparationSelected
+                    ? "SELECT PREPARATION TO CONTINUE"
+                    : editCart
+                    ? "UPDATE CART"
+                    : "ADD TO CART"}
+                </button>
+
+                {!editCart && (
+                  <button
+                    type="button"
+                    disabled={
+                      (requiresPreparation &&
+                        !isPreparationSelected) ||
+                      weight <= 0 ||
+                      weight > availableStock
+                    }
+                    onClick={handleBuyNow}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 py-3 text-sm font-bold text-white shadow-md transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-gray-400 sm:text-base"
+                  >
+                    <FaCreditCard />
+
+                    {requiresPreparation &&
+                    !isPreparationSelected
+                      ? "SELECT PREPARATION TO CONTINUE"
+                      : "BUY NOW"}
+                  </button>
                 )}
               </div>
-            )}
-
-            {isPreparationSelected && (
-              <div className="px-3.5 pb-3 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-700">
-                <FaCheckCircle className="text-green-500" />
-                Selected: {selectedPreparation}
-              </div>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full rounded-xl bg-gray-400 py-3 text-sm font-bold text-white"
+              >
+                OUT OF STOCK
+              </button>
             )}
           </div>
 
-          )}
-
-          {/* ADD TO CART */}
-
-         {/* ADD TO CART + BUY NOW */}
-
-<div className="mt-3">
-
-  {!isOutOfStock ? (
-    <div className="space-y-2.5">
-
-      {/* ADD TO CART / UPDATE CART */}
-      <button
-        type="button"
-        disabled={
-          (requiresPreparation &&
-            !isPreparationSelected) ||
-          weight <= 0 ||
-          weight > availableStock
-        }
-        onClick={handleAddToCart}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base shadow-md flex items-center justify-center gap-2 transition"
-      >
-        <FaShoppingCart />
-
-        {requiresPreparation &&
-        !isPreparationSelected
-          ? "SELECT PREPARATION TO CONTINUE"
-          : editCart
-          ? "UPDATE CART"
-          : "ADD TO CART"}
-      </button>
-
-      {/* BUY NOW */}
-      {!editCart && (
-        <button
-          type="button"
-          disabled={
-            (requiresPreparation &&
-              !isPreparationSelected) ||
-            weight <= 0 ||
-            weight > availableStock
-          }
-          onClick={handleBuyNow}
-          className="w-full py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base shadow-md flex items-center justify-center gap-2 transition"
-        >
-          <FaCreditCard />
-
-          {requiresPreparation &&
-          !isPreparationSelected
-            ? "SELECT PREPARATION TO CONTINUE"
-            : "BUY NOW"}
-        </button>
-      )}
-
-    </div>
-  ) : (
-    <button
-      type="button"
-      disabled
-      className="w-full py-3.5 rounded-xl bg-gray-400 text-white font-bold text-sm"
-    >
-      OUT OF STOCK
-    </button>
-  )}
-
-</div>
-
           {/* ASSURANCE */}
 
-          <div className="mt-2 flex justify-center flex-wrap gap-x-4 gap-y-1.5 text-[10px] text-gray-500">
+          <div className="mt-1.5 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[10px] text-gray-500">
             <span className="flex items-center gap-1">
               <FaShieldAlt className="text-green-500" />
               Secure Order
@@ -990,39 +956,37 @@ const handleBuyNow = () => {
       </div>
 
       {/* ========================================================
-          QUICK INFORMATION — COMPACT
+          QUICK INFORMATION
       ======================================================== */}
 
-      <div className="grid grid-cols-3 gap-2 mt-5">
-
-        <div className="rounded-lg bg-cyan-50 border border-cyan-100 p-2.5 text-center">
-          <FaSnowflake className="mx-auto text-cyan-600 text-sm" />
-          <p className="mt-1 text-[9px] sm:text-xs font-semibold text-gray-700">
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="rounded-lg border border-cyan-100 bg-cyan-50 p-2.5 text-center">
+          <FaSnowflake className="mx-auto text-sm text-cyan-600" />
+          <p className="mt-1 text-[9px] font-semibold text-gray-700 sm:text-xs">
             Fresh & Hygienic
           </p>
         </div>
 
-        <div className="rounded-lg bg-blue-50 border border-blue-100 p-2.5 text-center">
-          <FaTruck className="mx-auto text-blue-600 text-sm" />
-          <p className="mt-1 text-[9px] sm:text-xs font-semibold text-gray-700">
+        <div className="rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-center">
+          <FaTruck className="mx-auto text-sm text-blue-600" />
+          <p className="mt-1 text-[9px] font-semibold text-gray-700 sm:text-xs">
             Reliable Dispatch
           </p>
         </div>
 
-        <div className="rounded-lg bg-green-50 border border-green-100 p-2.5 text-center">
-          <FaCreditCard className="mx-auto text-green-600 text-sm" />
-          <p className="mt-1 text-[9px] sm:text-xs font-semibold text-gray-700">
+        <div className="rounded-lg border border-green-100 bg-green-50 p-2.5 text-center">
+          <FaCreditCard className="mx-auto text-sm text-green-600" />
+          <p className="mt-1 text-[9px] font-semibold text-gray-700 sm:text-xs">
             Secure Payments
           </p>
         </div>
-
       </div>
 
       {/* ========================================================
-          RELATED PRODUCTS — MOVED UP
+          RELATED PRODUCTS
       ======================================================== */}
 
-      <div className="mt-4">
+      <div className="mt-3">
         <RelatedProducts
           category={productData.category}
           subCategory={productData.subCategory}
@@ -1034,12 +998,11 @@ const handleBuyNow = () => {
           PRODUCT INFORMATION ACCORDIONS
       ======================================================== */}
 
-     <div className="mt-4 space-y-2">
+      <div className="mt-3 space-y-1.5">
 
         {/* NUTRITION */}
 
-        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
           <AccordionHeader
             icon={<FaLeaf />}
             iconBg="bg-green-100"
@@ -1055,8 +1018,7 @@ const handleBuyNow = () => {
           />
 
           {showNutrition && (
-            <div className="px-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 border-t border-gray-100 pt-3">
-
+            <div className="grid grid-cols-2 gap-2 border-t border-gray-100 px-3.5 pb-3.5 pt-2.5 sm:grid-cols-3 lg:grid-cols-5">
               {[
                 ["Protein", productData.description?.proteins],
                 ["Calories", productData.description?.calories],
@@ -1066,7 +1028,7 @@ const handleBuyNow = () => {
               ].map(([label, value]) => (
                 <div
                   key={label}
-                  className="bg-gray-50 rounded-lg p-3"
+                  className="rounded-lg bg-gray-50 p-3"
                 >
                   <p className="text-[10px] text-gray-500">
                     {label}
@@ -1083,8 +1045,7 @@ const handleBuyNow = () => {
 
         {/* BENEFITS */}
 
-        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
           <AccordionHeader
             icon={<FaHeartbeat />}
             iconBg="bg-red-50"
@@ -1100,19 +1061,18 @@ const handleBuyNow = () => {
           />
 
           {showBenefits && (
-            <div className="px-3.5 pb-3.5 border-t border-gray-100 pt-3">
-
+            <div className="border-t border-gray-100 px-3.5 pb-3.5 pt-2.5">
               {productData.description?.benefits?.length > 0 ? (
-                <div className="grid sm:grid-cols-2 gap-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {productData.description.benefits.map(
                     (benefit, index) => (
                       <div
                         key={index}
-                        className="flex items-start gap-2 bg-green-50 rounded-lg p-3"
+                        className="flex items-start gap-2 rounded-lg bg-green-50 p-3"
                       >
-                        <FaCheckCircle className="text-green-500 mt-0.5 shrink-0" />
+                        <FaCheckCircle className="mt-0.5 shrink-0 text-green-500" />
 
-                        <p className="text-xs text-gray-700 leading-5">
+                        <p className="text-xs leading-5 text-gray-700">
                           {benefit}
                         </p>
                       </div>
@@ -1130,8 +1090,7 @@ const handleBuyNow = () => {
 
         {/* ABOUT */}
 
-        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
           <AccordionHeader
             icon={<FaFish />}
             title="About This Seafood"
@@ -1145,7 +1104,7 @@ const handleBuyNow = () => {
           />
 
           {showDescription && (
-            <div className="px-4 pb-4 border-t border-gray-100 pt-3 text-xs sm:text-sm text-gray-600 leading-5 space-y-2">
+            <div className="space-y-2 border-t border-gray-100 px-4 pb-4 pt-2.5 text-xs leading-5 text-gray-600 sm:text-sm">
               <p>
                 {commonDescription ||
                   "Our seafood is sourced from trusted suppliers and carefully inspected before dispatch."}
@@ -1162,10 +1121,9 @@ const handleBuyNow = () => {
           )}
         </div>
 
-        {/* PREPARATION & PACKING — COMPACT ACCORDION */}
+        {/* PREPARATION & PACKING */}
 
-        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
           <AccordionHeader
             icon={<FaCut />}
             title="Preparation & Packing"
@@ -1179,18 +1137,17 @@ const handleBuyNow = () => {
           />
 
           {showPreparation && (
-            <div className="px-4 pb-4 border-t border-gray-100 pt-3">
-
+            <div className="border-t border-gray-100 px-4 pb-4 pt-2.5">
               <div className="flex flex-wrap gap-2">
                 {preparationOptions.map(
                   (option) => (
                     <span
                       key={option.name}
-                      className={`rounded-full px-2.5 py-1.5 text-[10px] font-semibold border ${
+                      className={`rounded-full border px-2.5 py-1.5 text-[10px] font-semibold ${
                         selectedPreparation ===
                         option.name
-                          ? "bg-cyan-600 text-white border-cyan-600"
-                          : "bg-gray-50 text-gray-600 border-gray-200"
+                          ? "border-cyan-600 bg-cyan-600 text-white"
+                          : "border-gray-200 bg-gray-50 text-gray-600"
                       }`}
                     >
                       {option.name} • {currency}
@@ -1200,7 +1157,7 @@ const handleBuyNow = () => {
                 )}
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-gray-500">
+              <div className="mt-2.5 flex flex-wrap gap-3 text-[10px] text-gray-500">
                 <span className="flex items-center gap-1">
                   <FaCheckCircle className="text-green-500" />
                   Hygienic handling
@@ -1222,18 +1179,17 @@ const handleBuyNow = () => {
       </div>
 
       {/* ========================================================
-          CUSTOMER FEEDBACK — COMPACT
+          CUSTOMER FEEDBACK
       ======================================================== */}
 
-      <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-xl p-4">
-
+      <div className="mt-3 rounded-xl border border-yellow-100 bg-yellow-50 p-3.5">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white">
             <FaStar className="text-yellow-500" />
           </div>
 
           <div>
-            <p className="text-[10px] font-bold text-yellow-700 uppercase">
+            <p className="text-[10px] font-bold uppercase text-yellow-700">
               Customer Feedback
             </p>
 
@@ -1243,17 +1199,16 @@ const handleBuyNow = () => {
           </div>
         </div>
 
-        <p className="mt-2 text-xs text-gray-600">
+        <p className="mt-1.5 text-xs text-gray-600">
           Product reviews will appear here as customers share their experience.
         </p>
       </div>
 
       {/* ========================================================
-          WHY CHOOSE US — NOW AT BOTTOM
+          WHY CHOOSE US
       ======================================================== */}
 
-      <div className="mt-4 rounded-xl bg-gradient-to-r from-cyan-700 to-blue-800 text-white overflow-hidden">
-
+      <div className="mt-3 overflow-hidden rounded-xl bg-gradient-to-r from-cyan-700 to-blue-800 text-white">
         <button
           type="button"
           onClick={() =>
@@ -1261,10 +1216,10 @@ const handleBuyNow = () => {
               !showWhyChoose
             )
           }
-          className="w-full flex items-center justify-between gap-3 p-4 text-left"
+          className="flex w-full items-center justify-between gap-3 p-3.5 text-left"
         >
           <div>
-            <p className="text-[10px] text-cyan-100 uppercase tracking-wide">
+            <p className="text-[10px] uppercase tracking-wide text-cyan-100">
               Priya Live Fish
             </p>
 
@@ -1285,8 +1240,7 @@ const handleBuyNow = () => {
         </button>
 
         {showWhyChoose && (
-          <div className="px-4 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-3 border-t border-white/10 pt-3">
-
+          <div className="grid grid-cols-2 gap-2.5 border-t border-white/10 px-3.5 pb-3.5 pt-2.5 lg:grid-cols-4">
             {[
               [
                 <FaFish />,
@@ -1318,11 +1272,11 @@ const handleBuyNow = () => {
                     {icon}
                   </div>
 
-                  <h3 className="mt-2 text-xs font-bold">
+                  <h3 className="mt-1.5 text-xs font-bold">
                     {title}
                   </h3>
 
-                  <p className="mt-1 text-[10px] text-cyan-100 leading-4">
+                  <p className="mt-1 text-[10px] leading-4 text-cyan-100">
                     {text}
                   </p>
                 </div>
@@ -1336,10 +1290,10 @@ const handleBuyNow = () => {
           BACK TO MENU
       ======================================================== */}
 
-      <div className="flex justify-center mt-4">
+      <div className="mt-3 flex justify-center">
         <Link
           to="/menu"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold shadow-sm hover:text-cyan-700 transition text-xs"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:text-cyan-700"
         >
           <FaArrowLeft />
           Continue Shopping

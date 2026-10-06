@@ -7,21 +7,14 @@ import {
   FaSave,
   FaTimes,
 } from "react-icons/fa";
-
 import { ShopContext } from "../context/ShopContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 
 const Profile = () => {
-  const {
-    user,
-    setUser,
-    backendUrl,
-    token,
-  } = useContext(ShopContext);
+  const { user, setUser, backendUrl, token } = useContext(ShopContext);
 
   const [edit, setEdit] = useState(false);
-
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -92,25 +85,19 @@ const Profile = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-5 py-7 sm:py-9">
-
-      {/* Header */}
       <div className="mb-6 sm:mb-7">
         <p className="text-teal-600 font-semibold uppercase tracking-widest text-xs">
           My Account
         </p>
-
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mt-1.5">
           Profile Settings
         </h1>
-
         <p className="text-gray-500 text-sm mt-1.5">
           Manage your personal information and delivery details.
         </p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-5 sm:gap-6">
-
-        {/* LEFT PROFILE CARD */}
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
           <div className="bg-gradient-to-r from-teal-600 to-cyan-500 h-24 sm:h-28" />
 
@@ -122,9 +109,7 @@ const Profile = () => {
             </div>
 
             <div className="text-center mt-4">
-              <h2 className="text-xl sm:text-2xl font-bold">
-                {user?.name}
-              </h2>
+              <h2 className="text-xl sm:text-2xl font-bold">{user?.name}</h2>
 
               <p className="text-gray-500 text-sm mt-1.5 flex items-center justify-center gap-2">
                 <FaUserCircle />
@@ -159,7 +144,6 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-md p-5 sm:p-6">
           <h2 className="text-xl sm:text-2xl font-bold mb-5">
             Personal Information
@@ -167,13 +151,11 @@ const Profile = () => {
 
           {edit ? (
             <div className="space-y-4">
-
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-600">
                     First Name
                   </label>
-
                   <input
                     name="firstName"
                     value={form.firstName}
@@ -187,7 +169,6 @@ const Profile = () => {
                   <label className="text-sm font-medium text-gray-600">
                     Last Name
                   </label>
-
                   <input
                     name="lastName"
                     value={form.lastName}
@@ -202,7 +183,6 @@ const Profile = () => {
                 <label className="text-sm font-medium text-gray-600">
                   Phone Number
                 </label>
-
                 <input
                   name="phone"
                   value={form.phone}
@@ -216,7 +196,6 @@ const Profile = () => {
                 <label className="text-sm font-medium text-gray-600">
                   Delivery Address
                 </label>
-
                 <input
                   name="address"
                   value={form.address}
@@ -231,7 +210,6 @@ const Profile = () => {
                   <label className="text-sm font-medium text-gray-600">
                     City
                   </label>
-
                   <input
                     name="city"
                     value={form.city}
@@ -245,7 +223,6 @@ const Profile = () => {
                   <label className="text-sm font-medium text-gray-600">
                     State
                   </label>
-
                   <input
                     name="state"
                     value={form.state}
@@ -261,7 +238,6 @@ const Profile = () => {
                   <label className="text-sm font-medium text-gray-600">
                     Pincode
                   </label>
-
                   <input
                     name="zipcode"
                     value={form.zipcode}
@@ -275,7 +251,6 @@ const Profile = () => {
                   <label className="text-sm font-medium text-gray-600">
                     Country
                   </label>
-
                   <input
                     name="country"
                     value={form.country}
@@ -306,8 +281,6 @@ const Profile = () => {
             </div>
           ) : (
             <div className="space-y-4">
-
-              {/* CONTACT INFORMATION */}
               <div className="bg-gray-50 rounded-2xl p-4 sm:p-5">
                 <h3 className="text-lg font-semibold flex items-center gap-2.5 mb-4">
                   <FaPhoneAlt className="text-teal-600" />
@@ -317,9 +290,7 @@ const Profile = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Full Name</p>
-                    <p className="font-semibold mt-1">
-                      {user?.name}
-                    </p>
+                    <p className="font-semibold mt-1">{user?.name}</p>
                   </div>
 
                   <div>
@@ -338,7 +309,6 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* DELIVERY ADDRESS */}
               <div className="bg-gray-50 rounded-2xl p-4 sm:p-5">
                 <h3 className="text-lg font-semibold flex items-center gap-2.5 mb-4">
                   <FaMapMarkerAlt className="text-teal-600" />
@@ -349,8 +319,7 @@ const Profile = () => {
                   <div>
                     <p className="text-xs text-gray-500">Receiver Name</p>
                     <p className="font-semibold mt-1">
-                      {user?.address?.firstName}{" "}
-                      {user?.address?.lastName}
+                      {user?.address?.firstName} {user?.address?.lastName}
                     </p>
                   </div>
 
@@ -391,18 +360,15 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* ACCOUNT STATUS */}
               <div className="bg-gradient-to-r from-teal-600 to-cyan-500 rounded-2xl p-5 text-white">
                 <h3 className="text-lg font-bold mb-1.5">
                   Premium FreshFish Member
                 </h3>
-
                 <p className="text-sm opacity-90 leading-5">
                   Manage your profile, delivery information, orders and
                   receive fresh seafood delivered safely to your doorstep.
                 </p>
               </div>
-
             </div>
           )}
         </div>

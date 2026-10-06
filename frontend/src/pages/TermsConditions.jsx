@@ -19,8 +19,6 @@ const TermsConditions = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-teal-50 py-7 sm:py-9 px-3 sm:px-5">
       <div className="max-w-5xl mx-auto">
-
-        {/* Header */}
         <div className="text-center mb-7 sm:mb-9">
           <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-700 flex items-center justify-center shadow-lg">
             <FaFileContract className="text-white text-3xl sm:text-4xl" />
@@ -41,12 +39,9 @@ const TermsConditions = () => {
         </div>
 
         <div className="space-y-4 sm:space-y-5">
-
-          {/* Introduction */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaFileContract className="text-2xl text-teal-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 1. Introduction
               </h2>
@@ -61,11 +56,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Eligibility */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaUser className="text-2xl text-blue-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 2. Customer Eligibility & Account
               </h2>
@@ -95,11 +88,9 @@ const TermsConditions = () => {
             </ul>
           </div>
 
-          {/* Product Information */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaFish className="text-2xl text-teal-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 3. Seafood Products & Product Information
               </h2>
@@ -136,11 +127,9 @@ const TermsConditions = () => {
             </ul>
           </div>
 
-          {/* Weight Variation */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaFish className="text-2xl text-cyan-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 4. Weight & Quantity Variation
               </h2>
@@ -157,11 +146,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Orders */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaShoppingCart className="text-2xl text-teal-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 5. Orders & Order Confirmation
               </h2>
@@ -189,11 +176,9 @@ const TermsConditions = () => {
             </ul>
           </div>
 
-          {/* Pricing */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaMoneyBillWave className="text-2xl text-green-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 6. Pricing & Taxes
               </h2>
@@ -208,11 +193,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Payments */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaMoneyBillWave className="text-2xl text-green-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 7. Payments
               </h2>
@@ -243,11 +226,9 @@ const TermsConditions = () => {
             </ul>
           </div>
 
-          {/* Delivery */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaTruck className="text-2xl text-cyan-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 8. Delivery
               </h2>
@@ -278,11 +259,9 @@ const TermsConditions = () => {
             </ul>
           </div>
 
-          {/* Perishable Food */}
           <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl shadow-md p-5 sm:p-6 text-white">
             <div className="flex items-center gap-3 mb-3">
               <FaExclamationTriangle className="text-2xl shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 9. Perishable & Food Safety
               </h2>
@@ -299,11 +278,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Cancellation */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaUndo className="text-2xl text-red-500 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 10. Order Cancellation
               </h2>
@@ -319,11 +296,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Returns Refunds */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaUndo className="text-2xl text-green-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 11. Returns, Refunds & Complaints
               </h2>
@@ -358,11 +333,9 @@ const TermsConditions = () => {
             </ul>
           </div>
 
-          {/* Customer Responsibilities */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaShieldAlt className="text-2xl text-blue-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 12. Customer Responsibilities
               </h2>
@@ -392,11 +365,9 @@ const TermsConditions = () => {
             </ul>
           </div>
 
-          {/* Prohibited Activities */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaBan className="text-2xl text-red-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 13. Prohibited Activities
               </h2>
@@ -419,11 +390,9 @@ const TermsConditions = () => {
             </ul>
           </div>
 
-          {/* Privacy */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaLock className="text-2xl text-teal-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 14. Privacy & Personal Information
               </h2>
@@ -438,11 +407,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Intellectual Property */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaShieldAlt className="text-2xl text-purple-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 15. Intellectual Property
               </h2>
@@ -457,11 +424,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Liability */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaBalanceScale className="text-2xl text-orange-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 16. Limitation of Liability
               </h2>
@@ -477,11 +442,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Force Majeure */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaExclamationTriangle className="text-2xl text-yellow-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 17. Events Beyond Our Control
               </h2>
@@ -496,11 +459,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Changes */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaFileContract className="text-2xl text-cyan-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 18. Changes to These Terms
               </h2>
@@ -515,11 +476,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Governing Law */}
           <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-3">
               <FaGavel className="text-2xl text-indigo-600 shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 19. Governing Law & Disputes
               </h2>
@@ -534,11 +493,9 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Contact */}
           <div className="bg-gradient-to-r from-teal-600 to-cyan-700 rounded-2xl shadow-md p-5 sm:p-6 text-white">
             <div className="flex items-center gap-3 mb-3">
               <FaFileContract className="text-2xl shrink-0" />
-
               <h2 className="text-xl sm:text-2xl font-bold">
                 20. Contact Us
               </h2>
@@ -552,21 +509,17 @@ const TermsConditions = () => {
             </p>
           </div>
 
-          {/* Final Agreement */}
           <div className="text-center bg-gray-900 rounded-2xl p-5 sm:p-6 text-white">
             <FaFileContract className="text-3xl mx-auto mb-3 text-cyan-400" />
-
             <h2 className="text-xl sm:text-2xl font-bold mb-2">
               Your Agreement
             </h2>
-
             <p className="text-gray-300 text-sm leading-6">
               By creating an account, browsing our website or placing an
               order, you confirm that you have read and agree to these
               Terms & Conditions.
             </p>
           </div>
-
         </div>
       </div>
     </div>

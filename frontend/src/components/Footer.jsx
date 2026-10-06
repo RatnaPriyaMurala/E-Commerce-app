@@ -16,49 +16,51 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="relative mt-8 sm:mt-10 bg-slate-950 text-white rounded-t-2xl overflow-hidden">
+    <footer className="relative mt-5 overflow-hidden rounded-t-2xl bg-slate-950 text-white sm:mt-6">
+      {/* =====================================================
+          MAIN FOOTER
+      ===================================================== */}
 
-      {/* MAIN FOOTER */}
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-7 sm:pt-8 pb-5">
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
-
-          {/* BRAND */}
+      <div className="relative mx-auto max-w-7xl px-3 pb-4 pt-5 sm:px-5 sm:pb-4 sm:pt-6 lg:px-6">
+        <div className="grid grid-cols-2 gap-x-5 gap-y-5 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-0">
+          {/* =================================================
+              BRAND
+          ================================================= */}
 
           <div className="col-span-2 lg:col-span-1">
-
             <Link to="/" className="inline-block">
               <img
                 src={assets.logo}
-                className="w-28 sm:w-32 bg-white rounded-lg p-1.5"
+                className="w-24 rounded-lg bg-white p-1 sm:w-28"
                 alt="Priya Live Fish"
               />
             </Link>
 
-            <p className="mt-2.5 text-[11px] sm:text-xs text-gray-400 leading-5 max-w-sm">
-              Freshwater fish, seawater fish, prawns and crabs sourced carefully and packed hygienically.
+            <p className="mt-2 max-w-sm text-[10px] leading-4.5 text-gray-400 sm:text-[11px]">
+              Freshwater fish, seawater fish, prawns and crabs sourced
+              carefully and packed hygienically.
             </p>
 
-            <div className="mt-2.5 inline-flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-800/50 text-cyan-300 px-2.5 py-1.5 rounded-full text-[10px]">
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-cyan-800/50 bg-cyan-950/70 px-2.5 py-1 text-[9px] text-cyan-300 sm:text-[10px]">
               <FaFish />
               Freshness Delivered
             </div>
           </div>
 
-          {/* COMPANY */}
+          {/* =================================================
+              COMPANY
+          ================================================= */}
 
           <div>
-            <h3 className="text-sm font-bold mb-2.5">
+            <h3 className="mb-2 text-sm font-bold">
               Company
             </h3>
 
-            <ul className="space-y-1.5 text-[11px] text-gray-400">
-
+            <ul className="space-y-1 text-[10px] text-gray-400 sm:text-[11px]">
               <li>
                 <Link
                   to="/"
-                  className="flex items-center gap-1.5 hover:text-cyan-400"
+                  className="flex items-center gap-1.5 transition-colors hover:text-cyan-400"
                 >
                   <FaArrowRight className="text-[7px]" />
                   Home
@@ -68,7 +70,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/about"
-                  className="flex items-center gap-1.5 hover:text-cyan-400"
+                  className="flex items-center gap-1.5 transition-colors hover:text-cyan-400"
                 >
                   <FaArrowRight className="text-[7px]" />
                   About Us
@@ -78,7 +80,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/menu"
-                  className="flex items-center gap-1.5 hover:text-cyan-400"
+                  className="flex items-center gap-1.5 transition-colors hover:text-cyan-400"
                 >
                   <FaArrowRight className="text-[7px]" />
                   Products
@@ -88,29 +90,29 @@ const Footer = () => {
               <li>
                 <Link
                   to="/contact"
-                  className="flex items-center gap-1.5 hover:text-cyan-400"
+                  className="flex items-center gap-1.5 transition-colors hover:text-cyan-400"
                 >
                   <FaArrowRight className="text-[7px]" />
                   Contact
                 </Link>
               </li>
-
             </ul>
           </div>
 
-          {/* POLICIES */}
+          {/* =================================================
+              POLICIES
+          ================================================= */}
 
           <div>
-            <h3 className="text-sm font-bold mb-2.5">
+            <h3 className="mb-2 text-sm font-bold">
               Policies
             </h3>
 
-            <ul className="space-y-1.5 text-[11px] text-gray-400">
-
+            <ul className="space-y-1 text-[10px] text-gray-400 sm:text-[11px]">
               <li>
                 <Link
                   to="/privacy-policy"
-                  className="hover:text-cyan-400"
+                  className="transition-colors hover:text-cyan-400"
                 >
                   Privacy Policy
                 </Link>
@@ -118,8 +120,8 @@ const Footer = () => {
 
               <li>
                 <Link
-                  to="/terms"
-                  className="hover:text-cyan-400"
+                  to="/terms-conditions"
+                  className="transition-colors hover:text-cyan-400"
                 >
                   Terms & Conditions
                 </Link>
@@ -128,7 +130,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/refund-policy"
-                  className="hover:text-cyan-400"
+                  className="transition-colors hover:text-cyan-400"
                 >
                   Refund Policy
                 </Link>
@@ -137,44 +139,41 @@ const Footer = () => {
               <li>
                 <Link
                   to="/shipping-policy"
-                  className="hover:text-cyan-400"
+                  className="transition-colors hover:text-cyan-400"
                 >
                   Shipping Policy
                 </Link>
               </li>
-
             </ul>
           </div>
 
-          {/* CONTACT */}
+          {/* =================================================
+              CONTACT
+          ================================================= */}
 
           <div className="col-span-2 lg:col-span-1">
-
-            <h3 className="text-sm font-bold mb-2.5">
+            <h3 className="mb-2 text-sm font-bold">
               Contact Us
             </h3>
 
-            <div className="space-y-2 text-[11px] text-gray-400">
-
+            <div className="space-y-1.5 text-[10px] text-gray-400 sm:text-[11px]">
               <a
                 href="tel:+919954833369"
-                className="flex items-center gap-2 hover:text-cyan-400"
+                className="flex items-center gap-2 transition-colors hover:text-cyan-400"
               >
-                <span className="w-7 h-7 rounded-full bg-cyan-950 flex items-center justify-center shrink-0">
-                  <FaPhoneAlt className="text-cyan-400 text-[10px]" />
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-950">
+                  <FaPhoneAlt className="text-[9px] text-cyan-400" />
                 </span>
 
-                <span>
-                  +91 9954833369
-                </span>
+                <span>+91 9954833369</span>
               </a>
 
               <a
                 href="mailto:priyalivefish@gmail.com"
-                className="flex items-center gap-2 hover:text-cyan-400"
+                className="flex items-center gap-2 transition-colors hover:text-cyan-400"
               >
-                <span className="w-7 h-7 rounded-full bg-cyan-950 flex items-center justify-center shrink-0">
-                  <FaEnvelope className="text-cyan-400 text-[10px]" />
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-950">
+                  <FaEnvelope className="text-[9px] text-cyan-400" />
                 </span>
 
                 <span className="break-all">
@@ -183,11 +182,11 @@ const Footer = () => {
               </a>
 
               <div className="flex items-start gap-2">
-                <span className="w-7 h-7 rounded-full bg-cyan-950 flex items-center justify-center shrink-0">
-                  <FaMapMarkerAlt className="text-cyan-400 text-[10px]" />
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-950">
+                  <FaMapMarkerAlt className="text-[9px] text-cyan-400" />
                 </span>
 
-                <span className="leading-4">
+                <span className="leading-3.5">
                   Fresh Fish Market,
                   <br />
                   Andhra Pradesh,
@@ -195,17 +194,15 @@ const Footer = () => {
                   India
                 </span>
               </div>
-
             </div>
 
             {/* SOCIAL */}
 
-            <div className="flex gap-2 mt-2.5">
-
+            <div className="mt-2 flex gap-1.5">
               <button
                 type="button"
                 aria-label="Facebook"
-                className="w-7 h-7 rounded-full bg-cyan-900/70 flex items-center justify-center text-xs"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-900/70 text-[10px] transition hover:scale-105"
               >
                 <FaFacebookF />
               </button>
@@ -213,7 +210,7 @@ const Footer = () => {
               <button
                 type="button"
                 aria-label="Instagram"
-                className="w-7 h-7 rounded-full bg-pink-900/40 flex items-center justify-center text-xs"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-pink-900/40 text-[10px] transition hover:scale-105"
               >
                 <FaInstagram />
               </button>
@@ -221,21 +218,20 @@ const Footer = () => {
               <button
                 type="button"
                 aria-label="WhatsApp"
-                className="w-7 h-7 rounded-full bg-green-900/40 flex items-center justify-center text-xs"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-green-900/40 text-[10px] transition hover:scale-105"
               >
                 <FaWhatsapp />
               </button>
-
             </div>
           </div>
         </div>
 
-        {/* TRUST STRIP */}
+        {/* =====================================================
+            TRUST STRIP
+        ===================================================== */}
 
-        <div className="mt-5 pt-3 border-t border-slate-800">
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9px] sm:text-[10px] text-gray-500">
-
+        <div className="mt-4 border-t border-slate-800 pt-2.5">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[8px] text-gray-500 sm:grid-cols-4 sm:text-[10px]">
             <div className="flex items-center gap-1.5">
               <FaCheckCircle className="text-cyan-500" />
               Fresh Seafood
@@ -255,28 +251,25 @@ const Footer = () => {
               <FaCheckCircle className="text-cyan-500" />
               Customer First
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* COPYRIGHT */}
+      {/* =====================================================
+          COPYRIGHT
+      ===================================================== */}
 
       <div className="border-t border-slate-800">
-
-        <div className="max-w-7xl mx-auto px-4 py-2.5 text-center">
-
-          <p className="text-[9px] sm:text-[10px] text-gray-500">
+        <div className="mx-auto max-w-7xl px-3 py-2 text-center sm:px-5">
+          <p className="text-[8px] text-gray-500 sm:text-[10px]">
             © {new Date().getFullYear()}{" "}
-            <span className="text-gray-300 font-medium">
+            <span className="font-medium text-gray-300">
               Priya Live Fish
             </span>
             . All Rights Reserved.
           </p>
-
         </div>
       </div>
-
     </footer>
   );
 };

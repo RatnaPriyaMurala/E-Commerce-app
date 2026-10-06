@@ -1,6 +1,6 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect } from "react";
 import { FaSearch, FaTimes } from "react-icons/fa";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
 
 const SearchBar = () => {
@@ -12,78 +12,231 @@ const SearchBar = () => {
   } = useContext(ShopContext);
 
   const location = useLocation();
-
-  const [visible, setVisible] = useState(false);
+  const navigate = useNavigate();
 
   /* =========================================================
-     SHOW SEARCH ONLY ON MENU PAGE
+     OPEN SEARCH BAR
+     
+     The search bar is global.
+     It can be opened from any page.
+  ========================================================= */
+
+  /* =========================================================
+     SEARCH SUBMIT
+  ========================================================= */
+
+  const handleSearch = (event) => {
+    event?.preventDefault();
+
+    const searchValue = search.trim();
+
+    if (!searchValue) {
+      return;
+    }
+
+    /*
+      Send the search text to the Menu page.
+
+      Example:
+      /menu?search=rohu
+      /menu?search=prawn
+      /menu?search=crab
+    */
+
+    setShowSearch(false);
+
+    navigate(
+      `/menu?search=${encodeURIComponent(searchValue)}`
+    );
+  };
+
+  /* =========================================================
+     CLOSE SEARCH
+  ========================================================= */
+
+  const handleClose = () => {
+    setShowSearch(false);
+    setSearch("");
+  };
+
+  /* =========================================================
+     ESCAPE KEY
   ========================================================= */
 
   useEffect(() => {
-    if (location.pathname.includes("/menu")) {
-      setVisible(true);
-    } else {
-      setVisible(false);
+    if (!showSearch) {
+      return;
     }
-  }, [location.pathname]);
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        handleClose();
+      }
+    };
+
+    document.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
+    return () => {
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, [showSearch]);
 
   /* =========================================================
-     HIDE SEARCH BAR
+     DO NOT RENDER WHEN CLOSED
   ========================================================= */
 
-  if (!showSearch || !visible) {
+  if (!showSearch) {
     return null;
   }
 
   return (
-    <div className="bg-gradient-to-r from-teal-600 to-cyan-700 py-4 sm:py-5 shadow-md">
-      <div className="max-w-5xl mx-auto flex items-center gap-2.5 sm:gap-3 px-3 sm:px-5">
+    <div
+      className="
+        fixed
+        left-0
+        right-0
+        top-14
+        z-[90]
+        border-b
+        border-cyan-700/20
+        bg-gradient-to-r
+        from-teal-600
+        to-cyan-700
+        py-2.5
+        shadow-lg
+        sm:top-16
+        sm:py-3
+      "
+    >
+      <form
+        onSubmit={handleSearch}
+        className="
+          mx-auto
+          flex
+          max-w-5xl
+          items-center
+          gap-2
+          px-3
+          sm:gap-2.5
+          sm:px-5
+        "
+      >
+        {/* =====================================================
+            SEARCH INPUT
+        ===================================================== */}
 
-        {/* SEARCH INPUT */}
-        <div className="flex-1 bg-white rounded-full flex items-center px-4 py-2.5 sm:px-5 sm:py-3 shadow-md">
-
-          <FaSearch className="text-gray-500 mr-3 text-sm sm:text-base" />
+        <div
+          className="
+            flex
+            min-w-0
+            flex-1
+            items-center
+            rounded-full
+            bg-white
+            px-3.5
+            py-2
+            shadow-md
+            sm:px-4
+            sm:py-2.5
+          "
+        >
+          <FaSearch
+            className="
+              mr-2.5
+              shrink-0
+              text-xs
+              text-gray-500
+              sm:mr-3
+              sm:text-sm
+            "
+          />
 
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
             placeholder="Search fresh fish, prawns, crabs..."
-            className="flex-1 outline-none bg-transparent text-sm sm:text-base"
+            autoFocus
+            className="
+              min-w-0
+              flex-1
+              bg-transparent
+              text-sm
+              text-gray-800
+              outline-none
+              placeholder:text-gray-400
+              sm:text-base
+            "
           />
-
         </div>
 
-        {/* CLOSE SEARCH */}
+        {/* =====================================================
+            SEARCH BUTTON
+        ===================================================== */}
+
         <button
-          type="button"
-          onClick={() => {
-            setShowSearch(false);
-            setSearch("");
-          }}
-          aria-label="Close search"
+          type="submit"
+          aria-label="Search products"
           className="
-            w-10
-            h-10
-            sm:w-11
-            sm:h-11
-            rounded-full
-            bg-white
             flex
+            h-9
+            w-9
+            shrink-0
             items-center
             justify-center
+            rounded-full
+            bg-white
+            text-cyan-700
             shadow
-            hover:bg-gray-100
-            hover:scale-105
             transition-all
             duration-200
-            shrink-0
+            hover:scale-105
+            hover:bg-cyan-50
+            sm:h-10
+            sm:w-10
           "
         >
-          <FaTimes className="text-sm" />
+          <FaSearch className="text-xs sm:text-sm" />
         </button>
 
-      </div>
+        {/* =====================================================
+            CLOSE BUTTON
+        ===================================================== */}
+
+        <button
+          type="button"
+          onClick={handleClose}
+          aria-label="Close search"
+          className="
+            flex
+            h-9
+            w-9
+            shrink-0
+            items-center
+            justify-center
+            rounded-full
+            bg-white
+            text-gray-700
+            shadow
+            transition-all
+            duration-200
+            hover:scale-105
+            hover:bg-gray-100
+            sm:h-10
+            sm:w-10
+          "
+        >
+          <FaTimes className="text-xs sm:text-sm" />
+        </button>
+      </form>
     </div>
   );
 };

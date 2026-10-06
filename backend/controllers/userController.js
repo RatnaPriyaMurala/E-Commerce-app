@@ -1,5 +1,5 @@
 // controllers/userController.js
-
+import mongoose from "mongoose";
 import userModel from "../models/userModel.js";
 import orderModel from "../models/orderModel.js";
 import customerModel from "../models/customerModel.js";
@@ -741,6 +741,175 @@ const updateProfile = async (req, res) => {
     }
 };
 
+
+// ======================================
+// GET USER FAVORITES
+// ======================================
+
+const getFavorites = async (req, res) => {
+    try {
+        const user = await userModel
+            .findById(req.userId)
+            .select("-password")
+            .populate("favorites");
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        // Remove products that no longer exist
+        const validFavorites =
+            (user.favorites || []).filter(Boolean);
+
+        return res.json({
+            success: true,
+            favorites: validFavorites,
+        });
+
+    } catch (error) {
+        console.error(
+            "Get favorites error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                error.message ||
+                "Unable to fetch favorites",
+        });
+    }
+};
+
+
+// ======================================
+// ADD FAVORITE
+// ======================================
+
+const addFavorite = async (req, res) => {
+    try {
+        const { productId } = req.body;
+
+        if (!productId) {
+            return res.status(400).json({
+                success: false,
+                message: "Product ID is required",
+            });
+        }
+
+        // Check whether product exists
+        const productExists =
+            await mongoose.model("product").findById(
+                productId
+            );
+
+        if (!productExists) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found",
+            });
+        }
+
+        const user =
+            await userModel.findByIdAndUpdate(
+                req.userId,
+                {
+                    $addToSet: {
+                        favorites: productId,
+                    },
+                },
+                {
+                    new: true,
+                }
+            ).populate("favorites");
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: "Added to favorites",
+            favorites: user.favorites || [],
+        });
+
+    } catch (error) {
+        console.error(
+            "Add favorite error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                error.message ||
+                "Unable to add favorite",
+        });
+    }
+};
+
+
+// ======================================
+// REMOVE FAVORITE
+// ======================================
+
+const removeFavorite = async (req, res) => {
+    try {
+        const { productId } = req.body;
+
+        if (!productId) {
+            return res.status(400).json({
+                success: false,
+                message: "Product ID is required",
+            });
+        }
+
+        const user =
+            await userModel.findByIdAndUpdate(
+                req.userId,
+                {
+                    $pull: {
+                        favorites: productId,
+                    },
+                },
+                {
+                    new: true,
+                }
+            ).populate("favorites");
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: "Removed from favorites",
+            favorites: user.favorites || [],
+        });
+
+    } catch (error) {
+        console.error(
+            "Remove favorite error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                error.message ||
+                "Unable to remove favorite",
+        });
+    }
+};
 // ======================================
 // EXPORT
 // ======================================
@@ -753,4 +922,7 @@ export {
     getProfile,
     userOrders,
     updateProfile,
+    getFavorites,
+    addFavorite,
+    removeFavorite,
 };

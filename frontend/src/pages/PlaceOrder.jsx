@@ -49,11 +49,9 @@ const PlaceOrder = () => {
     currency = "₹",
   } = useContext(ShopContext);
 
-  const [loadingProfile, setLoadingProfile] =
-    useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
-  const [placingOrder, setPlacingOrder] =
-    useState(false);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -91,11 +89,7 @@ const PlaceOrder = () => {
      */
 
     return Number(getCartAmount?.() || 0);
-  }, [
-    isBuyNow,
-    buyNowItem,
-    getCartAmount,
-  ]);
+  }, [isBuyNow, buyNowItem, getCartAmount]);
 
   /*
    * Existing backend uses fixed ₹10 delivery fee.
@@ -124,23 +118,19 @@ const PlaceOrder = () => {
         {
           _id: buyNowItem._id,
 
+          productId: buyNowItem._id,
+
           name: buyNowItem.name,
 
           image: Array.isArray(buyNowItem.image)
             ? buyNowItem.image[0] || ""
             : buyNowItem.image || "",
 
-          price: Number(
-            buyNowItem.price || 0
-          ),
+          price: Number(buyNowItem.price || 0),
 
-          weight: Number(
-            buyNowItem.weight || 0
-          ),
+          weight: Number(buyNowItem.weight || 0),
 
-          quantity: Number(
-            buyNowItem.quantity || 1
-          ),
+          quantity: Number(buyNowItem.quantity || 1),
 
           preparation: String(
             buyNowItem.preparation || ""
@@ -236,24 +226,26 @@ const PlaceOrder = () => {
             }
 
             items.push({
-              _id: product._id,
+  _id: product._id,
 
-              name: product.name,
+  productId: product._id,
 
-              image: Array.isArray(
-                product.image
-              )
-                ? product.image[0] || ""
-                : product.image || "",
+  name: product.name,
 
-              price: pricePerKg,
+  image: Array.isArray(
+    product.image
+  )
+    ? product.image[0] || ""
+    : product.image || "",
 
-              weight,
+  price: pricePerKg,
 
-              quantity,
+  weight,
 
-              preparation,
-            });
+  quantity,
+
+  preparation,
+});
           }
         );
       }
@@ -888,10 +880,10 @@ const PlaceOrder = () => {
 
       paymentObject.open();
     } catch (error) {
-      console.error(
-        "Razorpay checkout error:",
-        error
-      );
+     console.error("❌ Razorpay checkout error:", error);
+console.error("❌ Backend response data:", error?.response?.data);
+console.error("❌ Backend message:", error?.response?.data?.message);
+console.error("❌ HTTP status:", error?.response?.status);
 
       if (
         !handleAuthError(error)
@@ -1025,17 +1017,17 @@ const PlaceOrder = () => {
     )
   ) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center px-4 py-10">
+      <div className="min-h-[65vh] flex items-center justify-center px-4 py-8">
         <div className="text-center max-w-md">
-          <div className="mx-auto mb-5 w-16 h-16 rounded-full bg-cyan-50 flex items-center justify-center">
-            <FaShoppingBag className="text-2xl text-cyan-600" />
+          <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-cyan-50 flex items-center justify-center">
+            <FaShoppingBag className="text-xl text-cyan-600" />
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
             Your cart is empty
           </h2>
 
-          <p className="mt-2 text-sm text-gray-500 leading-6">
+          <p className="mt-1.5 text-sm text-gray-500 leading-6">
             Add some seafood to your cart before proceeding
             to checkout.
           </p>
@@ -1045,7 +1037,7 @@ const PlaceOrder = () => {
             onClick={() =>
               navigate("/menu")
             }
-            className="mt-5 px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold transition"
+            className="mt-4 px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold transition"
           >
             Browse Seafood
           </button>
@@ -1059,33 +1051,37 @@ const PlaceOrder = () => {
   ============================================================ */
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50 py-5 sm:py-7">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50 py-3 sm:py-5">
       <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-6">
+
         {/* HEADER */}
 
-        <div className="mb-5 sm:mb-6">
+        <div className="mb-4 sm:mb-5">
           <Title
             text1="CHECKOUT"
             text2="DETAILS"
           />
 
-          <p className="mt-2 text-xs sm:text-sm text-gray-500 max-w-2xl leading-5">
+          <p className="mt-1.5 text-xs sm:text-sm text-gray-500 max-w-2xl leading-5">
             Enter your contact and delivery-point details,
             confirm your seafood preparation choices, and
             complete your payment securely.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-[1.55fr_0.95fr] gap-5 lg:gap-6">
+        <div className="grid lg:grid-cols-[1.55fr_0.95fr] gap-4 lg:gap-5">
+
           {/* ====================================================
               LEFT
           ==================================================== */}
 
-          <div className="space-y-5">
+          <div className="space-y-4">
+
             {/* CUSTOMER INFORMATION */}
 
             <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-4 sm:px-5 py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white flex items-center gap-2.5">
+
+              <div className="px-4 sm:px-5 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white flex items-center gap-2.5">
                 <FaUser />
 
                 <div>
@@ -1099,7 +1095,8 @@ const PlaceOrder = () => {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 space-y-4">
+              <div className="p-4 sm:p-5 space-y-3">
+
                 {loadingProfile && (
                   <div className="text-xs text-cyan-600 bg-cyan-50 border border-cyan-100 rounded-xl px-3 py-2.5">
                     Loading your saved details...
@@ -1109,8 +1106,9 @@ const PlaceOrder = () => {
                 {/* NAME */}
 
                 <div className="grid sm:grid-cols-2 gap-3">
+
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       First Name
                       <span className="text-red-500 ml-1">
                         *
@@ -1133,7 +1131,7 @@ const PlaceOrder = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       Last Name
                     </label>
 
@@ -1151,12 +1149,13 @@ const PlaceOrder = () => {
                       className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
                     />
                   </div>
+
                 </div>
 
                 {/* PRIMARY PHONE */}
 
                 <div>
-                  <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-1">
                     <FaPhoneAlt className="text-gray-400" />
 
                     Phone Number
@@ -1167,6 +1166,7 @@ const PlaceOrder = () => {
                   </label>
 
                   <div className="flex">
+
                     <div className="flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-xl text-xs text-gray-600">
                       +91
                     </div>
@@ -1186,13 +1186,14 @@ const PlaceOrder = () => {
                       autoComplete="tel"
                       className="w-full border border-gray-200 rounded-r-xl px-3.5 py-2.5 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
                     />
+
                   </div>
                 </div>
 
                 {/* ALTERNATE PHONE */}
 
                 <div>
-                  <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-1">
                     <FaMobileAlt className="text-gray-400" />
 
                     Alternate Phone Number
@@ -1203,6 +1204,7 @@ const PlaceOrder = () => {
                   </label>
 
                   <div className="flex">
+
                     <div className="flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-xl text-xs text-gray-600">
                       +91
                     </div>
@@ -1221,13 +1223,15 @@ const PlaceOrder = () => {
                       inputMode="numeric"
                       className="w-full border border-gray-200 rounded-r-xl px-3.5 py-2.5 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
                     />
+
                   </div>
 
-                  <p className="text-[11px] text-gray-400 mt-1.5">
+                  <p className="text-[11px] text-gray-400 mt-1">
                     Useful if our delivery team cannot reach
                     your primary number.
                   </p>
                 </div>
+
               </div>
             </section>
 
@@ -1236,7 +1240,8 @@ const PlaceOrder = () => {
             ================================================== */}
 
             <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-4 sm:px-5 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center gap-2.5">
+
+              <div className="px-4 sm:px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center gap-2.5">
                 <FaMapMarkerAlt />
 
                 <div>
@@ -1250,11 +1255,12 @@ const PlaceOrder = () => {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 space-y-4">
+              <div className="p-4 sm:p-5 space-y-3">
+
                 {/* DELIVERY POINT */}
 
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                     Bus Stop / Delivery Point
 
                     <span className="text-red-500 ml-1">
@@ -1275,7 +1281,7 @@ const PlaceOrder = () => {
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
                   />
 
-                  <p className="text-[11px] text-gray-400 mt-1.5">
+                  <p className="text-[11px] text-gray-400 mt-1">
                     Enter the bus stop or agreed delivery point
                     where you will receive your order.
                   </p>
@@ -1284,8 +1290,9 @@ const PlaceOrder = () => {
                 {/* CITY / STATE */}
 
                 <div className="grid sm:grid-cols-2 gap-3">
+
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       City
 
                       <span className="text-red-500 ml-1">
@@ -1309,7 +1316,7 @@ const PlaceOrder = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       State
 
                       <span className="text-red-500 ml-1">
@@ -1331,12 +1338,14 @@ const PlaceOrder = () => {
                       className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
                     />
                   </div>
+
                 </div>
 
                 {/* PINCODE */}
 
                 <div className="sm:w-1/2">
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                     Pincode
 
                     <span className="text-red-500 ml-1">
@@ -1359,12 +1368,14 @@ const PlaceOrder = () => {
                     autoComplete="postal-code"
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
                   />
+
                 </div>
 
                 {/* LANDMARK */}
 
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
+
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                     Landmark / Delivery Instructions
 
                     <span className="text-[10px] font-normal text-gray-400 ml-2">
@@ -1384,11 +1395,13 @@ const PlaceOrder = () => {
                     rows={2}
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none resize-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
                   />
+
                 </div>
 
                 {/* DELIVERY NOTICE */}
 
-                <div className="flex gap-2.5 rounded-xl bg-amber-50 border border-amber-100 p-3">
+                <div className="flex gap-2.5 rounded-xl bg-amber-50 border border-amber-100 p-2.5">
+
                   <FaMapMarkerAlt className="text-amber-500 mt-0.5 shrink-0" />
 
                   <div>
@@ -1396,14 +1409,16 @@ const PlaceOrder = () => {
                       Delivery Point Instructions
                     </p>
 
-                    <p className="text-[11px] text-amber-700 mt-1 leading-5">
+                    <p className="text-[11px] text-amber-700 mt-0.5 leading-5">
                       Please provide a clear bus stop or agreed
                       delivery point and a nearby landmark. Our
                       delivery team may contact you if they need
                       additional directions.
                     </p>
                   </div>
+
                 </div>
+
               </div>
             </section>
 
@@ -1412,7 +1427,9 @@ const PlaceOrder = () => {
             ================================================== */}
 
             <section className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-100 rounded-2xl p-4 sm:p-5">
+
               <div className="flex items-start gap-3">
+
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
                   <FaTruck className="text-cyan-600" />
                 </div>
@@ -1427,9 +1444,11 @@ const PlaceOrder = () => {
                     packed carefully before dispatch.
                   </p>
                 </div>
+
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
+              <div className="grid sm:grid-cols-2 gap-2.5 mt-3">
+
                 {[
                   "Preparation selected by you",
                   "Food-grade packaging",
@@ -1445,19 +1464,24 @@ const PlaceOrder = () => {
                     {item}
                   </div>
                 ))}
+
               </div>
             </section>
+
           </div>
 
           {/* ====================================================
               RIGHT
           ==================================================== */}
 
-          <div className="space-y-5 lg:sticky lg:top-5 lg:self-start">
+          <div className="space-y-4 lg:sticky lg:top-5 lg:self-start">
+
             {/* PAYMENT */}
 
             <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-4 sm:px-5 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center gap-2.5">
+
+              <div className="px-4 sm:px-5 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center gap-2.5">
+
                 <FaCreditCard />
 
                 <div>
@@ -1469,12 +1493,17 @@ const PlaceOrder = () => {
                     Secure online payment
                   </p>
                 </div>
+
               </div>
 
               <div className="p-4 sm:p-5">
-                <div className="w-full rounded-xl border-2 border-cyan-600 bg-cyan-50 p-3.5">
+
+                <div className="w-full rounded-xl border-2 border-cyan-600 bg-cyan-50 p-3">
+
                   <div className="flex items-center justify-between gap-3">
+
                     <div className="flex items-center gap-2.5">
+
                       <span className="w-5 h-5 rounded-full border-2 border-cyan-600 flex items-center justify-center">
                         <span className="w-2.5 h-2.5 rounded-full bg-cyan-600" />
                       </span>
@@ -1486,25 +1515,31 @@ const PlaceOrder = () => {
                         alt="Razorpay"
                         className="h-6 sm:h-7 object-contain"
                       />
+
                     </div>
 
                     <span className="text-[10px] sm:text-[11px] text-gray-500 text-right">
                       UPI • Cards • Wallets
                     </span>
+
                   </div>
 
-                  <p className="mt-2 ml-7 text-[11px] text-gray-500 leading-5">
+                  <p className="mt-1.5 ml-7 text-[11px] text-gray-500 leading-5">
                     Pay securely using Razorpay. Available
                     payment methods are shown during payment.
                   </p>
+
                 </div>
+
               </div>
             </section>
 
             {/* ORDER SUMMARY */}
 
             <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
-              <div className="flex items-center justify-between mb-4">
+
+              <div className="flex items-center justify-between mb-3">
+
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-gray-800">
                     Order Summary
@@ -1520,18 +1555,22 @@ const PlaceOrder = () => {
                 </div>
 
                 <FaShoppingBag className="text-cyan-600" />
+
               </div>
 
               {/* ITEMS */}
 
-              <div className="space-y-2.5 mb-5 max-h-72 overflow-y-auto pr-1">
+              <div className="space-y-2 mb-4 max-h-72 overflow-y-auto pr-1">
+
                 {orderItems.map(
                   (item, index) => (
                     <div
                       key={`${item._id}-${item.weight}-${item.preparation}-${index}`}
                       className="flex items-center gap-2.5 bg-gray-50 rounded-xl p-2.5"
                     >
+
                       <div className="w-12 h-12 rounded-lg bg-white overflow-hidden shrink-0">
+
                         {item.image ? (
                           <img
                             src={item.image}
@@ -1543,9 +1582,11 @@ const PlaceOrder = () => {
                             <FaShoppingBag className="text-gray-300" />
                           </div>
                         )}
+
                       </div>
 
                       <div className="min-w-0 flex-1">
+
                         <p className="font-semibold text-xs text-gray-800 truncate">
                           {item.name}
                         </p>
@@ -1560,6 +1601,7 @@ const PlaceOrder = () => {
                           {item.preparation ||
                             "Not selected"}
                         </p>
+
                       </div>
 
                       <p className="font-bold text-xs text-gray-800 whitespace-nowrap">
@@ -1576,14 +1618,17 @@ const PlaceOrder = () => {
                           )
                         ).toFixed(2)}
                       </p>
+
                     </div>
                   )
                 )}
+
               </div>
 
               {/* SUBTOTAL */}
 
               <div className="flex items-center justify-between">
+
                 <span className="text-sm text-gray-600">
                   Subtotal
                 </span>
@@ -1592,27 +1637,33 @@ const PlaceOrder = () => {
                   {currency}
                   {cartAmount.toFixed(2)}
                 </span>
+
               </div>
 
               {/* DELIVERY */}
 
-              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+              <div className="mt-2.5 pt-2.5 border-t border-gray-100 flex items-center justify-between">
+
                 <div className="flex items-center gap-2">
+
                   <FaTruck className="text-cyan-600" />
 
                   <span className="text-sm text-gray-600">
                     Delivery
                   </span>
+
                 </div>
 
                 <span className="text-sm font-semibold text-gray-800">
                   {currency}10.00
                 </span>
+
               </div>
 
               {/* TOTAL */}
 
-              <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
+              <div className="mt-2.5 pt-2.5 border-t border-gray-200 flex items-center justify-between">
+
                 <span className="text-sm font-bold text-gray-800">
                   Total Amount
                 </span>
@@ -1621,13 +1672,17 @@ const PlaceOrder = () => {
                   {currency}
                   {totalAmount.toFixed(2)}
                 </span>
+
               </div>
+
             </section>
 
             {/* SECURITY */}
 
-            <div className="rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-white p-4">
+            <div className="rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-white p-3.5">
+
               <div className="flex items-center gap-2.5">
+
                 <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
                   <FaShieldAlt />
                 </div>
@@ -1642,12 +1697,14 @@ const PlaceOrder = () => {
                     Razorpay.
                   </p>
                 </div>
+
               </div>
 
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/20 text-[11px] text-emerald-50">
+              <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-white/20 text-[11px] text-emerald-50">
                 <FaLock />
                 Secure payment processing
               </div>
+
             </div>
 
             {/* PLACE ORDER */}
@@ -1662,6 +1719,7 @@ const PlaceOrder = () => {
                   : "bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 active:scale-[0.99]"
               }`}
             >
+
               {placingOrder ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -1674,11 +1732,13 @@ const PlaceOrder = () => {
                   <span>→</span>
                 </>
               )}
+
             </button>
 
             {/* FINAL TOTAL */}
 
             <div className="text-center">
+
               <p className="text-[10px] text-gray-400">
                 Total payable amount
               </p>
@@ -1687,7 +1747,9 @@ const PlaceOrder = () => {
                 {currency}
                 {totalAmount.toFixed(2)}
               </p>
+
             </div>
+
           </div>
         </div>
       </div>

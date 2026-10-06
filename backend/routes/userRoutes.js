@@ -7,6 +7,9 @@ import {
     resetPassword,
     getProfile,
     updateProfile,
+    getFavorites,
+    addFavorite,
+    removeFavorite,
 } from "../controllers/userController.js";
 
 import authUser from "../middleware/auth.js";
@@ -52,5 +55,25 @@ userRouter.post(
     authUser,
     updateProfile
 );
+// =====================================================
+// FAVORITES
+// =====================================================
 
+userRouter.get(
+    "/favorites",
+    authUser,
+    getFavorites
+);
+
+userRouter.post(
+    "/favorites/add",
+    authUser,
+    addFavorite
+);
+
+userRouter.post(
+    "/favorites/remove",
+    authUser,
+    removeFavorite
+);
 export default userRouter;

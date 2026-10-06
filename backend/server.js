@@ -6,6 +6,7 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
+
 // =====================================================
 // CONFIG
 // =====================================================
@@ -51,27 +52,35 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests without an origin (Postman, server-to-server, etc.)
-      if (!origin) return callback(null, true);
+      // Allow requests without an origin
+      // Example: Postman / server-to-server requests
+      if (!origin) {
+        return callback(null, true);
+      }
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      return callback(new Error("Not allowed by CORS"));
+      return callback(
+        new Error("Not allowed by CORS")
+      );
     },
+
     credentials: true,
   })
 );
 
-// Parse JSON
+// =====================================================
+// BODY PARSERS
+// =====================================================
+
 app.use(
   express.json({
     limit: "10mb",
   })
 );
 
-// Parse form data
 app.use(
   express.urlencoded({
     extended: true,
@@ -79,26 +88,53 @@ app.use(
   })
 );
 
-// Static uploads
-app.use("/uploads", express.static("uploads"));
+// =====================================================
+// STATIC UPLOADS
+// =====================================================
+
+app.use(
+  "/uploads",
+  express.static("uploads")
+);
 
 // =====================================================
 // API ROUTES
 // =====================================================
 
-app.use("/api/user", userRouter);
+app.use(
+  "/api/user",
+  userRouter
+);
 
-app.use("/api/product", productRouter);
+app.use(
+  "/api/product",
+  productRouter
+);
 
-app.use("/api/cart", cartRouter);
+app.use(
+  "/api/cart",
+  cartRouter
+);
 
-app.use("/api/order", orderRouter);
+app.use(
+  "/api/order",
+  orderRouter
+);
 
-app.use("/api/admin", adminRouter);
+app.use(
+  "/api/admin",
+  adminRouter
+);
 
-app.use("/api/customer", customerRouter);
+app.use(
+  "/api/customer",
+  customerRouter
+);
 
-app.use("/api/payment", paymentRouter);
+app.use(
+  "/api/payment",
+  paymentRouter
+);
 
 // =====================================================
 // HEALTH CHECK
@@ -133,7 +169,9 @@ app.post(
   "/test-upload",
   upload.single("image"),
   (req, res) => {
-    console.log("📦 Upload request received");
+    console.log(
+      "📦 Upload request received"
+    );
 
     if (!req.file) {
       return res.status(400).json({
@@ -144,7 +182,8 @@ app.post(
 
     return res.status(200).json({
       success: true,
-      message: "Image uploaded successfully",
+      message:
+        "Image uploaded successfully",
       file: req.file,
       body: req.body,
     });
@@ -158,7 +197,8 @@ app.post(
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    message:
+      `Route not found: ${req.method} ${req.originalUrl}`,
   });
 });
 
@@ -166,39 +206,56 @@ app.use((req, res) => {
 // GLOBAL ERROR HANDLER
 // =====================================================
 
-app.use((error, req, res, next) => {
-  console.error("❌ Server Error:", error);
+app.use(
+  (error, req, res, next) => {
+    console.error(
+      "❌ Server Error:",
+      error
+    );
 
-  if (error.name === "MulterError") {
-    return res.status(400).json({
+    if (
+      error.name === "MulterError"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    if (
+      error.name === "ValidationError"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    return res.status(
+      error.statusCode || 500
+    ).json({
       success: false,
-      message: error.message,
+      message:
+        error.message ||
+        "Internal server error",
     });
   }
-
-  if (error.name === "ValidationError") {
-    return res.status(400).json({
-      success: false,
-      message: "Validation error",
-      errors: error.errors,
-    });
-  }
-
-  return res.status(error.statusCode || 500).json({
-    success: false,
-    message:
-      error.message || "Internal server error",
-  });
-});
+);
 
 // =====================================================
 // START SERVER
 // =====================================================
 
-const PORT = process.env.PORT || 4000;
+const PORT =
+  process.env.PORT || 4000;
 
 const startServer = async () => {
   try {
+    // =================================================
+    // REQUIRED ENVIRONMENT VARIABLES
+    // =================================================
+
     if (!process.env.MONGODB_URI) {
       throw new Error(
         "MONGODB_URI is missing from .env"
@@ -211,24 +268,84 @@ const startServer = async () => {
       );
     }
 
+    if (!process.env.RAZORPAY_KEY_ID) {
+      throw new Error(
+        "RAZORPAY_KEY_ID is missing from .env"
+      );
+    }
+
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+      throw new Error(
+        "RAZORPAY_KEY_SECRET is missing from .env"
+      );
+    }
+
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
+
+    // =================================================
+    // CLOUDINARY
+    // =================================================
 
     await connectCloudinary();
 
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log("------------------------------------------");
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌐 http://localhost:${PORT}`);
-      console.log("------------------------------------------");
-      console.log("✅ MongoDB connected");
-      console.log("✅ Cloudinary initialized");
-      console.log("✅ API routes loaded");
-      console.log("==========================================");
-    });
+    // =================================================
+    // START SERVER
+    // =================================================
 
+    app.listen(
+      PORT,
+      "0.0.0.0",
+      () => {
+        console.log(
+          "------------------------------------------"
+        );
+
+        console.log(
+          `🚀 Server running on port ${PORT}`
+        );
+
+        console.log(
+          `🌐 http://localhost:${PORT}`
+        );
+
+        console.log(
+          "------------------------------------------"
+        );
+
+        console.log(
+          "✅ MongoDB connected"
+        );
+
+        console.log(
+          "✅ Cloudinary initialized"
+        );
+
+        console.log(
+          "✅ Razorpay configuration loaded"
+        );
+
+        console.log(
+          "✅ API routes loaded"
+        );
+
+        console.log(
+          "=========================================="
+        );
+      }
+    );
   } catch (error) {
-    console.error("❌ Failed to start server:");
-    console.error(error.message);
+    console.error(
+      "❌ Failed to start server:"
+    );
+
+    console.error(
+      error.message
+    );
+
     process.exit(1);
   }
 };

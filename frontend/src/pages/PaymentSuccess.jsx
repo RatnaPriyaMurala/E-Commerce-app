@@ -1,32 +1,31 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FaCheckCircle,
-  FaShoppingBag,
-} from "react-icons/fa";
+import { FaCheckCircle, FaShoppingBag } from "react-icons/fa";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-[70vh] flex justify-center items-center bg-gradient-to-br from-green-50 via-white to-emerald-50 px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-7 sm:p-9 max-w-md w-full text-center">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full bg-green-50 flex items-center justify-center">
-          <FaCheckCircle className="text-5xl sm:text-6xl text-green-600" />
+    <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl border border-green-100 bg-white p-7 text-center shadow-lg sm:p-9">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50 sm:h-20 sm:w-20">
+          <FaCheckCircle className="text-5xl text-green-600 sm:text-6xl" />
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold mt-5 text-gray-800">
+        <h1 className="mt-5 text-2xl font-bold text-gray-800 sm:text-3xl">
           Payment Successful
         </h1>
 
-        <p className="text-sm sm:text-base text-gray-500 mt-3 leading-6">
-          Thank you for shopping with us. Your order has
-          been placed successfully.
+        <p className="mt-3 text-sm leading-6 text-gray-500 sm:text-base">
+          Thank you for shopping with us. Your order has been placed
+          successfully.
         </p>
 
         <button
+          type="button"
           onClick={() => navigate("/orders")}
-          className="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2.5 mx-auto text-sm font-semibold transition hover:scale-105"
+          className="mx-auto mt-6 flex items-center gap-2.5 rounded-xl bg-green-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:scale-105 hover:bg-green-700"
         >
           <FaShoppingBag />
           View Orders

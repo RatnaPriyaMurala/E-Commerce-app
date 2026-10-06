@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useCallback,
@@ -18,6 +17,7 @@ import { useNavigate } from "react-router-dom";
    - User profile
    - Search
    - Cart
+   - Favorites
    - Common configuration
 ============================================================ */
 
@@ -39,7 +39,6 @@ export const ShopContextProvider = ({ children }) => {
 
   /*
     Keep your existing delivery fee.
-    This is NOT a delivery availability claim.
   */
   const delivery_fee = 10;
 
@@ -106,42 +105,67 @@ export const ShopContextProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState({});
 
   /* ============================================================
+     FAVORITES
+
+     Favorites are stored in MongoDB for logged-in users.
+
+     MongoDB stores:
+
+     user.favorites = [
+       productId,
+       productId,
+       ...
+     ]
+
+     The backend populates these product IDs and returns
+     the complete product objects to the frontend.
+  ============================================================ */
+
+  const [favorites, setFavorites] = useState([]);
+
+  /* ============================================================
      HELPERS
   ============================================================ */
 
-  const handleAuthError = (error) => {
-    const status = error?.response?.status;
+  const handleAuthError = useCallback(
+    (error) => {
+      const status = error?.response?.status;
 
-    if (status === 401 || status === 403) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      if (status === 401 || status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
 
-      setToken("");
-      setUser(null);
+        setToken("");
+        setUser(null);
+        setFavorites([]);
+        setCartItems({});
 
-      toast.error(
-        "Your session has expired. Please login again."
-      );
+        toast.error(
+          "Your session has expired. Please login again."
+        );
 
-      navigate("/login");
+        navigate("/login");
 
-      return true;
-    }
+        return true;
+      }
 
-    return false;
-  };
+      return false;
+    },
+    [navigate]
+  );
 
-  /*
-    Creates a safe cart line key.
+  /* ============================================================
+     CREATE CART LINE KEY
 
-    Example:
+     Example:
 
-    1 + Curry Cut
-    -> "1-curry-cut"
+     1 + Curry Cut
+     -> "1-curry-cut"
 
-    1 + Fry Cut
-    -> "1-fry-cut"
-  */
+     1 + Fry Cut
+     -> "1-fry-cut"
+  ============================================================ */
+
   const createCartLineKey = (
     weight,
     preparation
@@ -157,119 +181,151 @@ export const ShopContextProvider = ({ children }) => {
   };
 
   /* ============================================================
-   PREPARATION PRICE HELPER
+     PREPARATION PRICE HELPER
 
-   Finds the price per KG for the selected preparation.
+     Finds the price per KG for the selected preparation.
 
-   Supports:
-   - pricePerKg
-   - price
-   - fallback to product base price
-============================================================ */
+     Supports:
+     - pricePerKg
+     - price
+     - amount
+     - fallback to product base price
+  ============================================================ */
 
-const getPreparationPrice = (product, preparation) => {
-  const basePrice = Number(product?.price || 0);
-
-  const normalizeName = (value) =>
-    String(value ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
-
-  const selectedPreparation = normalizeName(preparation);
-
-  if (!selectedPreparation) {
-    return basePrice;
-  }
-
-  /*
-    Support preparation pricing stored in
-    preparationOptions.
-  */
-  const options = Array.isArray(product?.preparationOptions)
-    ? product.preparationOptions
-    : [];
-
-  const selectedOption = options.find((option) => {
-    if (typeof option === "string") {
-      return normalizeName(option) === selectedPreparation;
-    }
-
-    if (!option || typeof option !== "object") {
-      return false;
-    }
-
-    const optionName =
-      option.name ??
-      option.label ??
-      option.preparation ??
-      option.title ??
-      "";
-
-    return normalizeName(optionName) === selectedPreparation;
-  });
-
-  if (!selectedOption) {
-    console.warn(
-      "⚠️ Preparation price not found:",
-      preparation,
-      product?.name,
-      product?.preparationOptions
+  const getPreparationPrice = (
+    product,
+    preparation
+  ) => {
+    const basePrice = Number(
+      product?.price || 0
     );
 
-    return basePrice;
-  }
+    const normalizeName = (value) =>
+      String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
 
-  /*
-    If preparation option is an object,
-    read its actual per-KG price.
-  */
-  if (typeof selectedOption === "object") {
-    const possiblePrices = [
-      selectedOption.pricePerKg,
-      selectedOption.price,
-      selectedOption.amount,
-    ];
+    const selectedPreparation =
+      normalizeName(preparation);
 
-    for (const value of possiblePrices) {
-      const price = Number(value);
-
-      if (Number.isFinite(price) && price > 0) {
-        return price;
-      }
-    }
-  }
-
-  return basePrice;
-};
-
-  /*
-    Converts old cart format into the new format.
-
-    OLD:
-
-    {
-      productId: {
-        "1": 1
-      }
+    if (!selectedPreparation) {
+      return basePrice;
     }
 
-    NEW:
+    /*
+      Support preparation pricing stored in
+      preparationOptions.
+    */
 
-    {
-      productId: {
-        "1-unknown-preparation": {
-          weight: 1,
-          quantity: 1,
-          preparation: ""
+    const options = Array.isArray(
+      product?.preparationOptions
+    )
+      ? product.preparationOptions
+      : [];
+
+    const selectedOption = options.find(
+      (option) => {
+        if (typeof option === "string") {
+          return (
+            normalizeName(option) ===
+            selectedPreparation
+          );
+        }
+
+        if (
+          !option ||
+          typeof option !== "object"
+        ) {
+          return false;
+        }
+
+        const optionName =
+          option.name ??
+          option.label ??
+          option.preparation ??
+          option.title ??
+          "";
+
+        return (
+          normalizeName(optionName) ===
+          selectedPreparation
+        );
+      }
+    );
+
+    if (!selectedOption) {
+      console.warn(
+        "⚠️ Preparation price not found:",
+        preparation,
+        product?.name,
+        product?.preparationOptions
+      );
+
+      return basePrice;
+    }
+
+    /*
+      If preparation option is an object,
+      read its actual per-KG price.
+    */
+
+    if (
+      typeof selectedOption === "object"
+    ) {
+      const possiblePrices = [
+        selectedOption.pricePerKg,
+        selectedOption.price,
+        selectedOption.amount,
+      ];
+
+      for (const value of possiblePrices) {
+        const price = Number(value);
+
+        if (
+          Number.isFinite(price) &&
+          price > 0
+        ) {
+          return price;
         }
       }
     }
 
-    This prevents the application from crashing if an old cart
-    is still present.
-  */
-  const normalizeCartData = (cartData) => {
+    return basePrice;
+  };
+
+  /* ============================================================
+     NORMALIZE CART DATA
+
+     Converts old cart format into the new format.
+
+     OLD:
+
+     {
+       productId: {
+         "1": 1
+       }
+     }
+
+     NEW:
+
+     {
+       productId: {
+         "1-unknown-preparation": {
+           weight: 1,
+           quantity: 1,
+           preparation: ""
+         }
+       }
+     }
+
+     This prevents the application from crashing if an old cart
+     is still present.
+  ============================================================ */
+
+  const normalizeCartData = (
+    cartData
+  ) => {
     if (
       !cartData ||
       typeof cartData !== "object" ||
@@ -292,11 +348,14 @@ const getPreparationPrice = (product, preparation) => {
 
         normalized[productId] = {};
 
-        Object.entries(productCart).forEach(
+        Object.entries(
+          productCart
+        ).forEach(
           ([key, value]) => {
-            /*
-              NEW FORMAT
-            */
+            /* ==================================================
+               NEW FORMAT
+            ================================================== */
+
             if (
               value &&
               typeof value === "object" &&
@@ -311,9 +370,10 @@ const getPreparationPrice = (product, preparation) => {
                 value.quantity || 1
               );
 
-              const preparation = String(
-                value.preparation || ""
-              ).trim();
+              const preparation =
+                String(
+                  value.preparation || ""
+                ).trim();
 
               if (
                 Number.isFinite(weight) &&
@@ -333,31 +393,42 @@ const getPreparationPrice = (product, preparation) => {
                   weight,
                   quantity,
                   preparation,
-                  pricePerKg: Number(value.pricePerKg) > 0
-  ? Number(value.pricePerKg)
-  : 0,
+                  pricePerKg:
+                    Number(
+                      value.pricePerKg
+                    ) > 0
+                      ? Number(
+                          value.pricePerKg
+                        )
+                      : 0,
                 };
               }
 
               return;
             }
 
-            /*
-              OLD FORMAT
+            /* ==================================================
+               OLD FORMAT
 
-              {
-                "1": 1
-              }
-            */
-            const oldWeight = Number(key);
-            const oldQuantity = Number(
-              value || 0
-            );
+               {
+                 "1": 1
+               }
+            ================================================== */
+
+            const oldWeight =
+              Number(key);
+
+            const oldQuantity =
+              Number(value || 0);
 
             if (
-              Number.isFinite(oldWeight) &&
+              Number.isFinite(
+                oldWeight
+              ) &&
               oldWeight > 0 &&
-              Number.isFinite(oldQuantity) &&
+              Number.isFinite(
+                oldQuantity
+              ) &&
               oldQuantity > 0
             ) {
               const lineKey =
@@ -381,6 +452,7 @@ const getPreparationPrice = (product, preparation) => {
         /*
           Remove empty product cart objects.
         */
+
         if (
           Object.keys(
             normalized[productId]
@@ -403,14 +475,15 @@ const getPreparationPrice = (product, preparation) => {
       if (!token) return;
 
       try {
-        const response = await axios.get(
-          `${backendUrl}/api/user/profile`,
-          {
-            headers: {
-              token,
-            },
-          }
-        );
+        const response =
+          await axios.get(
+            `${backendUrl}/api/user/profile`,
+            {
+              headers: {
+                token,
+              },
+            }
+          );
 
         if (response.data?.success) {
           const profile =
@@ -432,7 +505,11 @@ const getPreparationPrice = (product, preparation) => {
         handleAuthError(error);
       }
     },
-    [backendUrl, token]
+    [
+      backendUrl,
+      token,
+      handleAuthError,
+    ]
   );
 
   /* ============================================================
@@ -443,13 +520,12 @@ const getPreparationPrice = (product, preparation) => {
     if (token) {
       getUserProfile();
     }
-  }, [token, getUserProfile]);
+  }, [
+    token,
+    getUserProfile,
+  ]);
 
   /* ============================================================
-     PRODUCTS
-  ============================================================ */
-
-    /* ============================================================
      PRODUCTS
   ============================================================ */
 
@@ -457,7 +533,9 @@ const getPreparationPrice = (product, preparation) => {
     async () => {
       if (!backendUrl) {
         setProducts([]);
-        setError("Backend URL is not configured.");
+        setError(
+          "Backend URL is not configured."
+        );
         return;
       }
 
@@ -465,24 +543,33 @@ const getPreparationPrice = (product, preparation) => {
         setLoading(true);
         setError(null);
 
-        const response = await axios.get(
-          `${backendUrl}/api/product/list`
-        );
+        const response =
+          await axios.get(
+            `${backendUrl}/api/product/list`
+          );
 
         if (response.data?.success) {
           const allProducts =
             response.data.products || [];
 
-          // Only show products that are available
-          // and currently have stock.
+          /*
+            Only show products that are available
+            and currently have stock.
+          */
+
           const availableProducts =
             allProducts.filter(
               (product) =>
-                product?.isAvailable !== false &&
-                Number(product?.stock || 0) > 0
+                product?.isAvailable !==
+                  false &&
+                Number(
+                  product?.stock || 0
+                ) > 0
             );
 
-          setProducts(availableProducts);
+          setProducts(
+            availableProducts
+          );
         } else {
           setProducts([]);
 
@@ -500,7 +587,8 @@ const getPreparationPrice = (product, preparation) => {
         setProducts([]);
 
         setError(
-          error?.response?.data?.message ||
+          error?.response?.data
+            ?.message ||
             error?.message ||
             "Unable to load products."
         );
@@ -513,13 +601,10 @@ const getPreparationPrice = (product, preparation) => {
 
   /* ============================================================
      LOAD PRODUCTS ON APP START
-  ============================================================ */
 
-  useEffect(() => {
-    getProducts();
-  }, [getProducts]);
-  /* ============================================================
-     LOAD PRODUCTS ON APP START
+     IMPORTANT:
+     Only ONE effect is needed here.
+     The duplicate effect from the previous file has been removed.
   ============================================================ */
 
   useEffect(() => {
@@ -535,23 +620,27 @@ const getPreparationPrice = (product, preparation) => {
       if (!token) return;
 
       try {
-        const response = await axios.post(
-          `${backendUrl}/api/cart/get`,
-          {},
-          {
-            headers: {
-              token,
-            },
-          }
-        );
+        const response =
+          await axios.post(
+            `${backendUrl}/api/cart/get`,
+            {},
+            {
+              headers: {
+                token,
+              },
+            }
+          );
 
         if (response.data?.success) {
           const normalizedCart =
             normalizeCartData(
-              response.data.cartData || {}
+              response.data.cartData ||
+                {}
             );
 
-          setCartItems(normalizedCart);
+          setCartItems(
+            normalizedCart
+          );
         } else {
           setCartItems({});
         }
@@ -564,7 +653,11 @@ const getPreparationPrice = (product, preparation) => {
         handleAuthError(error);
       }
     },
-    [backendUrl, token]
+    [
+      backendUrl,
+      token,
+      handleAuthError,
+    ]
   );
 
   /* ============================================================
@@ -595,7 +688,9 @@ const getPreparationPrice = (product, preparation) => {
             parsedCart
           );
 
-        setCartItems(normalizedCart);
+        setCartItems(
+          normalizedCart
+        );
       } else {
         setCartItems({});
       }
@@ -607,7 +702,10 @@ const getPreparationPrice = (product, preparation) => {
 
       setCartItems({});
     }
-  }, [token, loadUserCart]);
+  }, [
+    token,
+    loadUserCart,
+  ]);
 
   /* ============================================================
      SAVE GUEST CART
@@ -627,7 +725,263 @@ const getPreparationPrice = (product, preparation) => {
         );
       }
     }
-  }, [cartItems, token]);
+  }, [
+    cartItems,
+    token,
+  ]);
+
+  /* ============================================================
+     FAVORITES
+  ============================================================ */
+
+  /*
+    Get favorites from MongoDB.
+
+    Backend:
+    GET /api/user/favorites
+  */
+
+  const getFavorites =
+    useCallback(async () => {
+      if (!token) {
+        setFavorites([]);
+        return;
+      }
+
+      try {
+        const response =
+          await axios.get(
+            `${backendUrl}/api/user/favorites`,
+            {
+              headers: {
+                token,
+              },
+            }
+          );
+
+        if (
+          response.data?.success
+        ) {
+          setFavorites(
+            Array.isArray(
+              response.data.favorites
+            )
+              ? response.data.favorites
+              : []
+          );
+        } else {
+          setFavorites([]);
+        }
+      } catch (error) {
+        console.error(
+          "❌ Get favorites error:",
+          error?.response?.data ||
+            error?.message ||
+            error
+        );
+
+        handleAuthError(error);
+      }
+    }, [
+      backendUrl,
+      token,
+      handleAuthError,
+    ]);
+
+  /*
+    Load MongoDB favorites whenever
+    the authentication token becomes available.
+  */
+
+  useEffect(() => {
+    if (token) {
+      getFavorites();
+    } else {
+      setFavorites([]);
+    }
+  }, [
+    token,
+    getFavorites,
+  ]);
+
+  /* ============================================================
+     ADD FAVORITE
+
+     Backend:
+     POST /api/user/favorites/add
+  ============================================================ */
+
+  const addFavorite =
+    useCallback(
+      async (productId) => {
+        if (!productId) {
+          toast.error(
+            "Product not found."
+          );
+          return;
+        }
+
+        /*
+          Favorites are currently associated
+          with authenticated MongoDB users.
+        */
+
+        if (!token) {
+          toast.error(
+            "Please login to add favorites."
+          );
+
+          navigate("/login");
+
+          return;
+        }
+
+        try {
+          const response =
+            await axios.post(
+              `${backendUrl}/api/user/favorites/add`,
+              {
+                productId,
+              },
+              {
+                headers: {
+                  token,
+                },
+              }
+            );
+
+          if (
+            response.data?.success
+          ) {
+            setFavorites(
+              Array.isArray(
+                response.data.favorites
+              )
+                ? response.data
+                    .favorites
+                : []
+            );
+
+            toast.success(
+              "Added to favorites."
+            );
+          } else {
+            toast.error(
+              response.data?.message ||
+                "Unable to add favorite."
+            );
+          }
+        } catch (error) {
+          console.error(
+            "❌ Add favorite error:",
+            error?.response?.data ||
+              error?.message ||
+              error
+          );
+
+          const authError =
+            handleAuthError(
+              error
+            );
+
+          if (!authError) {
+            toast.error(
+              error?.response
+                ?.data?.message ||
+                "Unable to add favorite."
+            );
+          }
+        }
+      },
+      [
+        backendUrl,
+        token,
+        navigate,
+        handleAuthError,
+      ]
+    );
+
+  /* ============================================================
+     REMOVE FAVORITE
+
+     Backend:
+     POST /api/user/favorites/remove
+  ============================================================ */
+
+  const removeFavorite =
+    useCallback(
+      async (productId) => {
+        if (!productId) {
+          return;
+        }
+
+        if (!token) {
+          return;
+        }
+
+        try {
+          const response =
+            await axios.post(
+              `${backendUrl}/api/user/favorites/remove`,
+              {
+                productId,
+              },
+              {
+                headers: {
+                  token,
+                },
+              }
+            );
+
+          if (
+            response.data?.success
+          ) {
+            setFavorites(
+              Array.isArray(
+                response.data.favorites
+              )
+                ? response.data
+                    .favorites
+                : []
+            );
+
+            toast.success(
+              "Removed from favorites."
+            );
+          } else {
+            toast.error(
+              response.data?.message ||
+                "Unable to remove favorite."
+            );
+          }
+        } catch (error) {
+          console.error(
+            "❌ Remove favorite error:",
+            error?.response?.data ||
+              error?.message ||
+              error
+          );
+
+          const authError =
+            handleAuthError(
+              error
+            );
+
+          if (!authError) {
+            toast.error(
+              error?.response
+                ?.data?.message ||
+                "Unable to remove favorite."
+            );
+          }
+        }
+      },
+      [
+        backendUrl,
+        token,
+        handleAuthError,
+      ]
+    );
 
   /* ============================================================
      ADD TO CART
@@ -637,15 +991,17 @@ const getPreparationPrice = (product, preparation) => {
     id,
     weight,
     preparation,
-     selectedPricePerKg
+    selectedPricePerKg
   ) => {
     /* ----------------------------------------------------------
        PRODUCT
     ---------------------------------------------------------- */
 
-    const product = products.find(
-      (item) => item._id === id
-    );
+    const product =
+      products.find(
+        (item) =>
+          item._id === id
+      );
 
     if (!product) {
       toast.error(
@@ -689,20 +1045,25 @@ const getPreparationPrice = (product, preparation) => {
       return;
     }
 
-
     /* ----------------------------------------------------------
-   PREPARATION PRICE
----------------------------------------------------------- */
-const passedPrice = Number(selectedPricePerKg);
+       PREPARATION PRICE
+    ---------------------------------------------------------- */
 
-const pricePerKg =
-  Number.isFinite(passedPrice) && passedPrice > 0
-    ? passedPrice
-    : getPreparationPrice(
-        product,
-        selectedPreparation
+    const passedPrice =
+      Number(
+        selectedPricePerKg
       );
 
+    const pricePerKg =
+      Number.isFinite(
+        passedPrice
+      ) &&
+      passedPrice > 0
+        ? passedPrice
+        : getPreparationPrice(
+            product,
+            selectedPreparation
+          );
 
     /* ----------------------------------------------------------
        STOCK
@@ -719,7 +1080,10 @@ const pricePerKg =
       return;
     }
 
-    if (selectedWeight > stock) {
+    if (
+      selectedWeight >
+      stock
+    ) {
       toast.error(
         `Only ${stock} KG available.`
       );
@@ -730,16 +1094,21 @@ const pricePerKg =
        MIN / MAX WEIGHT
     ---------------------------------------------------------- */
 
-    const minWeight = Number(
-      product.minQuantity || 0.5
-    );
+    const minWeight =
+      Number(
+        product.minQuantity ||
+          0.5
+      );
 
-    const maxWeight = Number(
-      product.maxQuantity || stock
-    );
+    const maxWeight =
+      Number(
+        product.maxQuantity ||
+          stock
+      );
 
     if (
-      selectedWeight < minWeight
+      selectedWeight <
+      minWeight
     ) {
       toast.error(
         `Minimum order weight is ${minWeight} KG.`
@@ -748,7 +1117,8 @@ const pricePerKg =
     }
 
     if (
-      selectedWeight > maxWeight
+      selectedWeight >
+      maxWeight
     ) {
       toast.error(
         `Maximum order weight is ${maxWeight} KG.`
@@ -760,9 +1130,11 @@ const pricePerKg =
        QUANTITY STEP
     ---------------------------------------------------------- */
 
-    const quantityStep = Number(
-      product.quantityStep || 0
-    );
+    const quantityStep =
+      Number(
+        product.quantityStep ||
+          0
+      );
 
     if (
       quantityStep > 0
@@ -774,7 +1146,9 @@ const pricePerKg =
       if (
         Math.abs(
           steps -
-            Math.round(steps)
+            Math.round(
+              steps
+            )
         ) > 0.000001
       ) {
         toast.error(
@@ -805,27 +1179,23 @@ const pricePerKg =
 
     /* ----------------------------------------------------------
        ADD / REPLACE SAME LINE
-       
-       If the same product + same weight +
-       same preparation is added again,
-       we keep it as one line.
-
-       Different preparation = different line.
     ---------------------------------------------------------- */
 
     const updatedCart = {
       ...normalizedCurrentCart,
 
       [id]: {
-        ...(normalizedCurrentCart[id] ||
-          {}),
+        ...(normalizedCurrentCart[
+          id
+        ] || {}),
 
         [lineKey]: {
-          weight: selectedWeight,
+          weight:
+            selectedWeight,
           quantity: 1,
           preparation:
             selectedPreparation,
-          pricePerKg,  
+          pricePerKg,
         },
       },
     };
@@ -834,7 +1204,9 @@ const pricePerKg =
        UPDATE UI IMMEDIATELY
     ---------------------------------------------------------- */
 
-    setCartItems(updatedCart);
+    setCartItems(
+      updatedCart
+    );
 
     /* ----------------------------------------------------------
        LOGGED-IN USER → BACKEND
@@ -878,14 +1250,11 @@ const pricePerKg =
           );
         } else {
           toast.error(
-            response.data?.message ||
+            response.data
+              ?.message ||
               "Unable to add product."
           );
 
-          /*
-            Reload backend cart if add failed,
-            so local UI doesn't remain inconsistent.
-          */
           await loadUserCart();
         }
       } catch (error) {
@@ -896,15 +1265,11 @@ const pricePerKg =
 
         handleAuthError(error);
 
-        /*
-          If it isn't an authentication error,
-          restore backend state.
-        */
         if (
-          error?.response?.status !==
-            401 &&
-          error?.response?.status !==
-            403
+          error?.response
+            ?.status !== 401 &&
+          error?.response
+            ?.status !== 403
         ) {
           await loadUserCart();
         }
@@ -922,537 +1287,546 @@ const pricePerKg =
 
   /* ============================================================
      REMOVE FROM CART
-     
+
      Removes ONE preparation/weight line.
-
-     Example:
-
-     Ari
-     ├── 1 KG Curry Cut
-     └── 1 KG Fry Cut
-
-     Removing Curry Cut does NOT remove Fry Cut.
   ============================================================ */
 
-  const removeFromCart = async (
-    id,
-    lineKey,
-    preparation = ""
-  ) => {
-    const normalizedCart =
-      normalizeCartData(
-        cartItems
-      );
-
-    if (!normalizedCart[id]) {
-      return;
-    }
-
-    const updatedCart = {
-      ...normalizedCart,
-      [id]: {
-        ...normalizedCart[id],
-      },
-    };
-
-    /*
-      If lineKey isn't supplied, remove the
-      entire product for backward compatibility.
-    */
-    if (lineKey) {
-      delete updatedCart[id][
-        lineKey
-      ];
-    } else if (
-      preparation
-    ) {
-      /*
-        Find line by preparation.
-      */
-      const matchingKey =
-        Object.keys(
-          updatedCart[id]
-        ).find((key) => {
-          return (
-            String(
-              updatedCart[id][key]
-                ?.preparation || ""
-            ).trim() ===
-            String(
-              preparation
-            ).trim()
-          );
-        });
-
-      if (matchingKey) {
-        delete updatedCart[id][
-          matchingKey
-        ];
-      }
-    } else {
-      delete updatedCart[id];
-    }
-
-    /*
-      Remove empty product object.
-    */
-    if (
-      updatedCart[id] &&
-      Object.keys(
-        updatedCart[id]
-      ).length === 0
-    ) {
-      delete updatedCart[id];
-    }
-
-    setCartItems(
-      updatedCart
-    );
-
-    /* ----------------------------------------------------------
-       GUEST
-    ---------------------------------------------------------- */
-
-    if (!token) {
-      toast.success(
-        "Removed from cart."
-      );
-
-      return;
-    }
-
-    /* ----------------------------------------------------------
-       LOGGED-IN USER
-    ---------------------------------------------------------- */
-
-    try {
-      const response =
-        await axios.post(
-          `${backendUrl}/api/cart/remove`,
-          {
-            itemId: id,
-            lineKey,
-            preparation,
-          },
-          {
-            headers: {
-              token,
-            },
-          }
+  const removeFromCart =
+    async (
+      id,
+      lineKey,
+      preparation = ""
+    ) => {
+      const normalizedCart =
+        normalizeCartData(
+          cartItems
         );
 
       if (
-        response.data?.success
+        !normalizedCart[id]
       ) {
-        const backendCart =
-          normalizeCartData(
-            response.data
-              .cartData ||
-              updatedCart
+        return;
+      }
+
+      const updatedCart = {
+        ...normalizedCart,
+
+        [id]: {
+          ...normalizedCart[id],
+        },
+      };
+
+      /*
+        If lineKey isn't supplied,
+        remove the entire product for backward compatibility.
+      */
+
+      if (lineKey) {
+        delete updatedCart[id][
+          lineKey
+        ];
+      } else if (
+        preparation
+      ) {
+        /*
+          Find line by preparation.
+        */
+
+        const matchingKey =
+          Object.keys(
+            updatedCart[id]
+          ).find(
+            (key) => {
+              return (
+                String(
+                  updatedCart[id][
+                    key
+                  ]?.preparation ||
+                    ""
+                ).trim() ===
+                String(
+                  preparation
+                ).trim()
+              );
+            }
           );
 
-        setCartItems(
-          backendCart
-        );
+        if (matchingKey) {
+          delete updatedCart[id][
+            matchingKey
+          ];
+        }
+      } else {
+        delete updatedCart[id];
+      }
 
+      /*
+        Remove empty product object.
+      */
+
+      if (
+        updatedCart[id] &&
+        Object.keys(
+          updatedCart[id]
+        ).length === 0
+      ) {
+        delete updatedCart[id];
+      }
+
+      setCartItems(
+        updatedCart
+      );
+
+      /* --------------------------------------------------------
+         GUEST
+      -------------------------------------------------------- */
+
+      if (!token) {
         toast.success(
           "Removed from cart."
         );
-      } else {
-        toast.error(
-          response.data?.message ||
-            "Unable to remove item."
+
+        return;
+      }
+
+      /* --------------------------------------------------------
+         LOGGED-IN USER
+      -------------------------------------------------------- */
+
+      try {
+        const response =
+          await axios.post(
+            `${backendUrl}/api/cart/remove`,
+            {
+              itemId: id,
+              lineKey,
+              preparation,
+            },
+            {
+              headers: {
+                token,
+              },
+            }
+          );
+
+        if (
+          response.data?.success
+        ) {
+          const backendCart =
+            normalizeCartData(
+              response.data
+                .cartData ||
+                updatedCart
+            );
+
+          setCartItems(
+            backendCart
+          );
+
+          toast.success(
+            "Removed from cart."
+          );
+        } else {
+          toast.error(
+            response.data
+              ?.message ||
+              "Unable to remove item."
+          );
+
+          await loadUserCart();
+        }
+      } catch (error) {
+        console.error(
+          "❌ Remove cart error:",
+          error
         );
 
-        await loadUserCart();
-      }
-    } catch (error) {
-      console.error(
-        "❌ Remove cart error:",
-        error
-      );
+        handleAuthError(error);
 
-      handleAuthError(error);
-
-      if (
-        error?.response?.status !==
-          401 &&
-        error?.response?.status !==
-          403
-      ) {
-        await loadUserCart();
+        if (
+          error?.response
+            ?.status !== 401 &&
+          error?.response
+            ?.status !== 403
+        ) {
+          await loadUserCart();
+        }
       }
-    }
-  };
+    };
 
   /* ============================================================
      UPDATE CART WEIGHT
 
      Preparation stays attached to the item.
-
-     Example:
-
-     1 KG Curry Cut
-     ↓
-     2 KG Curry Cut
-
-     Preparation remains "Curry Cut".
   ============================================================ */
 
-  const updateWeight = async (
-    id,
-    oldWeight,
-    newWeight,
-    lineKey,
-    preparation
-  ) => {
-    const product =
-      products.find(
-        (item) =>
-          item._id === id
-      );
+  const updateWeight =
+    async (
+      id,
+      oldWeight,
+      newWeight,
+      lineKey,
+      preparation
+    ) => {
+      const product =
+        products.find(
+          (item) =>
+            item._id === id
+        );
 
-    if (!product) {
-      toast.error(
-        "Product not found."
-      );
-      return;
-    }
-
-    const updatedWeight =
-      Number(newWeight);
-
-    const previousWeight =
-      Number(oldWeight);
-
-    if (
-      !Number.isFinite(
-        updatedWeight
-      ) ||
-      updatedWeight <= 0
-    ) {
-      toast.error(
-        "Invalid weight."
-      );
-      return;
-    }
-
-    if (
-      !Number.isFinite(
-        previousWeight
-      ) ||
-      previousWeight <= 0
-    ) {
-      toast.error(
-        "Invalid previous weight."
-      );
-      return;
-    }
-
-    /* ----------------------------------------------------------
-       STOCK
-    ---------------------------------------------------------- */
-
-    if (
-      updatedWeight >
-      Number(product.stock || 0)
-    ) {
-      toast.error(
-        `Only ${product.stock} KG available.`
-      );
-      return;
-    }
-
-    /* ----------------------------------------------------------
-       MIN
-    ---------------------------------------------------------- */
-
-    const minWeight =
-      Number(
-        product.minQuantity ||
-          0.5
-      );
-
-    if (
-      updatedWeight <
-      minWeight
-    ) {
-      toast.error(
-        `Minimum weight is ${minWeight} KG.`
-      );
-      return;
-    }
-
-    /* ----------------------------------------------------------
-       MAX
-    ---------------------------------------------------------- */
-
-    const maxWeight =
-      Number(
-        product.maxQuantity ||
-          product.stock ||
-          10
-      );
-
-    if (
-      updatedWeight >
-      maxWeight
-    ) {
-      toast.error(
-        `Maximum weight is ${maxWeight} KG.`
-      );
-      return;
-    }
-
-    /* ----------------------------------------------------------
-       STEP
-    ---------------------------------------------------------- */
-
-    const quantityStep =
-      Number(
-        product.quantityStep ||
-          0
-      );
-
-    if (
-      quantityStep > 0
-    ) {
-      const steps =
-        updatedWeight /
-        quantityStep;
-
-      if (
-        Math.abs(
-          steps -
-            Math.round(steps)
-        ) > 0.000001
-      ) {
+      if (!product) {
         toast.error(
-          `Weight must be in increments of ${quantityStep} KG.`
+          "Product not found."
         );
         return;
       }
-    }
 
-    /* ----------------------------------------------------------
-       CURRENT CART
-    ---------------------------------------------------------- */
+      const updatedWeight =
+        Number(newWeight);
 
-    const normalizedCart =
-      normalizeCartData(
-        cartItems
-      );
+      const previousWeight =
+        Number(oldWeight);
 
-    if (
-      !normalizedCart[id]
-    ) {
-      return;
-    }
+      if (
+        !Number.isFinite(
+          updatedWeight
+        ) ||
+        updatedWeight <= 0
+      ) {
+        toast.error(
+          "Invalid weight."
+        );
+        return;
+      }
 
-    /*
-      Find the actual old line.
+      if (
+        !Number.isFinite(
+          previousWeight
+        ) ||
+        previousWeight <= 0
+      ) {
+        toast.error(
+          "Invalid previous weight."
+        );
+        return;
+      }
 
-      Cart.jsx should pass lineKey.
-      If it doesn't, we find it using oldWeight
-      + preparation.
-    */
-    let oldLineKey =
-      lineKey;
+      /* --------------------------------------------------------
+         STOCK
+      -------------------------------------------------------- */
 
-    if (
-      !oldLineKey ||
-      !normalizedCart[id][
-        oldLineKey
-      ]
-    ) {
-      oldLineKey =
-        Object.keys(
-          normalizedCart[id]
-        ).find((key) => {
-          const item =
-            normalizedCart[id][
-              key
-            ];
+      if (
+        updatedWeight >
+        Number(
+          product.stock || 0
+        )
+      ) {
+        toast.error(
+          `Only ${product.stock} KG available.`
+        );
+        return;
+      }
 
-          return (
-            Number(
-              item?.weight
-            ) ===
-              previousWeight &&
-            String(
-              item?.preparation ||
-                ""
-            ).trim() ===
-              String(
-                preparation || ""
-              ).trim()
+      /* --------------------------------------------------------
+         MIN
+      -------------------------------------------------------- */
+
+      const minWeight =
+        Number(
+          product.minQuantity ||
+            0.5
+        );
+
+      if (
+        updatedWeight <
+        minWeight
+      ) {
+        toast.error(
+          `Minimum weight is ${minWeight} KG.`
+        );
+        return;
+      }
+
+      /* --------------------------------------------------------
+         MAX
+      -------------------------------------------------------- */
+
+      const maxWeight =
+        Number(
+          product.maxQuantity ||
+            product.stock ||
+            10
+        );
+
+      if (
+        updatedWeight >
+        maxWeight
+      ) {
+        toast.error(
+          `Maximum weight is ${maxWeight} KG.`
+        );
+        return;
+      }
+
+      /* --------------------------------------------------------
+         STEP
+      -------------------------------------------------------- */
+
+      const quantityStep =
+        Number(
+          product.quantityStep ||
+            0
+        );
+
+      if (
+        quantityStep > 0
+      ) {
+        const steps =
+          updatedWeight /
+          quantityStep;
+
+        if (
+          Math.abs(
+            steps -
+              Math.round(
+                steps
+              )
+          ) > 0.000001
+        ) {
+          toast.error(
+            `Weight must be in increments of ${quantityStep} KG.`
           );
-        });
-    }
+          return;
+        }
+      }
 
-    if (
-      !oldLineKey ||
-      !normalizedCart[id][
-        oldLineKey
-      ]
-    ) {
-      toast.error(
-        "Cart item not found."
-      );
-      return;
-    }
+      /* --------------------------------------------------------
+         CURRENT CART
+      -------------------------------------------------------- */
 
-    const existingItem =
-      normalizedCart[id][
+      const normalizedCart =
+        normalizeCartData(
+          cartItems
+        );
+
+      if (
+        !normalizedCart[id]
+      ) {
+        return;
+      }
+
+      /*
+        Find the actual old line.
+      */
+
+      let oldLineKey =
+        lineKey;
+
+      if (
+        !oldLineKey ||
+        !normalizedCart[id][
+          oldLineKey
+        ]
+      ) {
+        oldLineKey =
+          Object.keys(
+            normalizedCart[id]
+          ).find(
+            (key) => {
+              const item =
+                normalizedCart[
+                  id
+                ][key];
+
+              return (
+                Number(
+                  item?.weight
+                ) ===
+                  previousWeight &&
+                String(
+                  item?.preparation ||
+                    ""
+                ).trim() ===
+                  String(
+                    preparation || ""
+                  ).trim()
+              );
+            }
+          );
+      }
+
+      if (
+        !oldLineKey ||
+        !normalizedCart[id][
+          oldLineKey
+        ]
+      ) {
+        toast.error(
+          "Cart item not found."
+        );
+        return;
+      }
+
+      const existingItem =
+        normalizedCart[id][
+          oldLineKey
+        ];
+
+      const selectedPreparation =
+        String(
+          preparation ||
+            existingItem?.preparation ||
+            ""
+        ).trim();
+
+      /*
+        New key after changing weight.
+      */
+
+      const newLineKey =
+        createCartLineKey(
+          updatedWeight,
+          selectedPreparation
+        );
+
+      const updatedProductCart =
+        {
+          ...normalizedCart[id],
+        };
+
+      /*
+        Remove old line.
+      */
+
+      delete updatedProductCart[
         oldLineKey
       ];
 
-    const selectedPreparation =
-      String(
-        preparation ||
-          existingItem?.preparation ||
-          ""
-      ).trim();
+      /*
+        If the new key already exists,
+        preserve its quantity.
+      */
 
-    /*
-      New key after changing weight.
-    */
-    const newLineKey =
-      createCartLineKey(
-        updatedWeight,
-        selectedPreparation
-      );
+      const existingNewLine =
+        updatedProductCart[
+          newLineKey
+        ];
 
-    const updatedProductCart =
-      {
-        ...normalizedCart[id],
-      };
+      const preparationPrice =
+        getPreparationPrice(
+          product,
+          selectedPreparation
+        );
 
-    /*
-      Remove old line.
-    */
-    delete updatedProductCart[
-      oldLineKey
-    ];
-
-    /*
-      If the new key already exists,
-      preserve it rather than creating duplicates.
-    */
-    const existingNewLine =
       updatedProductCart[
         newLineKey
-      ];
+      ] = {
+        weight:
+          updatedWeight,
 
-const preparationPrice =
-  getPreparationPrice(
-    product,
-    selectedPreparation
-  );
+        quantity: Number(
+          existingNewLine?.quantity ||
+            existingItem?.quantity ||
+            1
+        ),
 
-updatedProductCart[
-  newLineKey
-] = {
-  weight: updatedWeight,
-  quantity:
-    Number(
-      existingNewLine?.quantity ||
-        existingItem?.quantity ||
-        1
-    ),
-  preparation:
-    selectedPreparation,
-  pricePerKg: preparationPrice,
-};
+        preparation:
+          selectedPreparation,
 
-    const updatedCart = {
-      ...normalizedCart,
+        pricePerKg:
+          preparationPrice,
+      };
 
-      [id]: updatedProductCart,
-    };
+      const updatedCart = {
+        ...normalizedCart,
 
-    setCartItems(
-      updatedCart
-    );
+        [id]:
+          updatedProductCart,
+      };
 
-    /* ----------------------------------------------------------
-       GUEST
-    ---------------------------------------------------------- */
-
-    if (!token) {
-      return;
-    }
-
-    /* ----------------------------------------------------------
-       LOGGED-IN USER
-    ---------------------------------------------------------- */
-
-    try {
-      const response =
-        await axios.post(
-          `${backendUrl}/api/cart/update`,
-          {
-            itemId: id,
-
-            oldWeight:
-              previousWeight,
-
-            newWeight:
-              updatedWeight,
-
-            preparation:
-              selectedPreparation,
-
-            oldLineKey,
-
-            newLineKey,
-          },
-          {
-            headers: {
-              token,
-            },
-          }
-        );
-
-      if (
-        response.data?.success
-      ) {
-        const backendCart =
-          normalizeCartData(
-            response.data
-              .cartData ||
-              updatedCart
-          );
-
-        setCartItems(
-          backendCart
-        );
-      } else {
-        toast.error(
-          response.data?.message ||
-            "Unable to update weight."
-        );
-
-        await loadUserCart();
-      }
-    } catch (error) {
-      console.error(
-        "❌ Update weight error:",
-        error
+      setCartItems(
+        updatedCart
       );
 
-      handleAuthError(error);
+      /* --------------------------------------------------------
+         GUEST
+      -------------------------------------------------------- */
 
-      if (
-        error?.response?.status !==
-          401 &&
-        error?.response?.status !==
-          403
-      ) {
-        await loadUserCart();
+      if (!token) {
+        return;
       }
-    }
-  };
+
+      /* --------------------------------------------------------
+         LOGGED-IN USER
+      -------------------------------------------------------- */
+
+      try {
+        const response =
+          await axios.post(
+            `${backendUrl}/api/cart/update`,
+            {
+              itemId: id,
+
+              oldWeight:
+                previousWeight,
+
+              newWeight:
+                updatedWeight,
+
+              preparation:
+                selectedPreparation,
+
+              oldLineKey,
+
+              newLineKey,
+            },
+            {
+              headers: {
+                token,
+              },
+            }
+          );
+
+        if (
+          response.data?.success
+        ) {
+          const backendCart =
+            normalizeCartData(
+              response.data
+                .cartData ||
+                updatedCart
+            );
+
+          setCartItems(
+            backendCart
+          );
+        } else {
+          toast.error(
+            response.data
+              ?.message ||
+              "Unable to update weight."
+          );
+
+          await loadUserCart();
+        }
+      } catch (error) {
+        console.error(
+          "❌ Update weight error:",
+          error
+        );
+
+        handleAuthError(error);
+
+        if (
+          error?.response
+            ?.status !== 401 &&
+          error?.response
+            ?.status !== 403
+        ) {
+          await loadUserCart();
+        }
+      }
+    };
 
   /* ============================================================
      CART COUNT
@@ -1461,169 +1835,184 @@ updatedProductCart[
 
      Example:
 
-     Ari Curry Cut → 1
-     Ari Fry Cut   → 1
+     Curry Cut → 1
+     Fry Cut   → 1
 
      Cart count = 2
   ============================================================ */
 
-  const getCartCount = () => {
-    let count = 0;
+  const getCartCount =
+    () => {
+      let count = 0;
 
-    const normalizedCart =
-      normalizeCartData(
-        cartItems
+      const normalizedCart =
+        normalizeCartData(
+          cartItems
+        );
+
+      Object.values(
+        normalizedCart
+      ).forEach(
+        (productCart) => {
+          Object.values(
+            productCart || {}
+          ).forEach(
+            (lineItem) => {
+              const quantity =
+                Number(
+                  lineItem?.quantity ||
+                    0
+                );
+
+              if (
+                Number.isFinite(
+                  quantity
+                ) &&
+                quantity > 0
+              ) {
+                count +=
+                  quantity;
+              }
+            }
+          );
+        }
       );
 
-    Object.values(
-      normalizedCart
-    ).forEach(
-      (productCart) => {
-        Object.values(
-          productCart || {}
-        ).forEach(
-          (lineItem) => {
-            const quantity =
-              Number(
-                lineItem?.quantity ||
-                  0
-              );
-
-            if (
-              Number.isFinite(
-                quantity
-              ) &&
-              quantity > 0
-            ) {
-              count += quantity;
-            }
-          }
-        );
-      }
-    );
-
-    return count;
-  };
+      return count;
+    };
 
   /* ============================================================
      CART AMOUNT
 
      Price is PER KG.
 
-     Example:
-
-     Fish price = ₹750 / KG
-     Weight = 2 KG
-
-     Total = ₹1500
+     Preparation price is used when preparation exists.
   ============================================================ */
 
-  /* ============================================================
-   CART AMOUNT
+  const getCartAmount =
+    () => {
+      let total = 0;
 
-   Price is PER KG.
+      const normalizedCart =
+        normalizeCartData(
+          cartItems
+        );
 
-   IMPORTANT:
-   The price comes from the selected preparation.
+      Object.entries(
+        normalizedCart
+      ).forEach(
+        ([id, productCart]) => {
+          const product =
+            products.find(
+              (item) =>
+                item._id === id
+            );
 
-   Example:
-
-   Fish base price      = ₹300 / KG
-   Curry Cut            = ₹330 / KG
-   Weight               = 2 KG
-
-   Total = ₹330 × 2
-         = ₹660
-============================================================ */
-
-const getCartAmount = () => {
-  let total = 0;
-
-  const normalizedCart = normalizeCartData(cartItems);
-
-  Object.entries(normalizedCart).forEach(
-    ([id, productCart]) => {
-      const product = products.find(
-        (item) => item._id === id
-      );
-
-      if (!product) return;
-
-      Object.values(productCart || {}).forEach(
-        (lineItem) => {
-          const weight = Number(
-            lineItem?.weight || 0
-          );
-
-          const quantity = Number(
-            lineItem?.quantity || 1
-          );
-
-          if (
-            !Number.isFinite(weight) ||
-            weight <= 0 ||
-            !Number.isFinite(quantity) ||
-            quantity <= 0
-          ) {
+          if (!product) {
             return;
           }
 
-          let pricePerKg;
+          Object.values(
+            productCart || {}
+          ).forEach(
+            (lineItem) => {
+              const weight =
+                Number(
+                  lineItem?.weight ||
+                    0
+                );
 
-const preparation =
-  String(
-    lineItem?.preparation || ""
-  ).trim();
+              const quantity =
+                Number(
+                  lineItem?.quantity ||
+                    1
+                );
 
-if (preparation) {
-  /*
-    Always calculate the current price
-    from the current product preparation.
-  */
-  pricePerKg =
-    getPreparationPrice(
-      product,
-      preparation
-    );
-} else {
-  pricePerKg =
-    Number(
-      lineItem?.pricePerKg || 0
-    );
+              if (
+                !Number.isFinite(
+                  weight
+                ) ||
+                weight <= 0 ||
+                !Number.isFinite(
+                  quantity
+                ) ||
+                quantity <= 0
+              ) {
+                return;
+              }
 
-  if (
-    !Number.isFinite(pricePerKg) ||
-    pricePerKg <= 0
-  ) {
-    pricePerKg =
-      Number(product.price || 0);
-  }
-}
+              let pricePerKg;
 
-          if (
-            !Number.isFinite(pricePerKg) ||
-            pricePerKg <= 0
-          ) {
-            return;
-          }
+              const preparation =
+                String(
+                  lineItem?.preparation ||
+                    ""
+                ).trim();
 
-          total +=
-            pricePerKg *
-            weight *
-            quantity;
+              if (
+                preparation
+              ) {
+                /*
+                  Always calculate current price
+                  from current product preparation.
+                */
+
+                pricePerKg =
+                  getPreparationPrice(
+                    product,
+                    preparation
+                  );
+              } else {
+                pricePerKg =
+                  Number(
+                    lineItem?.pricePerKg ||
+                      0
+                  );
+
+                if (
+                  !Number.isFinite(
+                    pricePerKg
+                  ) ||
+                  pricePerKg <= 0
+                ) {
+                  pricePerKg =
+                    Number(
+                      product.price ||
+                        0
+                    );
+                }
+              }
+
+              if (
+                !Number.isFinite(
+                  pricePerKg
+                ) ||
+                pricePerKg <= 0
+              ) {
+                return;
+              }
+
+              total +=
+                pricePerKg *
+                weight *
+                quantity;
+            }
+          );
         }
       );
-    }
-  );
 
-  return Number(total.toFixed(2));
-};
+      return Number(
+        total.toFixed(2)
+      );
+    };
 
   /* ============================================================
      UPDATE USER
   ============================================================ */
 
-  const updateUser = (data) => {
+  const updateUser = (
+    data
+  ) => {
     setUser(data);
 
     if (data) {
@@ -1652,9 +2041,10 @@ if (preparation) {
     );
 
     /*
-      Keep your existing behaviour:
+      Keep your existing behavior:
       logout clears the guest/local cart.
     */
+
     localStorage.removeItem(
       "cartItems"
     );
@@ -1662,6 +2052,7 @@ if (preparation) {
     setToken("");
     setUser(null);
     setCartItems({});
+    setFavorites([]);
 
     toast.success(
       "Logged out successfully."
@@ -1675,33 +2066,49 @@ if (preparation) {
   ============================================================ */
 
   const value = {
-    /* Products */
+    /* ========================================================
+       Products
+    ======================================================== */
+
     products,
     setProducts,
     getProducts,
 
-    /* Global */
+    /* ========================================================
+       Global
+    ======================================================== */
+
     currency,
     delivery_fee,
     backendUrl,
     navigate,
 
-    /* Search */
+    /* ========================================================
+       Search
+    ======================================================== */
+
     search,
     setSearch,
     showSearch,
     setShowSearch,
 
-    /* Authentication */
+    /* ========================================================
+       Authentication
+    ======================================================== */
+
     token,
     setToken,
 
     user,
     setUser,
+
     updateUser,
     getUserProfile,
 
-    /* Cart */
+    /* ========================================================
+       Cart
+    ======================================================== */
+
     cartItems,
     setCartItems,
 
@@ -1713,11 +2120,27 @@ if (preparation) {
     getCartAmount,
     getPreparationPrice,
 
-    /* Status */
+    /* ========================================================
+       Favorites
+    ======================================================== */
+
+    favorites,
+    setFavorites,
+    getFavorites,
+    addFavorite,
+    removeFavorite,
+
+    /* ========================================================
+       Status
+    ======================================================== */
+
     loading,
     error,
 
-    /* Account */
+    /* ========================================================
+       Account
+    ======================================================== */
+
     logout,
   };
 
@@ -1726,7 +2149,9 @@ if (preparation) {
   ============================================================ */
 
   return (
-    <ShopContext.Provider value={value}>
+    <ShopContext.Provider
+      value={value}
+    >
       {children}
     </ShopContext.Provider>
   );

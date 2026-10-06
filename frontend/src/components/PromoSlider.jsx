@@ -43,7 +43,6 @@ const FishIllustration = () => {
         </filter>
       </defs>
 
-      {/* Shadow */}
       <ellipse
         cx="265"
         cy="300"
@@ -54,7 +53,6 @@ const FishIllustration = () => {
       />
 
       <g filter="url(#fishShadow)">
-        {/* Tail */}
         <path
           d="M108 178
              C72 135 42 125 24 126
@@ -64,7 +62,6 @@ const FishIllustration = () => {
           fill="url(#fishFin)"
         />
 
-        {/* Main body */}
         <ellipse
           cx="280"
           cy="180"
@@ -73,7 +70,6 @@ const FishIllustration = () => {
           fill="url(#fishBody)"
         />
 
-        {/* Top fin */}
         <path
           d="M245 84
              C258 44 303 34 338 42
@@ -82,7 +78,6 @@ const FishIllustration = () => {
           fill="#0ea5e9"
         />
 
-        {/* Bottom fin */}
         <path
           d="M254 269
              C276 310 320 319 348 310
@@ -91,7 +86,6 @@ const FishIllustration = () => {
           fill="#0284c7"
         />
 
-        {/* Side fin */}
         <path
           d="M325 178
              C377 187 404 212 413 237
@@ -101,7 +95,6 @@ const FishIllustration = () => {
           opacity="0.9"
         />
 
-        {/* Body highlight */}
         <ellipse
           cx="238"
           cy="143"
@@ -111,7 +104,6 @@ const FishIllustration = () => {
           opacity="0.16"
         />
 
-        {/* Scales */}
         <g
           fill="none"
           stroke="#e0f2fe"
@@ -129,19 +121,10 @@ const FishIllustration = () => {
           <path d="M275 166 Q290 181 305 166" />
         </g>
 
-        {/* Eye */}
         <circle cx="390" cy="150" r="27" fill="#ffffff" />
-
         <circle cx="397" cy="150" r="13" fill="#0f172a" />
+        <circle cx="402" cy="145" r="4" fill="#ffffff" />
 
-        <circle
-          cx="402"
-          cy="145"
-          r="4"
-          fill="#ffffff"
-        />
-
-        {/* Mouth */}
         <path
           d="M437 188 Q455 195 467 185"
           fill="none"
@@ -150,7 +133,6 @@ const FishIllustration = () => {
           strokeLinecap="round"
         />
 
-        {/* Gill */}
         <path
           d="M357 195 Q370 217 393 222"
           fill="none"
@@ -163,7 +145,6 @@ const FishIllustration = () => {
     </svg>
   );
 };
-
 
 /* =========================
    PRAWN
@@ -199,7 +180,6 @@ const PrawnIllustration = () => {
         </filter>
       </defs>
 
-      {/* Shadow */}
       <ellipse
         cx="260"
         cy="305"
@@ -210,7 +190,6 @@ const PrawnIllustration = () => {
       />
 
       <g filter="url(#prawnShadow)">
-        {/* Curved prawn body */}
         <path
           d="
             M390 82
@@ -228,7 +207,6 @@ const PrawnIllustration = () => {
           fill="url(#prawnBody)"
         />
 
-        {/* Segment lines */}
         <g
           fill="none"
           stroke="#9a3412"
@@ -243,12 +221,8 @@ const PrawnIllustration = () => {
           <path d="M208 125 Q193 150 197 174" />
         </g>
 
-        {/* Belly highlight */}
         <path
-          d="
-            M169 230
-            C214 268 278 259 316 223
-          "
+          d="M169 230 C214 268 278 259 316 223"
           fill="none"
           stroke="url(#prawnLight)"
           strokeWidth="18"
@@ -256,7 +230,6 @@ const PrawnIllustration = () => {
           opacity="0.7"
         />
 
-        {/* Tail */}
         <path
           d="
             M158 261
@@ -278,7 +251,6 @@ const PrawnIllustration = () => {
           fill="#fb923c"
         />
 
-        {/* Antennae */}
         <path
           d="M387 84 C431 48 466 42 490 51"
           fill="none"
@@ -295,17 +267,9 @@ const PrawnIllustration = () => {
           strokeLinecap="round"
         />
 
-        {/* Eye */}
         <circle cx="385" cy="91" r="11" fill="#431407" />
+        <circle cx="389" cy="87" r="3" fill="#ffffff" />
 
-        <circle
-          cx="389"
-          cy="87"
-          r="3"
-          fill="#ffffff"
-        />
-
-        {/* Small legs */}
         <g
           stroke="#c2410c"
           strokeWidth="5"
@@ -320,7 +284,6 @@ const PrawnIllustration = () => {
     </svg>
   );
 };
-
 
 /* =========================
    CRAB
@@ -356,7 +319,6 @@ const CrabIllustration = () => {
         </filter>
       </defs>
 
-      {/* Shadow */}
       <ellipse
         cx="260"
         cy="306"
@@ -367,7 +329,6 @@ const CrabIllustration = () => {
       />
 
       <g filter="url(#crabShadow)">
-        {/* Left claw */}
         <path
           d="
             M155 169
@@ -380,7 +341,6 @@ const CrabIllustration = () => {
           fill="url(#crabClaw)"
         />
 
-        {/* Left claw opening */}
         <path
           d="M65 179 Q91 169 113 181"
           fill="none"
@@ -389,7 +349,6 @@ const CrabIllustration = () => {
           strokeLinecap="round"
         />
 
-        {/* Right claw */}
         <path
           d="
             M365 169
@@ -402,7 +361,6 @@ const CrabIllustration = () => {
           fill="url(#crabClaw)"
         />
 
-        {/* Right claw opening */}
         <path
           d="M455 179 Q429 169 407 181"
           fill="none"
@@ -411,7 +369,6 @@ const CrabIllustration = () => {
           strokeLinecap="round"
         />
 
-        {/* Main shell */}
         <ellipse
           cx="260"
           cy="188"
@@ -420,7 +377,6 @@ const CrabIllustration = () => {
           fill="url(#crabBody)"
         />
 
-        {/* Shell highlight */}
         <ellipse
           cx="220"
           cy="151"
@@ -430,7 +386,6 @@ const CrabIllustration = () => {
           opacity="0.14"
         />
 
-        {/* Shell detail */}
         <path
           d="M170 188 Q260 238 350 188"
           fill="none"
@@ -439,7 +394,6 @@ const CrabIllustration = () => {
           opacity="0.5"
         />
 
-        {/* Eyes */}
         <path
           d="M196 111 L196 86"
           stroke="#991b1b"
@@ -454,35 +408,12 @@ const CrabIllustration = () => {
           strokeLinecap="round"
         />
 
-        <circle
-          cx="196"
-          cy="80"
-          r="18"
-          fill="#fee2e2"
-        />
+        <circle cx="196" cy="80" r="18" fill="#fee2e2" />
+        <circle cx="324" cy="80" r="18" fill="#fee2e2" />
 
-        <circle
-          cx="324"
-          cy="80"
-          r="18"
-          fill="#fee2e2"
-        />
+        <circle cx="200" cy="80" r="9" fill="#450a0a" />
+        <circle cx="328" cy="80" r="9" fill="#450a0a" />
 
-        <circle
-          cx="200"
-          cy="80"
-          r="9"
-          fill="#450a0a"
-        />
-
-        <circle
-          cx="328"
-          cy="80"
-          r="9"
-          fill="#450a0a"
-        />
-
-        {/* Smile */}
         <path
           d="M235 207 Q260 226 285 207"
           fill="none"
@@ -491,7 +422,6 @@ const CrabIllustration = () => {
           strokeLinecap="round"
         />
 
-        {/* Legs */}
         <g
           fill="none"
           stroke="#b91c1c"
@@ -507,7 +437,6 @@ const CrabIllustration = () => {
           <path d="M315 256 L342 293 L345 315" />
         </g>
 
-        {/* Small shell dots */}
         <g fill="#fee2e2" opacity="0.35">
           <circle cx="205" cy="178" r="7" />
           <circle cx="232" cy="193" r="5" />
@@ -519,7 +448,6 @@ const CrabIllustration = () => {
   );
 };
 
-
 /* ============================================================
    SLIDES
 ============================================================ */
@@ -528,84 +456,55 @@ const slides = [
   {
     id: 1,
     type: "hero",
-
     badge: "FRESH SEAFOOD",
-
     title: "Fresh Fish",
-
     highlight: "Straight To Your Home",
-
     description:
       "Freshly selected seafood, carefully handled and delivered with quality you can trust.",
-
     buttonText: "Shop Fresh Seafood",
-
     buttonLink: "/menu",
-
     image: hero_backgroundimage,
   },
 
   {
     id: 2,
     type: "fish",
-
     badge: "FRESH FISH",
-
     title: "Fresh Fish",
-
     highlight: "Every Day",
-
     description:
       "Choose from fresh fish carefully selected for quality, freshness and great taste.",
-
     buttonText: "Explore Fish",
-
     buttonLink: "/menu",
-
     Illustration: FishIllustration,
   },
 
   {
     id: 3,
     type: "prawn",
-
     badge: "PREMIUM PRAWNS",
-
     title: "Fresh Prawns",
-
     highlight: "Perfect For Every Meal",
-
     description:
       "Fresh and carefully selected prawns, handled with care for delicious meals at home.",
-
     buttonText: "Shop Prawns",
-
     buttonLink: "/menu",
-
     Illustration: PrawnIllustration,
   },
 
   {
     id: 4,
     type: "crab",
-
     badge: "FRESH CRABS",
-
     title: "Fresh Crabs",
-
     highlight: "Delicious Seafood",
-
     description:
       "Quality fresh crabs selected for seafood lovers who want freshness and taste.",
-
     buttonText: "Shop Crabs",
-
     buttonLink: "/menu",
-
     Illustration: CrabIllustration,
   },
 ];
-
 
 /* ============================================================
    PROMO SLIDER
@@ -613,10 +512,6 @@ const slides = [
 
 const PromoSlider = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-
-  /* ==========================================================
-     AUTO SLIDE
-  ========================================================== */
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -628,19 +523,11 @@ const PromoSlider = () => {
     return () => clearInterval(interval);
   }, []);
 
-  /* ==========================================================
-     NEXT
-  ========================================================== */
-
   const nextSlide = () => {
     setCurrentSlide((prev) =>
       prev === slides.length - 1 ? 0 : prev + 1
     );
   };
-
-  /* ==========================================================
-     PREVIOUS
-  ========================================================== */
 
   const previousSlide = () => {
     setCurrentSlide((prev) =>
@@ -656,22 +543,21 @@ const PromoSlider = () => {
       className="relative mx-auto w-full max-w-7xl"
     >
       {/* ======================================================
-          SLIDER CONTAINER
+          COMPACT SLIDER HEIGHT
       ====================================================== */}
 
       <div
         className="
           relative
-          h-[330px]
+          h-[290px]
           w-full
           overflow-hidden
           rounded-2xl
           shadow-lg
-          sm:h-[370px]
-          lg:h-[420px]
+          sm:h-[320px]
+          lg:h-[370px]
         "
       >
-
         {/* ====================================================
             SLIDE 1 — REAL HERO BACKGROUND IMAGE
         ==================================================== */}
@@ -692,7 +578,6 @@ const PromoSlider = () => {
               "
             />
 
-            {/* Dark overlay */}
             <div
               className="
                 absolute
@@ -704,7 +589,6 @@ const PromoSlider = () => {
               "
             />
 
-            {/* Extra mobile overlay */}
             <div
               className="
                 absolute
@@ -718,7 +602,6 @@ const PromoSlider = () => {
             />
           </>
         )}
-
 
         {/* ====================================================
             SLIDES 2–4 — COLORFUL BACKGROUND
@@ -751,9 +634,8 @@ const PromoSlider = () => {
           />
         )}
 
-
         {/* ====================================================
-            DECORATIVE GLOW FOR SLIDES 2–4
+            DECORATIVE GLOW
         ==================================================== */}
 
         {slide.type !== "hero" && (
@@ -763,8 +645,8 @@ const PromoSlider = () => {
                 absolute
                 -right-24
                 -top-24
-                h-64
-                w-64
+                h-56
+                w-56
                 rounded-full
                 bg-white/10
                 blur-3xl
@@ -776,8 +658,8 @@ const PromoSlider = () => {
                 absolute
                 -bottom-24
                 -left-20
-                h-64
-                w-64
+                h-56
+                w-56
                 rounded-full
                 bg-white/10
                 blur-3xl
@@ -786,18 +668,8 @@ const PromoSlider = () => {
           </>
         )}
 
-
         {/* ====================================================
             SEAFOOD ILLUSTRATION — SLIDES 2–4
-
-            IMPORTANT:
-            This is deliberately NOT hidden on mobile.
-
-            Desktop:
-            large visual on right.
-
-            Mobile:
-            smaller but still clearly visible on right.
         ==================================================== */}
 
         {slide.type !== "hero" && slide.Illustration && (
@@ -808,29 +680,28 @@ const PromoSlider = () => {
               right-[-35px]
               top-1/2
               z-[2]
-              h-[220px]
-              w-[300px]
+              h-[190px]
+              w-[260px]
               -translate-y-1/2
               opacity-90
 
               sm:right-[-20px]
-              sm:h-[280px]
-              sm:w-[380px]
+              sm:h-[240px]
+              sm:w-[330px]
               sm:opacity-95
 
               md:right-[-10px]
-              md:h-[320px]
-              md:w-[430px]
+              md:h-[280px]
+              md:w-[380px]
 
               lg:right-0
-              lg:h-[350px]
-              lg:w-[500px]
+              lg:h-[310px]
+              lg:w-[440px]
             "
           >
             <slide.Illustration />
           </div>
         )}
-
 
         {/* ====================================================
             CONTENT
@@ -854,10 +725,7 @@ const PromoSlider = () => {
               lg:px-12
             "
           >
-
-            {/* ==================================================
-                BADGE
-            ================================================== */}
+            {/* BADGE */}
 
             <div
               className="
@@ -884,21 +752,18 @@ const PromoSlider = () => {
               </span>
             </div>
 
-
-            {/* ==================================================
-                TITLE
-            ================================================== */}
+            {/* TITLE */}
 
             <h2
               className="
-                mt-3
+                mt-2.5
                 max-w-[520px]
                 text-3xl
                 font-extrabold
                 leading-[1.05]
                 tracking-tight
                 text-white
-                sm:mt-4
+                sm:mt-3
                 sm:text-4xl
                 lg:text-5xl
               "
@@ -910,19 +775,16 @@ const PromoSlider = () => {
               </span>
             </h2>
 
-
-            {/* ==================================================
-                DESCRIPTION
-            ================================================== */}
+            {/* DESCRIPTION */}
 
             <p
               className="
-                mt-3
+                mt-2.5
                 max-w-[390px]
                 text-xs
                 leading-5
                 text-white/90
-                sm:mt-4
+                sm:mt-3
                 sm:text-sm
                 sm:leading-6
               "
@@ -930,15 +792,12 @@ const PromoSlider = () => {
               {slide.description}
             </p>
 
-
-            {/* ==================================================
-                BUTTON
-            ================================================== */}
+            {/* BUTTON */}
 
             <Link
               to={slide.buttonLink}
               className="
-                mt-4
+                mt-3
                 inline-flex
                 items-center
                 gap-2
@@ -954,7 +813,7 @@ const PromoSlider = () => {
                 duration-300
                 hover:-translate-y-0.5
                 hover:bg-cyan-100
-                sm:mt-5
+                sm:mt-4
                 sm:px-5
                 sm:py-3
                 sm:text-sm
@@ -962,14 +821,10 @@ const PromoSlider = () => {
             >
               {slide.buttonText}
 
-              <span className="text-base">
-                →
-              </span>
+              <span className="text-base">→</span>
             </Link>
-
           </div>
         </div>
-
 
         {/* ====================================================
             PREVIOUS BUTTON
@@ -1006,7 +861,6 @@ const PromoSlider = () => {
           ‹
         </button>
 
-
         {/* ====================================================
             NEXT BUTTON
         ==================================================== */}
@@ -1042,20 +896,14 @@ const PromoSlider = () => {
           ›
         </button>
 
-
         {/* ====================================================
             SMALL ROUND DOTS
-
-            NO TALL BARS.
-
-            Mobile and desktop are both explicitly forced
-            to 6px / 8px circles.
         ==================================================== */}
 
         <div
           className="
             absolute
-            bottom-3
+            bottom-2.5
             left-1/2
             z-40
             -translate-x-1/2
@@ -1064,13 +912,13 @@ const PromoSlider = () => {
           <div
             className="
               flex
-              h-[16px]
+              h-[14px]
               items-center
               justify-center
-              gap-[6px]
+              gap-[5px]
               rounded-full
               bg-black/20
-              px-2
+              px-1.5
               backdrop-blur-sm
             "
           >
@@ -1123,7 +971,6 @@ const PromoSlider = () => {
             })}
           </div>
         </div>
-
       </div>
     </section>
   );

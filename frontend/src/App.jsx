@@ -1,5 +1,13 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+
+import React, {
+  useEffect,
+} from "react";
+
+import {
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 
 // =========================
 // PAGES
@@ -15,7 +23,7 @@ import Login from "./pages/Login";
 import PlaceOrder from "./pages/PlaceOrder";
 import Orders from "./pages/Orders";
 import ForgotPassword from "./pages/ForgotPassword";
-import Profile from "./pages/Profile";
+import Profile from "./pages/profile";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
 import Favorites from "./pages/Favorites";
@@ -43,7 +51,30 @@ import SearchBar from "./components/SearchBar";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// ============================================================
+// SCROLL TO TOP
+// ============================================================
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    /*
+     * Always start a new page at the very top.
+     *
+     * This prevents React Router from keeping the
+     * previous page's scroll position.
+     */
+
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
+  }, [pathname]);
+
+  return null;
+};
 
 // =========================
 // APP
@@ -52,6 +83,12 @@ import "react-toastify/dist/ReactToastify.css";
 const App = () => {
   return (
     <div className="min-h-screen px-3 sm:px-[3vw] md:px-[4vw] lg:px-[5vw]">
+
+      {/* =========================
+          SCROLL POSITION
+      ========================== */}
+
+      <ScrollToTop />
 
       {/* =========================
           TOAST NOTIFICATIONS
@@ -78,7 +115,9 @@ const App = () => {
           SEARCH BAR
       ========================== */}
 
-      <SearchBar />
+      <div className="pt-14 sm:pt-16">
+        <SearchBar/>
+      
 
       {/* =========================
           ROUTES
@@ -219,6 +258,7 @@ const App = () => {
         />
 
       </Routes>
+      </div>
 
       {/* =========================
           FOOTER

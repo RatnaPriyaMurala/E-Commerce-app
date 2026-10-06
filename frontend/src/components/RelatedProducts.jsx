@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useState } from "react";
 import { ShopContext } from "../context/ShopContext";
 import ProductItem from "./ProductItem";
@@ -59,85 +58,73 @@ const RelatedProducts = ({
   if (!related.length) return null;
 
   return (
-    <section className="relative mt-4 sm:mt-5 py-6 sm:py-8 px-3 sm:px-5 lg:px-6 overflow-hidden rounded-2xl bg-gradient-to-b from-white via-cyan-50/60 to-sky-100/70">
+    <section className="relative mt-3 sm:mt-4 overflow-hidden rounded-2xl bg-gradient-to-b from-white via-cyan-50/60 to-sky-100/70 px-3 py-4 sm:px-5 sm:py-5 lg:px-6">
 
       {/* =====================================================
           DECORATIVE BACKGROUND
       ===================================================== */}
 
-      <div className="absolute -top-20 -right-20 w-56 h-56 bg-cyan-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-cyan-300/20 blur-3xl" />
 
-      <div className="absolute -bottom-20 -left-20 w-56 h-56 bg-blue-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="pointer-events-none absolute -bottom-20 -left-20 h-48 w-48 rounded-full bg-blue-300/20 blur-3xl" />
 
       {/* =====================================================
           SECTION HEADING
       ===================================================== */}
 
-      <div className="relative z-10 text-center mb-5 sm:mb-6">
+      <div className="relative z-10 mb-4 text-center sm:mb-5">
 
         {/* Small Badge */}
 
-        <div className="inline-flex items-center gap-1.5 bg-cyan-100 text-cyan-700 px-3 py-1.5 rounded-full border border-cyan-200 shadow-sm">
-
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-100 px-3 py-1.5 text-cyan-700 shadow-sm">
           <FaFish className="text-xs text-cyan-600" />
 
           <span className="text-xs font-semibold">
             Fresh Recommendations
           </span>
-
         </div>
 
         {/* Heading */}
 
-        <h2 className="mt-2.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-800 tracking-tight">
-
+        <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-gray-800 sm:text-3xl lg:text-4xl">
           You May{" "}
-
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700">
+          <span className="bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent">
             Like
           </span>
-
         </h2>
 
         {/* Description */}
 
-        <p className="mt-2 max-w-xl mx-auto text-xs sm:text-sm text-gray-500 leading-5">
-
+        <p className="mx-auto mt-1.5 max-w-xl text-xs leading-5 text-gray-500 sm:text-sm">
           Fresh seafood carefully selected based on your current
           selection. Discover more choices for your next meal.
-
         </p>
-
       </div>
 
       {/* =====================================================
           RELATED PRODUCTS
       ===================================================== */}
 
-      <div className="relative z-10 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+      <div className="relative z-10 grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3.5 md:grid-cols-3 lg:grid-cols-4 lg:gap-4 xl:grid-cols-5">
 
         {related.map((item, index) => (
           <div
             key={item._id}
-            className="relative group transition-all duration-300 hover:-translate-y-1"
+            className="group relative transition-all duration-300 hover:-translate-y-1"
             style={{
               animationDelay: `${index * 80}ms`,
             }}
           >
-
             {/* Product Card */}
 
-            <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg hover:border-cyan-200 transition-all duration-300">
-
+            <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:border-cyan-200 hover:shadow-lg">
               <ProductItem
                 id={item._id}
                 name={item.name}
                 price={item.price}
                 image={item.image}
               />
-
             </div>
-
           </div>
         ))}
 
@@ -147,18 +134,14 @@ const RelatedProducts = ({
           BOTTOM MESSAGE
       ===================================================== */}
 
-      <div className="relative z-10 flex justify-center mt-5">
-
+      <div className="relative z-10 mt-4 flex justify-center sm:mt-5">
         <div className="inline-flex items-center gap-2 text-xs text-gray-500">
-
           <span>
             Explore more fresh seafood from our collection
           </span>
 
           <FaArrowRight className="text-cyan-600" />
-
         </div>
-
       </div>
 
     </section>

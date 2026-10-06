@@ -14,17 +14,17 @@ import {
 const Contact = () => {
   return (
     <div className="border-t">
-      <section className="py-8 sm:py-10">
-        <div className="text-center mb-7">
+      <section className="py-5 sm:py-7">
+        <div className="text-center mb-5">
           <Title text1="CONTACT" text2="US" />
 
-          <p className="max-w-2xl mx-auto mt-2 text-xs sm:text-sm text-gray-500 leading-5 sm:leading-6">
+          <p className="max-w-2xl mx-auto mt-1.5 text-xs sm:text-sm text-gray-500 leading-5">
             Have a question about our seafood, delivery or services?
             We would love to hear from you.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-7 items-start">
+        <div className="grid md:grid-cols-2 gap-5 sm:gap-6 items-start">
           <div>
             <img
               src={assets.contact_us}
@@ -33,24 +33,22 @@ const Contact = () => {
             />
           </div>
 
-          <div className="space-y-5">
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
+          <div className="space-y-4">
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 sm:p-5">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3">
                 Store Information
               </h2>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0">
                     <FaMapMarkerAlt className="text-cyan-600" />
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-gray-800">
-                      Address
-                    </h3>
+                    <h3 className="font-semibold text-gray-800">Address</h3>
 
-                    <p className="mt-1 text-sm text-gray-500 leading-5">
+                    <p className="mt-0.5 text-sm text-gray-500 leading-5">
                       Sri Lakshmi Narasimha Live Fish and Sea Foods,
                       Moula Ali / ECIL, Hyderabad, Telangana.
                     </p>
@@ -63,11 +61,9 @@ const Contact = () => {
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-gray-800">
-                      Phone
-                    </h3>
+                    <h3 className="font-semibold text-gray-800">Phone</h3>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-0.5 text-sm text-gray-500">
                       Contact us for orders and enquiries.
                     </p>
                   </div>
@@ -79,11 +75,9 @@ const Contact = () => {
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-gray-800">
-                      Email
-                    </h3>
+                    <h3 className="font-semibold text-gray-800">Email</h3>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-0.5 text-sm text-gray-500">
                       We are happy to assist with your questions.
                     </p>
                   </div>
@@ -91,7 +85,7 @@ const Contact = () => {
               </div>
             </div>
 
-            <div className="bg-cyan-50 border border-cyan-100 rounded-2xl p-5 sm:p-6">
+            <div className="bg-cyan-50 border border-cyan-100 rounded-2xl p-4 sm:p-5">
               <div className="flex items-start gap-3">
                 <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0">
                   <FaBriefcase className="text-cyan-600" />
@@ -102,14 +96,14 @@ const Contact = () => {
                     Careers
                   </h2>
 
-                  <p className="mt-2 text-sm text-gray-600 leading-6">
+                  <p className="mt-1.5 text-sm text-gray-600 leading-5">
                     Interested in working with us? Explore available
                     opportunities and become part of our growing team.
                   </p>
 
                   <button
                     type="button"
-                    className="mt-4 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition"
+                    className="mt-3 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition"
                   >
                     Explore Jobs
                     <FaArrowRight className="text-xs" />

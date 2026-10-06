@@ -6,6 +6,7 @@ import {
   FaFish,
   FaCheckCircle,
   FaCut,
+  FaHeart,
 } from "react-icons/fa";
 
 import { ShopContext } from "../context/ShopContext";
@@ -17,7 +18,12 @@ const ProductItem = ({
   price,
   preparationOptions = [],
 }) => {
-  const { currency } = useContext(ShopContext);
+  const {
+    currency,
+    favorites,
+    addFavorite,
+    removeFavorite,
+  } = useContext(ShopContext);
 
   /* ============================================================
      IMAGE
@@ -28,6 +34,31 @@ const ProductItem = ({
     : image;
 
   /* ============================================================
+     FAVORITE STATUS
+  ============================================================ */
+
+  const isFavorite =
+    Array.isArray(favorites) &&
+    favorites.some(
+      (item) => item?._id === id
+    );
+
+  const handleFavoriteClick = (event) => {
+    /*
+      Prevent the click from opening
+      the product page.
+    */
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (isFavorite) {
+      removeFavorite(id);
+    } else {
+      addFavorite(id);
+    }
+  };
+
+  /* ============================================================
      PREPARATION OPTIONS
   ============================================================ */
 
@@ -36,22 +67,20 @@ const ProductItem = ({
       return option;
     }
 
-    if (
-      option &&
-      typeof option === "object"
-    ) {
+    if (option && typeof option === "object") {
       return option.name || "";
     }
 
     return "";
   };
 
-  const validPreparationNames =
-    Array.isArray(preparationOptions)
-      ? preparationOptions
-          .map(getPreparationName)
-          .filter(Boolean)
-      : [];
+  const validPreparationNames = Array.isArray(
+    preparationOptions
+  )
+    ? preparationOptions
+        .map(getPreparationName)
+        .filter(Boolean)
+    : [];
 
   const hasPreparationOptions =
     validPreparationNames.length > 0;
@@ -83,7 +112,6 @@ const ProductItem = ({
       ====================================================== */}
 
       <div className="relative overflow-hidden bg-gray-100">
-
         {displayImage ? (
           <img
             src={displayImage}
@@ -96,7 +124,7 @@ const ProductItem = ({
               transition-transform
               duration-500
               group-hover:scale-105
-              sm:h-44
+              sm:h-40
             "
           />
         ) : (
@@ -108,12 +136,67 @@ const ProductItem = ({
               items-center
               justify-center
               bg-cyan-50
-              sm:h-44
+              sm:h-40
             "
           >
             <FaFish className="text-5xl text-cyan-300" />
           </div>
         )}
+
+        {/* ==================================================
+            FAVORITE BUTTON
+        ================================================== */}
+
+        <button
+          type="button"
+          onClick={handleFavoriteClick}
+          aria-label={
+            isFavorite
+              ? `Remove ${name || "product"} from favorites`
+              : `Add ${name || "product"} to favorites`
+          }
+          title={
+            isFavorite
+              ? "Remove from favorites"
+              : "Add to favorites"
+          }
+          className="
+            absolute
+            right-2
+            top-10
+            z-20
+            flex
+            h-8
+            w-8
+            items-center
+            justify-center
+            rounded-full
+            bg-white/95
+            shadow-md
+            backdrop-blur-sm
+            transition-all
+            duration-200
+            hover:scale-110
+            sm:right-2.5
+            sm:top-11
+            sm:h-9
+            sm:w-9
+          "
+        >
+          <FaHeart
+            className={`
+              text-sm
+              transition-all
+              duration-200
+              sm:text-base
+              ${
+                isFavorite
+                  ? "text-red-500"
+                  : "text-gray-400 hover:text-red-500"
+              }
+            `}
+          />
+        </button>
 
         {/* ==================================================
             FRESH BADGE
@@ -142,9 +225,7 @@ const ProductItem = ({
         >
           <FaFish />
 
-          <span>
-            Fresh
-          </span>
+          <span>Fresh</span>
         </div>
 
         {/* ==================================================
@@ -215,7 +296,6 @@ const ProductItem = ({
       ====================================================== */}
 
       <div className="p-2.5 sm:p-3">
-
         {/* PRODUCT NAME */}
 
         <h3
@@ -235,12 +315,21 @@ const ProductItem = ({
 
         {/* ====================================================
             PREPARATION OPTIONS
-
-            Useful information, but kept compact.
         ==================================================== */}
 
         {hasPreparationOptions && (
-          <div className="mt-1.5 flex items-center gap-1 text-[9px] text-gray-500 sm:mt-2 sm:text-[10px]">
+          <div
+            className="
+              mt-1
+              flex
+              items-center
+              gap-1
+              text-[9px]
+              text-gray-500
+              sm:mt-1.5
+              sm:text-[10px]
+            "
+          >
             <FaCut className="shrink-0 text-cyan-600" />
 
             <span className="line-clamp-1">
@@ -260,18 +349,17 @@ const ProductItem = ({
 
         <div
           className="
-            mt-2
+            mt-1.5
             flex
             items-center
             justify-between
             gap-2
-            sm:mt-2.5
+            sm:mt-2
           "
         >
           {/* PRICE */}
 
           <div className="min-w-0">
-
             <p className="text-[8px] text-gray-400 sm:text-[9px]">
               Starting from
             </p>
@@ -287,7 +375,9 @@ const ProductItem = ({
               "
             >
               {currency}
-              {Number(price || 0).toLocaleString("en-IN")}
+              {Number(price || 0).toLocaleString(
+                "en-IN"
+              )}
 
               <span
                 className="
@@ -328,19 +418,17 @@ const ProductItem = ({
 
         {/* ====================================================
             DESKTOP-ONLY SUPPORTING INFORMATION
-
-            Hidden on mobile to keep cards compact.
         ==================================================== */}
 
         <div
           className="
-            mt-2.5
+            mt-2
             hidden
             items-center
             justify-between
             border-t
             border-gray-100
-            pt-2
+            pt-1.5
             text-[9px]
             text-gray-500
             sm:flex
@@ -348,7 +436,6 @@ const ProductItem = ({
         >
           <span className="flex items-center gap-1">
             <FaCheckCircle className="text-green-500" />
-
             Quality Checked
           </span>
 
@@ -356,7 +443,6 @@ const ProductItem = ({
             View Details
           </span>
         </div>
-
       </div>
     </Link>
   );
