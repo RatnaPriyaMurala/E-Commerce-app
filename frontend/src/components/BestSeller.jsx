@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useState } from "react";
 import { ShopContext } from "../context/ShopContext";
 import ProductItem from "./ProductItem";
@@ -6,20 +5,60 @@ import { FaCrown, FaStar, FaArrowRight } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 const BestSeller = () => {
-  const { products } = useContext(ShopContext);
+  const { products = [] } = useContext(ShopContext);
 
   const [bestSeller, setBestSeller] = useState([]);
 
   useEffect(() => {
-    if (products.length > 0) {
-      const bestProducts = products.filter(
-        (item) => item.bestseller === true
-      );
-
-      setBestSeller(bestProducts.slice(0, 5));
-    } else {
+    if (!products || products.length === 0) {
       setBestSeller([]);
+      return;
     }
+
+    // =====================================================
+    // FRESH SEAFOOD CATEGORIES
+    // =====================================================
+
+    const freshCategories = [
+      "Fresh Water Fish",
+      "Sea Fish",
+      "Prawns",
+      "Crabs",
+    ];
+
+    // =====================================================
+    // ONLY AVAILABLE FRESH BESTSELLERS
+    // =====================================================
+
+    const freshBestSellers = products.filter((item) => {
+      return (
+        item &&
+        item.bestseller === true &&
+        item.isAvailable !== false &&
+        Number(item.stock) > 0 &&
+        freshCategories.includes(item.category)
+      );
+    });
+
+    // =====================================================
+    // OPTIONAL SORT
+    //
+    // Newer/updated bestseller products first.
+    // =====================================================
+
+    const sortedBestSellers = [...freshBestSellers].sort((a, b) => {
+      const dateA = new Date(
+        a.updatedAt || a.createdAt || a.date || 0
+      ).getTime();
+
+      const dateB = new Date(
+        b.updatedAt || b.createdAt || b.date || 0
+      ).getTime();
+
+      return dateB - dateA;
+    });
+
+    setBestSeller(sortedBestSellers.slice(0, 5));
   }, [products]);
 
   return (
@@ -27,7 +66,7 @@ const BestSeller = () => {
 
       {/* =====================================================
           DECORATIVE BACKGROUND
-      ===================================================== */}
+          ===================================================== */}
 
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
 
@@ -36,11 +75,9 @@ const BestSeller = () => {
 
       {/* =====================================================
           HEADING
-      ===================================================== */}
+          ===================================================== */}
 
       <div className="relative z-10 mb-5 text-center sm:mb-6">
-
-        {/* Premium Badge */}
 
         <div className="inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-100 to-amber-100 px-3.5 py-1.5 text-yellow-700 shadow-sm">
 
@@ -55,8 +92,6 @@ const BestSeller = () => {
         </div>
 
 
-        {/* Heading */}
-
         <h2 className="mt-2.5 text-2xl font-extrabold tracking-tight text-gray-800 sm:text-3xl lg:text-4xl">
 
           Best Selling{" "}
@@ -68,12 +103,9 @@ const BestSeller = () => {
         </h2>
 
 
-        {/* Description */}
-
         <p className="mx-auto mt-1.5 max-w-2xl px-2 text-xs leading-5 text-gray-500 sm:text-sm">
-          Our most loved seafood products selected by hundreds of happy
-          customers. Freshly sourced, hygienically packed and delivered
-          with premium quality.
+          Our most loved fresh seafood selections, carefully sourced,
+          hygienically prepared and delivered with premium quality.
         </p>
 
       </div>
@@ -81,7 +113,7 @@ const BestSeller = () => {
 
       {/* =====================================================
           PRODUCTS
-      ===================================================== */}
+          ===================================================== */}
 
       {bestSeller.length > 0 ? (
 
@@ -130,10 +162,6 @@ const BestSeller = () => {
 
       ) : (
 
-        /* ===================================================
-           EMPTY STATE
-        =================================================== */
-
         <div className="relative z-10 flex flex-col items-center justify-center py-6">
 
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-cyan-100">
@@ -157,13 +185,11 @@ const BestSeller = () => {
 
       {/* =====================================================
           TRUST / STATISTICS
-      ===================================================== */}
+          ===================================================== */}
 
       <div className="relative z-10 mt-5 rounded-2xl border border-white bg-white/90 p-3.5 shadow-lg backdrop-blur-md sm:mt-6 sm:p-5">
 
         <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3 sm:gap-5">
-
-          {/* Customers */}
 
           <div className="group">
 
@@ -178,8 +204,6 @@ const BestSeller = () => {
           </div>
 
 
-          {/* Freshness */}
-
           <div className="group sm:border-x sm:border-gray-100">
 
             <div className="bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-2xl font-extrabold text-transparent sm:text-3xl">
@@ -192,8 +216,6 @@ const BestSeller = () => {
 
           </div>
 
-
-          {/* Rating */}
 
           <div className="group">
 
@@ -220,7 +242,7 @@ const BestSeller = () => {
 
       {/* =====================================================
           VIEW ALL BUTTON
-      ===================================================== */}
+          ===================================================== */}
 
       <div className="relative z-10 mt-4 flex justify-center sm:mt-5">
 
