@@ -42,12 +42,41 @@ const app = express();
 // GLOBAL MIDDLEWARE
 // =====================================================
 
+// =====================================================
 // CORS
+// =====================================================
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  "https://e-commerce-d8m9k6xub-e-commerce-team.vercel.app",
+
+  // Permanent Vercel production domain
+  "https://e-commerce-app-gray-five.vercel.app",
 ];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests without an origin
+      // Example: Postman / server-to-server requests
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("❌ CORS blocked origin:", origin);
+
+      return callback(
+        new Error("Not allowed by CORS")
+      );
+    },
+
+    credentials: true,
+  })
+);
 
 app.use(
   cors({
