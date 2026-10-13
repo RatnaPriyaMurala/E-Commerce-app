@@ -232,53 +232,66 @@ const syncCustomerCart = async (userId, cartData) => {
     { label: "Fry Cut" }
   ]
 */
-const validatePreparation = (
-  product,
-  preparation
-) => {
-  const selectedPreparation = String(
-    preparation || ""
-  ).trim();
+
+const validatePreparation = (product, preparation) => {
+  const category = String(product?.category || "")
+    .trim()
+    .toLowerCase();
+
+  // These categories do not require preparation selection.
+  const categoriesWithoutPreparation = [
+    "dry fish",
+    "dry prawns",
+    "pickles",
+  ];
+
+  if (categoriesWithoutPreparation.includes(category)) {
+    return {
+      valid: true,
+      preparation: "",
+    };
+  }
+
+  // Fresh fish and other seafood still require preparation.
+  const selectedPreparation = String(preparation || "").trim();
 
   if (!selectedPreparation) {
     return {
       valid: false,
-      message:
-        "Please select a preparation option.",
+      message: "Please select a preparation option.",
     };
   }
 
-  if (
-    Array.isArray(product.preparationOptions) &&
-    product.preparationOptions.length > 0
-  ) {
-    const allowedOptions =
-      product.preparationOptions
-        .map((option) => {
-          if (typeof option === "string") {
-            return option.trim();
-          }
+  const options = Array.isArray(product?.preparationOptions)
+    ? product.preparationOptions
+    : [];
 
-          return String(
-            option?.name ||
-              option?.label ||
-              ""
-          ).trim();
-        })
-        .filter(Boolean);
+  if (options.length > 0) {
+    const allowedOptions = options
+      .map((option) => {
+        if (typeof option === "string") {
+          return option.trim();
+        }
 
-    const isAllowed =
-      allowedOptions.some(
-        (option) =>
-          option.toLowerCase() ===
-          selectedPreparation.toLowerCase()
-      );
+        return String(
+          option?.name ??
+          option?.label ??
+          option?.preparation ??
+          option?.title ??
+          ""
+        ).trim();
+      })
+      .filter(Boolean);
+
+    const isAllowed = allowedOptions.some(
+      (option) =>
+        option.toLowerCase() === selectedPreparation.toLowerCase()
+    );
 
     if (!isAllowed) {
       return {
         valid: false,
-        message:
-          "Invalid preparation option.",
+        message: "Invalid preparation option.",
       };
     }
   }
@@ -289,6 +302,14 @@ const validatePreparation = (
   };
 };
 
+
+const usesQuarterKgRules = (product) => {
+  const category = String(product?.category || "")
+    .trim()
+    .toLowerCase();
+
+  return ["dry fish", "dry prawns", "pickles"].includes(category);
+};
 /* =========================================================
    ADD TO CART
 ========================================================= */
@@ -383,53 +404,50 @@ const addToCart = async (req, res) => {
        MIN / MAX
     ------------------------------------------------------- */
 
-    const minQuantity =
-      Number(product.minQuantity || 0.5);
+   /* MIN / MAX */
 
-    const maxQuantity =
-      Number(
-        product.maxQuantity || stock
-      );
+const usesQuarterKg = usesQuarterKgRules(product);
 
-    if (numericWeight < minQuantity) {
-      return res.status(400).json({
-        success: false,
-        message:
-          `Minimum order weight is ${minQuantity} KG.`,
-      });
-    }
+const minQuantity = usesQuarterKg
+  ? 0.25
+  : Number(product.minQuantity || 0.5);
 
-    if (numericWeight > maxQuantity) {
-      return res.status(400).json({
-        success: false,
-        message:
-          `Maximum order weight is ${maxQuantity} KG.`,
-      });
-    }
+const maxQuantity = Number(
+  product.maxQuantity || stock
+);
 
-    /* -------------------------------------------------------
-       QUANTITY STEP
-    ------------------------------------------------------- */
+if (numericWeight < minQuantity) {
+  return res.status(400).json({
+    success: false,
+    message: `Minimum order weight is ${minQuantity} KG.`,
+  });
+}
 
-    const quantityStep =
-      Number(product.quantityStep || 0);
+if (numericWeight > maxQuantity) {
+  return res.status(400).json({
+    success: false,
+    message: `Maximum order weight is ${maxQuantity} KG.`,
+  });
+}
 
-    if (quantityStep > 0) {
-      const steps =
-        numericWeight / quantityStep;
+/* QUANTITY STEP */
 
-      if (
-        Math.abs(
-          steps - Math.round(steps)
-        ) > 0.000001
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            `Weight must be in increments of ${quantityStep} KG.`,
-        });
-      }
-    }
+const quantityStep = usesQuarterKg
+  ? 0.25
+  : Number(product.quantityStep || 0);
+
+if (quantityStep > 0) {
+  const steps = numericWeight / quantityStep;
+
+  if (Math.abs(steps - Math.round(steps)) > 0.000001) {
+    return res.status(400).json({
+      success: false,
+      message: `Weight must be in increments of ${quantityStep} KG.`,
+    });
+  }
+}
+
+
 
     /* -------------------------------------------------------
        USER
@@ -624,73 +642,52 @@ const updateCartWeight = async (req, res) => {
        MIN / MAX
     ------------------------------------------------------- */
 
-    const minQuantity =
-      Number(
-        product.minQuantity || 0.5
-      );
+const usesQuarterKg = usesQuarterKgRules(product);
 
-    const maxQuantity =
-      Number(
-        product.maxQuantity ||
-        product.stock ||
-        10
-      );
+const minQuantity = usesQuarterKg
+  ? 0.25
+  : Number(product.minQuantity || 0.5);
 
-    if (
-      numericNewWeight <
-        minQuantity ||
-      numericNewWeight >
-        maxQuantity
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          `Weight must be between ${minQuantity} KG and ${maxQuantity} KG.`,
-      });
-    }
+const maxQuantity = Number(
+  product.maxQuantity || product.stock || 10
+);
 
-    /* -------------------------------------------------------
-       STOCK
-    ------------------------------------------------------- */
+if (
+  numericNewWeight < minQuantity ||
+  numericNewWeight > maxQuantity
+) {
+  return res.status(400).json({
+    success: false,
+    message: `Weight must be between ${minQuantity} KG and ${maxQuantity} KG.`,
+  });
+}
 
-    if (
-      numericNewWeight >
-      Number(product.stock || 0)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          `${product.name} has only ${product.stock} KG available.`,
-      });
-    }
+/* STOCK */
 
-    /* -------------------------------------------------------
-       QUANTITY STEP
-    ------------------------------------------------------- */
+if (numericNewWeight > Number(product.stock || 0)) {
+  return res.status(400).json({
+    success: false,
+    message: `${product.name} has only ${product.stock} KG available.`,
+  });
+}
 
-    const quantityStep =
-      Number(
-        product.quantityStep || 0
-      );
+/* QUANTITY STEP */
 
-    if (quantityStep > 0) {
-      const steps =
-        numericNewWeight /
-        quantityStep;
+const quantityStep = usesQuarterKg
+  ? 0.25
+  : Number(product.quantityStep || 0);
 
-      if (
-        Math.abs(
-          steps -
-            Math.round(steps)
-        ) > 0.000001
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            `Weight must be in increments of ${quantityStep} KG.`,
-        });
-      }
-    }
+if (quantityStep > 0) {
+  const steps = numericNewWeight / quantityStep;
+
+  if (Math.abs(steps - Math.round(steps)) > 0.000001) {
+    return res.status(400).json({
+      success: false,
+      message: `Weight must be in increments of ${quantityStep} KG.`,
+    });
+  }
+}
+
 
     /* -------------------------------------------------------
        USER

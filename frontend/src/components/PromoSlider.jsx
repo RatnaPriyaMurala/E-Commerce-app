@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -459,8 +460,6 @@ const slides = [
     badge: "FRESH SEAFOOD",
     title: "Fresh Fish",
     highlight: "Straight To Your Home",
-    description:
-      "Freshly selected seafood, carefully handled and delivered with quality you can trust.",
     buttonText: "Shop Fresh Seafood",
     buttonLink: "/menu",
     image: hero_backgroundimage,
@@ -472,8 +471,6 @@ const slides = [
     badge: "FRESH FISH",
     title: "Fresh Fish",
     highlight: "Every Day",
-    description:
-      "Choose from fresh fish carefully selected for quality, freshness and great taste.",
     buttonText: "Explore Fish",
     buttonLink: "/menu",
     Illustration: FishIllustration,
@@ -485,8 +482,6 @@ const slides = [
     badge: "PREMIUM PRAWNS",
     title: "Fresh Prawns",
     highlight: "Perfect For Every Meal",
-    description:
-      "Fresh and carefully selected prawns, handled with care for delicious meals at home.",
     buttonText: "Shop Prawns",
     buttonLink: "/menu",
     Illustration: PrawnIllustration,
@@ -498,8 +493,6 @@ const slides = [
     badge: "FRESH CRABS",
     title: "Fresh Crabs",
     highlight: "Delicious Seafood",
-    description:
-      "Quality fresh crabs selected for seafood lovers who want freshness and taste.",
     buttonText: "Shop Crabs",
     buttonLink: "/menu",
     Illustration: CrabIllustration,
@@ -542,9 +535,7 @@ const PromoSlider = () => {
       aria-label="Promotional seafood slider"
       className="relative mx-auto w-full max-w-7xl"
     >
-      {/* ======================================================
-          COMPACT SLIDER HEIGHT
-      ====================================================== */}
+      {/* SLIDER CONTAINER */}
 
       <div
         className="
@@ -558,9 +549,7 @@ const PromoSlider = () => {
           lg:h-[370px]
         "
       >
-        {/* ====================================================
-            SLIDE 1 — REAL HERO BACKGROUND IMAGE
-        ==================================================== */}
+        {/* SLIDE 1 — REAL HERO BACKGROUND IMAGE */}
 
         {slide.type === "hero" && (
           <>
@@ -603,28 +592,23 @@ const PromoSlider = () => {
           </>
         )}
 
-        {/* ====================================================
-            SLIDES 2–4 — COLORFUL BACKGROUND
-        ==================================================== */}
+        {/* SLIDES 2–4 — COLORFUL BACKGROUND */}
 
         {slide.type !== "hero" && (
           <div
             className={`
               absolute
               inset-0
-
               ${
                 slide.type === "fish"
                   ? "bg-gradient-to-br from-sky-950 via-cyan-800 to-blue-600"
                   : ""
               }
-
               ${
                 slide.type === "prawn"
                   ? "bg-gradient-to-br from-orange-950 via-orange-700 to-amber-500"
                   : ""
               }
-
               ${
                 slide.type === "crab"
                   ? "bg-gradient-to-br from-red-950 via-red-700 to-rose-500"
@@ -634,9 +618,7 @@ const PromoSlider = () => {
           />
         )}
 
-        {/* ====================================================
-            DECORATIVE GLOW
-        ==================================================== */}
+        {/* DECORATIVE GLOW */}
 
         {slide.type !== "hero" && (
           <>
@@ -668,9 +650,7 @@ const PromoSlider = () => {
           </>
         )}
 
-        {/* ====================================================
-            SEAFOOD ILLUSTRATION — SLIDES 2–4
-        ==================================================== */}
+        {/* SEAFOOD ILLUSTRATION — SLIDES 2–4 */}
 
         {slide.type !== "hero" && slide.Illustration && (
           <div
@@ -703,9 +683,7 @@ const PromoSlider = () => {
           </div>
         )}
 
-        {/* ====================================================
-            CONTENT
-        ==================================================== */}
+        {/* CONTENT */}
 
         <div
           className="
@@ -775,37 +753,22 @@ const PromoSlider = () => {
               </span>
             </h2>
 
-            {/* DESCRIPTION */}
-
-            <p
-              className="
-                mt-2.5
-                max-w-[390px]
-                text-xs
-                leading-5
-                text-white/90
-                sm:mt-3
-                sm:text-sm
-                sm:leading-6
-              "
-            >
-              {slide.description}
-            </p>
-
-            {/* BUTTON */}
+            {/* LARGE BUTTON — ALL SLIDES */}
 
             <Link
               to={slide.buttonLink}
               className="
-                mt-3
+                mt-4
                 inline-flex
+                min-h-[48px]
                 items-center
-                gap-2
+                justify-center
+                gap-3
                 rounded-xl
                 bg-white
-                px-4
-                py-2.5
-                text-xs
+                px-6
+                py-3
+                text-sm
                 font-bold
                 text-slate-900
                 shadow-xl
@@ -813,22 +776,24 @@ const PromoSlider = () => {
                 duration-300
                 hover:-translate-y-0.5
                 hover:bg-cyan-100
-                sm:mt-4
-                sm:px-5
-                sm:py-3
-                sm:text-sm
+                active:scale-95
+                sm:mt-5
+                sm:min-h-[54px]
+                sm:px-7
+                sm:py-3.5
+                sm:text-base
               "
             >
               {slide.buttonText}
 
-              <span className="text-base">→</span>
+              <span className="text-xl" aria-hidden="true">
+                →
+              </span>
             </Link>
           </div>
         </div>
 
-        {/* ====================================================
-            PREVIOUS BUTTON
-        ==================================================== */}
+        {/* PREVIOUS BUTTON */}
 
         <button
           type="button"
@@ -861,9 +826,7 @@ const PromoSlider = () => {
           ‹
         </button>
 
-        {/* ====================================================
-            NEXT BUTTON
-        ==================================================== */}
+        {/* NEXT BUTTON */}
 
         <button
           type="button"
@@ -896,9 +859,7 @@ const PromoSlider = () => {
           ›
         </button>
 
-        {/* ====================================================
-            SMALL ROUND DOTS
-        ==================================================== */}
+        {/* SMALL ROUND DOTS */}
 
         <div
           className="

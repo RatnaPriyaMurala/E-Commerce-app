@@ -59,6 +59,7 @@ const Product = () => {
 
   // Collapsible sections
   const [showPreparation, setShowPreparation] = useState(false);
+  const [showPacking, setShowPacking] = useState(false);
   const [showNutrition, setShowNutrition] = useState(false);
   const [showBenefits, setShowBenefits] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
@@ -80,13 +81,31 @@ const Product = () => {
     setProductData(foundProduct);
 
     const stock = Number(foundProduct.stock ?? 0);
+    const category = String(foundProduct.category || "")
+      .trim()
+      .toLowerCase();
 
-    const minQuantity = Number(
-      foundProduct.minQuantity ?? 0.5
-    );
+    const usesQuarterKg = [
+      "dry fish",
+      "dry prawns",
+      "pickles",
+    ].includes(category);
+
+    const minQuantity = usesQuarterKg
+      ? 0.25
+      : Number(foundProduct.minQuantity ?? 0.5);
+
+    const quantityStep = usesQuarterKg
+      ? 0.25
+      : Number(foundProduct.quantityStep ?? 0.5);
 
     if (editCart && editCartWeight > 0) {
-      setWeight(Math.min(editCartWeight, stock));
+      const requestedWeight = Math.max(editCartWeight, minQuantity);
+      const stepsFromMin = Math.round(
+        (requestedWeight - minQuantity) / (quantityStep > 0 ? quantityStep : 0.5)
+      );
+      const validWeight = minQuantity + stepsFromMin * (quantityStep > 0 ? quantityStep : 0.5);
+      setWeight(stock > 0 ? Number(Math.min(validWeight, stock).toFixed(2)) : 0);
     } else {
       setWeight(
         stock > 0
@@ -175,26 +194,36 @@ const Product = () => {
   // PRODUCT VALUES
   // ============================================================
 
-  const min = Number(
-    productData.minQuantity ?? 0.5
+  const normalizedCategory = String(
+    productData.category || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const categoriesWithoutPreparation = [
+    "dry fish",
+    "dry prawns",
+    "pickles",
+  ];
+
+  const usesQuarterKg = categoriesWithoutPreparation.includes(
+    normalizedCategory
   );
 
-  const max = Number(
-    productData.maxQuantity ?? 10
-  );
+  const min = usesQuarterKg
+    ? 0.25
+    : Number(productData.minQuantity ?? 0.5);
 
-  const step = Number(
-    productData.quantityStep ?? 0.5
-  );
+  const max = Number(productData.maxQuantity ?? 10);
 
-  const availableStock = Number(
-    productData.stock ?? 0
-  );
+  const step = usesQuarterKg
+    ? 0.25
+    : Number(productData.quantityStep ?? 0.5);
+
+  const availableStock = Number(productData.stock ?? 0);
 
   const safeMin = Math.max(0, min);
-
-  const safeStep =
-    step > 0 ? step : 0.5;
+  const safeStep = step > 0 ? step : 0.5;
 
   const availableMax = Math.max(
     0,
@@ -202,45 +231,30 @@ const Product = () => {
   );
 
   const isOutOfStock =
-    !productData.isAvailable ||
+    productData.isAvailable === false ||
     availableStock <= 0 ||
     availableMax < safeMin;
 
-  const hasPreparationOptions =
-    preparationOptions.length > 0;
-
-  const categoriesWithoutPreparation = [
-    "Dry Fish",
-    "Dry Prawns",
-    "Pickles",
-  ];
+  const hasPreparationOptions = preparationOptions.length > 0;
 
   const requiresPreparation =
-    !categoriesWithoutPreparation.includes(
-      productData.category?.trim()
-    );
+    !categoriesWithoutPreparation.includes(normalizedCategory) &&
+    hasPreparationOptions;
 
   const isPreparationSelected =
     selectedPreparation.trim().length > 0;
 
-  const selectedPreparationOption =
-    preparationOptions.find(
-      (option) =>
-        option.name === selectedPreparation
-    );
-
-  const productPrice = Number(
-    productData.price ?? 0
+  const selectedPreparationOption = preparationOptions.find(
+    (option) => option.name === selectedPreparation
   );
 
-  const currentPricePerKg =
-    selectedPreparationOption
-      ? selectedPreparationOption.pricePerKg
-      : productPrice;
+  const productPrice = Number(productData.price ?? 0);
 
-  const estimatedTotal =
-    currentPricePerKg *
-    Number(weight || 0);
+  const currentPricePerKg = selectedPreparationOption
+    ? selectedPreparationOption.pricePerKg
+    : productPrice;
+
+  const estimatedTotal = currentPricePerKg * Number(weight || 0);
 
   // ============================================================
   // WEIGHT HANDLER
@@ -464,7 +478,7 @@ const Product = () => {
           </h2>
 
           {subtitle && (
-            <p className="mt-0.5 truncate text-[11px] text-gray-500 sm:text-xs">
+            <p className="mt-0.5 truncate text-xs text-gray-500 sm:text-xs">
               {subtitle}
             </p>
           )}
@@ -490,7 +504,7 @@ const Product = () => {
           BREADCRUMB
       ======================================================== */}
 
-      <div className="mb-2.5 flex items-center gap-1.5 overflow-hidden text-[11px] text-gray-500 sm:text-xs">
+      <div className="mb-2.5 flex items-center gap-1.5 overflow-hidden text-xs text-gray-500 sm:text-xs">
         <Link
           to="/"
           className="shrink-0 hover:text-cyan-600"
@@ -526,13 +540,13 @@ const Product = () => {
           <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
 
             {productData.bestseller && (
-              <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow">
+              <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white shadow">
                 <FaStar />
                 Bestseller
               </div>
             )}
 
-            <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold text-cyan-700 shadow">
+            <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-cyan-700 shadow">
               <FaCheckCircle className="text-green-500" />
 
               {isOutOfStock
@@ -554,7 +568,7 @@ const Product = () => {
               )}
             </div>
 
-            <div className="flex justify-between gap-3 border-t border-gray-100 px-4 py-2 text-[10px] text-gray-500 sm:text-xs">
+            <div className="flex justify-between gap-3 border-t border-gray-100 px-4 py-2 text-[11px] text-gray-500 sm:text-xs">
               <span className="flex items-center gap-1.5">
                 <FaSnowflake className="text-cyan-600" />
                 Hygienically Packed
@@ -571,7 +585,7 @@ const Product = () => {
         {/* INFORMATION */}
 
         <div>
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-cyan-700 sm:text-xs">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-cyan-700 sm:text-xs">
             <FaFish />
             {categoryName}
           </span>
@@ -587,7 +601,7 @@ const Product = () => {
           {/* PRICE */}
 
           <div className="mt-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 px-4 py-3 text-white shadow-md">
-            <p className="text-[10px] uppercase tracking-wide text-cyan-100">
+            <p className="text-[11px] uppercase tracking-wide text-cyan-100">
               {isPreparationSelected
                 ? `${selectedPreparation} price`
                 : "Base price"}
@@ -609,7 +623,7 @@ const Product = () => {
 
               {weight > 0 && (
                 <div className="text-right">
-                  <p className="text-[9px] text-cyan-200">
+                  <p className="text-[10px] text-cyan-200">
                     Estimated total
                   </p>
 
@@ -632,7 +646,7 @@ const Product = () => {
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="rounded-lg border border-green-100 bg-green-50 px-2.5 py-2">
-              <p className="text-[9px] text-gray-500">
+              <p className="text-[10px] text-gray-500">
                 Available
               </p>
 
@@ -646,7 +660,7 @@ const Product = () => {
             </div>
 
             <div className="rounded-lg border border-cyan-100 bg-cyan-50 px-2.5 py-2">
-              <p className="text-[9px] text-gray-500">
+              <p className="text-[10px] text-gray-500">
                 Min Order
               </p>
 
@@ -656,7 +670,7 @@ const Product = () => {
             </div>
 
             <div className="rounded-lg border border-orange-100 bg-orange-50 px-2.5 py-2">
-              <p className="text-[9px] text-gray-500">
+              <p className="text-[10px] text-gray-500">
                 Max Order
               </p>
 
@@ -680,7 +694,7 @@ const Product = () => {
                     Select Quantity
                   </h3>
 
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-[11px] text-gray-500">
                     Choose order weight
                   </p>
                 </div>
@@ -733,7 +747,7 @@ const Product = () => {
                   className="w-24 rounded-lg border border-gray-200 px-2 py-2 text-center text-sm font-bold outline-none focus:border-cyan-500"
                 />
 
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
                   KG
                 </span>
               </div>
@@ -779,11 +793,11 @@ const Product = () => {
               {showPreparation && (
                 <div className="border-t border-gray-100 px-3.5 pb-3">
                   <div className="flex items-center justify-between py-2">
-                    <span className="text-[10px] text-gray-500">
+                    <span className="text-[11px] text-gray-500">
                       Preparation is required
                     </span>
 
-                    <span className="text-[10px] font-bold text-red-500">
+                    <span className="text-[11px] font-bold text-red-500">
                       Required
                     </span>
                   </div>
@@ -841,7 +855,7 @@ const Product = () => {
                                 </span>
                               </div>
 
-                              <span className="shrink-0 text-[10px] font-semibold text-gray-500">
+                              <span className="shrink-0 text-[11px] font-semibold text-gray-500">
                                 {currency}
                                 {option.pricePerKg.toLocaleString(
                                   "en-IN"
@@ -868,7 +882,7 @@ const Product = () => {
               )}
 
               {isPreparationSelected && (
-                <div className="flex items-center gap-1.5 px-3.5 pb-3 text-[11px] font-semibold text-cyan-700">
+                <div className="flex items-center gap-1.5 px-3.5 pb-3 text-xs font-semibold text-cyan-700">
                   <FaCheckCircle className="text-green-500" />
                   Selected: {selectedPreparation}
                 </div>
@@ -936,7 +950,7 @@ const Product = () => {
 
           {/* ASSURANCE */}
 
-          <div className="mt-1.5 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[10px] text-gray-500">
+          <div className="mt-1.5 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[11px] text-gray-500">
             <span className="flex items-center gap-1">
               <FaShieldAlt className="text-green-500" />
               Secure Order
@@ -953,45 +967,6 @@ const Product = () => {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* ========================================================
-          QUICK INFORMATION
-      ======================================================== */}
-
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-cyan-100 bg-cyan-50 p-2.5 text-center">
-          <FaSnowflake className="mx-auto text-sm text-cyan-600" />
-          <p className="mt-1 text-[9px] font-semibold text-gray-700 sm:text-xs">
-            Fresh & Hygienic
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-center">
-          <FaTruck className="mx-auto text-sm text-blue-600" />
-          <p className="mt-1 text-[9px] font-semibold text-gray-700 sm:text-xs">
-            Reliable Dispatch
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-green-100 bg-green-50 p-2.5 text-center">
-          <FaCreditCard className="mx-auto text-sm text-green-600" />
-          <p className="mt-1 text-[9px] font-semibold text-gray-700 sm:text-xs">
-            Secure Payments
-          </p>
-        </div>
-      </div>
-
-      {/* ========================================================
-          RELATED PRODUCTS
-      ======================================================== */}
-
-      <div className="mt-3">
-        <RelatedProducts
-          category={productData.category}
-          subCategory={productData.subCategory}
-          currentProductId={productData._id}
-        />
       </div>
 
       {/* ========================================================
@@ -1030,7 +1005,7 @@ const Product = () => {
                   key={label}
                   className="rounded-lg bg-gray-50 p-3"
                 >
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-[11px] text-gray-500">
                     {label}
                   </p>
 
@@ -1128,22 +1103,20 @@ const Product = () => {
             icon={<FaCut />}
             title="Preparation & Packing"
             subtitle="How your seafood is handled"
-            open={showPreparation}
+            open={showPacking}
             onClick={() =>
-              setShowPreparation(
-                !showPreparation
-              )
+              setShowPacking(!showPacking)
             }
           />
 
-          {showPreparation && (
+          {showPacking && (
             <div className="border-t border-gray-100 px-4 pb-4 pt-2.5">
               <div className="flex flex-wrap gap-2">
                 {preparationOptions.map(
                   (option) => (
                     <span
                       key={option.name}
-                      className={`rounded-full border px-2.5 py-1.5 text-[10px] font-semibold ${
+                      className={`rounded-full border px-2.5 py-1.5 text-[11px] font-semibold ${
                         selectedPreparation ===
                         option.name
                           ? "border-cyan-600 bg-cyan-600 text-white"
@@ -1157,7 +1130,7 @@ const Product = () => {
                 )}
               </div>
 
-              <div className="mt-2.5 flex flex-wrap gap-3 text-[10px] text-gray-500">
+              <div className="mt-2.5 flex flex-wrap gap-3 text-[11px] text-gray-500">
                 <span className="flex items-center gap-1">
                   <FaCheckCircle className="text-green-500" />
                   Hygienic handling
@@ -1178,6 +1151,46 @@ const Product = () => {
         </div>
       </div>
 
+
+      {/* ========================================================
+          QUICK INFORMATION
+      ======================================================== */}
+
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="rounded-lg border border-cyan-100 bg-cyan-50 p-2.5 text-center">
+          <FaSnowflake className="mx-auto text-sm text-cyan-600" />
+          <p className="mt-1 text-[10px] font-semibold text-gray-700 sm:text-xs">
+            Fresh & Hygienic
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-center">
+          <FaTruck className="mx-auto text-sm text-blue-600" />
+          <p className="mt-1 text-[10px] font-semibold text-gray-700 sm:text-xs">
+            Reliable Dispatch
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-green-100 bg-green-50 p-2.5 text-center">
+          <FaCreditCard className="mx-auto text-sm text-green-600" />
+          <p className="mt-1 text-[10px] font-semibold text-gray-700 sm:text-xs">
+            Secure Payments
+          </p>
+        </div>
+      </div>
+
+      {/* ========================================================
+          RELATED PRODUCTS
+      ======================================================== */}
+
+      <div className="mt-3">
+        <RelatedProducts
+          category={productData.category}
+          subCategory={productData.subCategory}
+          currentProductId={productData._id}
+        />
+      </div>
+
       {/* ========================================================
           CUSTOMER FEEDBACK
       ======================================================== */}
@@ -1189,7 +1202,7 @@ const Product = () => {
           </div>
 
           <div>
-            <p className="text-[10px] font-bold uppercase text-yellow-700">
+            <p className="text-[11px] font-bold uppercase text-yellow-700">
               Customer Feedback
             </p>
 
@@ -1219,7 +1232,7 @@ const Product = () => {
           className="flex w-full items-center justify-between gap-3 p-3.5 text-left"
         >
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-cyan-100">
+            <p className="text-[11px] uppercase tracking-wide text-cyan-100">
               Priya Live Fish
             </p>
 
@@ -1227,7 +1240,7 @@ const Product = () => {
               Why Choose Us?
             </h2>
 
-            <p className="mt-0.5 text-[11px] text-cyan-100">
+            <p className="mt-0.5 text-xs text-cyan-100">
               Fresh seafood, careful handling and reliable service.
             </p>
           </div>
@@ -1276,7 +1289,7 @@ const Product = () => {
                     {title}
                   </h3>
 
-                  <p className="mt-1 text-[10px] leading-4 text-cyan-100">
+                  <p className="mt-1 text-[11px] leading-4 text-cyan-100">
                     {text}
                   </p>
                 </div>

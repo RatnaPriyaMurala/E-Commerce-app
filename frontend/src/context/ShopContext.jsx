@@ -42,6 +42,16 @@ export const ShopContextProvider = ({ children }) => {
   */
   const delivery_fee = 10;
 
+
+  
+  const usesQuarterKgRules = (product) => {
+    const category = String(product?.category || "")
+      .trim()
+      .toLowerCase();
+
+    return ["dry fish", "dry prawns", "pickles"].includes(category);
+  };
+
   /* ============================================================
      PRODUCTS
   ============================================================ */
@@ -1010,21 +1020,38 @@ export const ShopContextProvider = ({ children }) => {
       return;
     }
 
+   
     /* ----------------------------------------------------------
        PREPARATION
     ---------------------------------------------------------- */
 
-    const selectedPreparation =
-      String(
-        preparation || ""
-      ).trim();
+    const category = String(product.category || "")
+      .trim()
+      .toLowerCase();
 
-    if (!selectedPreparation) {
-      toast.error(
-        "Please select a preparation option."
-      );
+    const categoriesWithoutPreparation = [
+      "dry fish",
+      "dry prawns",
+      "pickles",
+    ];
+
+    const requiresPreparation =
+      !categoriesWithoutPreparation.includes(category);
+
+    const selectedPreparationInput = String(
+      preparation || ""
+    ).trim();
+
+    if (requiresPreparation && !selectedPreparationInput) {
+      toast.error("Please select a preparation option.");
       return;
     }
+
+    // Products that do not need preparation always use
+    // an empty preparation value.
+    const selectedPreparation = requiresPreparation
+      ? selectedPreparationInput
+      : "";
 
     /* ----------------------------------------------------------
        WEIGHT
@@ -1094,32 +1121,29 @@ export const ShopContextProvider = ({ children }) => {
        MIN / MAX WEIGHT
     ---------------------------------------------------------- */
 
-    const minWeight =
-      Number(
-        product.minQuantity ||
-          0.5
-      );
+   
+    /* ----------------------------------------------------------
+       MIN / MAX WEIGHT
+    ---------------------------------------------------------- */
 
-    const maxWeight =
-      Number(
-        product.maxQuantity ||
-          stock
-      );
+    const usesQuarterKg = usesQuarterKgRules(product);
 
-    if (
-      selectedWeight <
-      minWeight
-    ) {
+    const minWeight = usesQuarterKg
+      ? 0.25
+      : Number(product.minQuantity ?? 0.5);
+
+    const maxWeight = Number(
+      product.maxQuantity ?? stock
+    );
+
+    if (selectedWeight < minWeight - 0.000001) {
       toast.error(
         `Minimum order weight is ${minWeight} KG.`
       );
       return;
     }
 
-    if (
-      selectedWeight >
-      maxWeight
-    ) {
+    if (selectedWeight > maxWeight) {
       toast.error(
         `Maximum order weight is ${maxWeight} KG.`
       );
@@ -1130,33 +1154,21 @@ export const ShopContextProvider = ({ children }) => {
        QUANTITY STEP
     ---------------------------------------------------------- */
 
-    const quantityStep =
-      Number(
-        product.quantityStep ||
-          0
-      );
+    const quantityStep = usesQuarterKg
+      ? 0.25
+      : Number(product.quantityStep ?? 0.5);
+
+    const steps = selectedWeight / quantityStep;
 
     if (
-      quantityStep > 0
+      Math.abs(steps - Math.round(steps)) > 0.000001
     ) {
-      const steps =
-        selectedWeight /
-        quantityStep;
-
-      if (
-        Math.abs(
-          steps -
-            Math.round(
-              steps
-            )
-        ) > 0.000001
-      ) {
-        toast.error(
-          `Weight must be in increments of ${quantityStep} KG.`
-        );
-        return;
-      }
+      toast.error(
+        `Weight must be in increments of ${quantityStep} KG.`
+      );
+      return;
     }
+
 
     /* ----------------------------------------------------------
        CART LINE KEY
@@ -1527,41 +1539,29 @@ export const ShopContextProvider = ({ children }) => {
         return;
       }
 
+     
       /* --------------------------------------------------------
-         MIN
+         MIN / MAX WEIGHT
       -------------------------------------------------------- */
 
-      const minWeight =
-        Number(
-          product.minQuantity ||
-            0.5
-        );
+      const usesQuarterKg = usesQuarterKgRules(product);
 
-      if (
-        updatedWeight <
-        minWeight
-      ) {
+      const minWeight = usesQuarterKg
+        ? 0.25
+        : Number(product.minQuantity ?? 0.5);
+
+      const maxWeight = Number(
+        product.maxQuantity ?? product.stock ?? 10
+      );
+
+      if (updatedWeight < minWeight - 0.000001) {
         toast.error(
           `Minimum weight is ${minWeight} KG.`
         );
         return;
       }
 
-      /* --------------------------------------------------------
-         MAX
-      -------------------------------------------------------- */
-
-      const maxWeight =
-        Number(
-          product.maxQuantity ||
-            product.stock ||
-            10
-        );
-
-      if (
-        updatedWeight >
-        maxWeight
-      ) {
+      if (updatedWeight > maxWeight) {
         toast.error(
           `Maximum weight is ${maxWeight} KG.`
         );
@@ -1569,37 +1569,23 @@ export const ShopContextProvider = ({ children }) => {
       }
 
       /* --------------------------------------------------------
-         STEP
+         QUANTITY STEP
       -------------------------------------------------------- */
 
-      const quantityStep =
-        Number(
-          product.quantityStep ||
-            0
-        );
+      const quantityStep = usesQuarterKg
+        ? 0.25
+        : Number(product.quantityStep ?? 0.5);
+
+      const steps = updatedWeight / quantityStep;
 
       if (
-        quantityStep > 0
+        Math.abs(steps - Math.round(steps)) > 0.000001
       ) {
-        const steps =
-          updatedWeight /
-          quantityStep;
-
-        if (
-          Math.abs(
-            steps -
-              Math.round(
-                steps
-              )
-          ) > 0.000001
-        ) {
-          toast.error(
-            `Weight must be in increments of ${quantityStep} KG.`
-          );
-          return;
-        }
+        toast.error(
+          `Weight must be in increments of ${quantityStep} KG.`
+        );
+        return;
       }
-
       /* --------------------------------------------------------
          CURRENT CART
       -------------------------------------------------------- */

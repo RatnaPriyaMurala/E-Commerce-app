@@ -643,3 +643,10 @@ body,
   }
 
 }
+
+
+/* Slightly larger notification text */
+.Toastify__toast {
+  font-size: 15px;
+  line-height: 1.5;
+}
