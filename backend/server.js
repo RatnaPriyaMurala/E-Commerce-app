@@ -51,7 +51,8 @@ const allowedOrigins = [
   "http://localhost:5174",
 
   // Permanent Vercel production domain
-  "https://e-commerce-app-gray-five.vercel.app",
+  "https://bezawadacuts.com",
+"https://www.bezawadacuts.com",
 ];
 
 app.use(
