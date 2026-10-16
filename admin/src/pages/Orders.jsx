@@ -14,6 +14,7 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaPhone,
+  FaFish,
 } from "react-icons/fa";
 
 const Orders = ({ token }) => {

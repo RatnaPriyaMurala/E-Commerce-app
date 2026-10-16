@@ -37,20 +37,9 @@ export const ShopContextProvider = ({ children }) => {
 
   const currency = "₹";
 
-  /*
-    Keep your existing delivery fee.
-  */
-  const delivery_fee = 10;
-
-
-  
-  const usesQuarterKgRules = (product) => {
-    const category = String(product?.category || "")
-      .trim()
-      .toLowerCase();
-
-    return ["dry fish", "dry prawns", "pickles"].includes(category);
-  };
+  // Delivery is free. Preparation & Cleaning is calculated separately.
+  const delivery_fee = 0;
+  const PREPARATION_CHARGE_PER_KG = 40;
 
   /* ============================================================
      PRODUCTS
@@ -178,7 +167,8 @@ export const ShopContextProvider = ({ children }) => {
 
   const createCartLineKey = (
     weight,
-    preparation
+    preparation,
+    variantId = ""
   ) => {
     const normalizedPreparation =
       String(preparation || "")
@@ -187,121 +177,79 @@ export const ShopContextProvider = ({ children }) => {
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9-]/g, "");
 
-    return `${Number(weight)}-${normalizedPreparation}`;
+    const baseKey = `${Number(weight)}-${normalizedPreparation}`;
+    const normalizedVariantId = String(variantId || "").trim()
+      .replace(/[^a-zA-Z0-9_-]/g, "");
+
+    return normalizedVariantId
+      ? `${baseKey}-variant-${normalizedVariantId}`
+      : baseKey;
+  };
+
+  const getPrawnVariants = (product) =>
+    Array.isArray(product?.variants) ? product.variants : [];
+
+  const getPrawnVariant = (product, variantId) => {
+    if (!variantId) return null;
+    return getPrawnVariants(product).find(
+      (variant) => String(variant?._id || variant?.id || "") === String(variantId)
+    ) || null;
   };
 
   /* ============================================================
-     PREPARATION PRICE HELPER
+     SEAFOOD PREPARATION HELPERS
 
-     Finds the price per KG for the selected preparation.
-
-     Supports:
-     - pricePerKg
-     - price
-     - amount
-     - fallback to product base price
+     The seafood price remains the base price per KG.
+     The fixed ₹40/KG preparation charge is calculated separately,
+     so preparation is never accidentally charged twice.
   ============================================================ */
 
-  const getPreparationPrice = (
-    product,
-    preparation
-  ) => {
-    const basePrice = Number(
-      product?.price || 0
-    );
+  const normalizeCategoryText = (value) =>
+    String(value ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
 
-    const normalizeName = (value) =>
-      String(value ?? "")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, " ");
+  const getProductType = (product) => {
+    const category = normalizeCategoryText(product?.category);
+    const name = normalizeCategoryText(product?.name);
+    const subCategory = normalizeCategoryText(product?.subCategory);
+    const combined = `${category} ${subCategory} ${name}`;
 
-    const selectedPreparation =
-      normalizeName(preparation);
+    if (/dry\s*fish|dry\s*prawns?|pickles?/.test(combined)) return "no-preparation";
+    if (/prawns?|shrimp/.test(combined)) return "prawns";
+    if (/crabs?/.test(combined)) return "crab";
+    if (/fish|seafood|fresh seafood/.test(combined)) return "fish";
+    return "other";
+  };
 
-    if (!selectedPreparation) {
-      return basePrice;
+  const getPreparationOptions = (product) => {
+    const type = getProductType(product);
+    if (type === "prawns" || type === "crab") {
+      return ["Whole Cleaned", "Uncleaned"];
     }
-
-    /*
-      Support preparation pricing stored in
-      preparationOptions.
-    */
-
-    const options = Array.isArray(
-      product?.preparationOptions
-    )
-      ? product.preparationOptions
-      : [];
-
-    const selectedOption = options.find(
-      (option) => {
-        if (typeof option === "string") {
-          return (
-            normalizeName(option) ===
-            selectedPreparation
-          );
-        }
-
-        if (
-          !option ||
-          typeof option !== "object"
-        ) {
-          return false;
-        }
-
-        const optionName =
-          option.name ??
-          option.label ??
-          option.preparation ??
-          option.title ??
-          "";
-
-        return (
-          normalizeName(optionName) ===
-          selectedPreparation
-        );
-      }
-    );
-
-    if (!selectedOption) {
-      console.warn(
-        "⚠️ Preparation price not found:",
-        preparation,
-        product?.name,
-        product?.preparationOptions
-      );
-
-      return basePrice;
+    if (type === "fish") {
+      return ["Whole Cleaned", "Uncleaned", "Curry Cut", "Fry Cut"];
     }
+    return [];
+  };
 
-    /*
-      If preparation option is an object,
-      read its actual per-KG price.
-    */
+  const requiresPreparation = (product) =>
+    getPreparationOptions(product).length > 0;
 
-    if (
-      typeof selectedOption === "object"
-    ) {
-      const possiblePrices = [
-        selectedOption.pricePerKg,
-        selectedOption.price,
-        selectedOption.amount,
-      ];
+  // Returns seafood's base price per KG only; ₹40/KG is charged separately.
+  const getPreparationPrice = (product, _preparation = "") => {
+    const basePrice = Number(product?.price ?? product?.pricePerKg ?? 0);
+    return Number.isFinite(basePrice) && basePrice > 0 ? basePrice : 0;
+  };
 
-      for (const value of possiblePrices) {
-        const price = Number(value);
+  const getItemBasePricePerKg = (product, lineItem = {}) => {
+    const variant = getPrawnVariant(product, lineItem?.variantId);
+    const variantPrice = Number(variant?.pricePerKg);
+    if (Number.isFinite(variantPrice) && variantPrice > 0) return variantPrice;
 
-        if (
-          Number.isFinite(price) &&
-          price > 0
-        ) {
-          return price;
-        }
-      }
-    }
+    const productPrice = Number(product?.price ?? product?.pricePerKg ?? 0);
+    if (Number.isFinite(productPrice) && productPrice > 0) return productPrice;
 
-    return basePrice;
+    const storedPrice = Number(lineItem?.pricePerKg ?? 0);
+    return Number.isFinite(storedPrice) && storedPrice > 0 ? storedPrice : 0;
   };
 
   /* ============================================================
@@ -333,148 +281,43 @@ export const ShopContextProvider = ({ children }) => {
      is still present.
   ============================================================ */
 
-  const normalizeCartData = (
-    cartData
-  ) => {
-    if (
-      !cartData ||
-      typeof cartData !== "object" ||
-      Array.isArray(cartData)
-    ) {
-      return {};
-    }
-
+  const normalizeCartData = (cartData) => {
+    if (!cartData || typeof cartData !== "object" || Array.isArray(cartData)) return {};
     const normalized = {};
-
-    Object.entries(cartData).forEach(
-      ([productId, productCart]) => {
-        if (
-          !productCart ||
-          typeof productCart !== "object" ||
-          Array.isArray(productCart)
-        ) {
+    Object.entries(cartData).forEach(([productId, productCart]) => {
+      if (!productCart || typeof productCart !== "object" || Array.isArray(productCart)) return;
+      normalized[productId] = {};
+      Object.entries(productCart).forEach(([key, value]) => {
+        if (value && typeof value === "object" && !Array.isArray(value) && value.weight !== undefined) {
+          const weight = Number(value.weight);
+          const quantity = Number(value.quantity ?? 1);
+          const preparation = String(value.preparation || "").trim();
+          const variantId = String(value.variantId || "").trim();
+          const variantCount = String(value.variantCount || "").trim();
+          const price = Number(value.pricePerKg);
+          if (!Number.isInteger(weight) || weight < 1 || !Number.isFinite(quantity) || quantity < 1) return;
+          const lineKey = createCartLineKey(weight, preparation, variantId);
+          normalized[productId][lineKey] = {
+            weight, quantity, preparation, variantId, variantCount,
+            pricePerKg: Number.isFinite(price) && price > 0 ? price : 0,
+          };
           return;
         }
-
-        normalized[productId] = {};
-
-        Object.entries(
-          productCart
-        ).forEach(
-          ([key, value]) => {
-            /* ==================================================
-               NEW FORMAT
-            ================================================== */
-
-            if (
-              value &&
-              typeof value === "object" &&
-              !Array.isArray(value) &&
-              value.weight !== undefined
-            ) {
-              const weight = Number(
-                value.weight
-              );
-
-              const quantity = Number(
-                value.quantity || 1
-              );
-
-              const preparation =
-                String(
-                  value.preparation || ""
-                ).trim();
-
-              if (
-                Number.isFinite(weight) &&
-                weight > 0 &&
-                Number.isFinite(quantity) &&
-                quantity > 0
-              ) {
-                const lineKey =
-                  createCartLineKey(
-                    weight,
-                    preparation
-                  );
-
-                normalized[productId][
-                  lineKey
-                ] = {
-                  weight,
-                  quantity,
-                  preparation,
-                  pricePerKg:
-                    Number(
-                      value.pricePerKg
-                    ) > 0
-                      ? Number(
-                          value.pricePerKg
-                        )
-                      : 0,
-                };
-              }
-
-              return;
-            }
-
-            /* ==================================================
-               OLD FORMAT
-
-               {
-                 "1": 1
-               }
-            ================================================== */
-
-            const oldWeight =
-              Number(key);
-
-            const oldQuantity =
-              Number(value || 0);
-
-            if (
-              Number.isFinite(
-                oldWeight
-              ) &&
-              oldWeight > 0 &&
-              Number.isFinite(
-                oldQuantity
-              ) &&
-              oldQuantity > 0
-            ) {
-              const lineKey =
-                createCartLineKey(
-                  oldWeight,
-                  ""
-                );
-
-              normalized[productId][
-                lineKey
-              ] = {
-                weight: oldWeight,
-                quantity: oldQuantity,
-                preparation: "",
-                pricePerKg: 0,
-              };
-            }
-          }
-        );
-
-        /*
-          Remove empty product cart objects.
-        */
-
-        if (
-          Object.keys(
-            normalized[productId]
-          ).length === 0
-        ) {
-          delete normalized[productId];
+        const oldWeight = Number(key);
+        const oldQuantity = Number(value || 0);
+        if (Number.isInteger(oldWeight) && oldWeight >= 1 && Number.isFinite(oldQuantity) && oldQuantity > 0) {
+          const lineKey = createCartLineKey(oldWeight, "");
+          normalized[productId][lineKey] = {
+            weight: oldWeight, quantity: oldQuantity, preparation: "",
+            variantId: "", variantCount: "", pricePerKg: 0,
+          };
         }
-      }
-    );
-
+      });
+      if (Object.keys(normalized[productId]).length === 0) delete normalized[productId];
+    });
     return normalized;
   };
+
 
   /* ============================================================
      USER PROFILE
@@ -568,14 +411,18 @@ export const ShopContextProvider = ({ children }) => {
           */
 
           const availableProducts =
-            allProducts.filter(
-              (product) =>
-                product?.isAvailable !==
-                  false &&
-                Number(
-                  product?.stock || 0
-                ) > 0
-            );
+            allProducts.filter((product) => {
+              if (product?.isAvailable === false) return false;
+              const variants = Array.isArray(product?.variants) ? product.variants : [];
+              if (variants.length > 0) {
+                return variants.some(
+                  (variant) =>
+                    variant?.isAvailable !== false &&
+                    Number(variant?.stock || 0) >= 1
+                );
+              }
+              return Number(product?.stock || 0) >= 1;
+            });
 
           setProducts(
             availableProducts
@@ -1001,299 +848,97 @@ export const ShopContextProvider = ({ children }) => {
     id,
     weight,
     preparation,
-    selectedPricePerKg
+    selectedVariantIdOrPrice = "",
+    selectedPricePerKg = 0
   ) => {
-    /* ----------------------------------------------------------
-       PRODUCT
-    ---------------------------------------------------------- */
+    const product = products.find((item) => String(item._id) === String(id));
+    if (!product) return toast.error("Product not found.");
 
-    const product =
-      products.find(
-        (item) =>
-          item._id === id
-      );
-
-    if (!product) {
-      toast.error(
-        "Product not found."
-      );
-      return;
+    const allowedPreparations = getPreparationOptions(product);
+    const needsPreparation = allowedPreparations.length > 0;
+    const selectedPreparation = needsPreparation ? String(preparation || "").trim() : "";
+    if (needsPreparation && !selectedPreparation) {
+      return toast.error("Please select a preparation option.");
+    }
+    if (needsPreparation && !allowedPreparations.includes(selectedPreparation)) {
+      return toast.error(`Choose one of these preparation options: ${allowedPreparations.join(", ")}.`);
     }
 
-   
-    /* ----------------------------------------------------------
-       PREPARATION
-    ---------------------------------------------------------- */
-
-    const category = String(product.category || "")
-      .trim()
-      .toLowerCase();
-
-    const categoriesWithoutPreparation = [
-      "dry fish",
-      "dry prawns",
-      "pickles",
-    ];
-
-    const requiresPreparation =
-      !categoriesWithoutPreparation.includes(category);
-
-    const selectedPreparationInput = String(
-      preparation || ""
-    ).trim();
-
-    if (requiresPreparation && !selectedPreparationInput) {
-      toast.error("Please select a preparation option.");
-      return;
+    const selectedWeight = Number(weight);
+    if (!Number.isInteger(selectedWeight) || selectedWeight < 1) {
+      return toast.error("Weight must be a whole number of kilograms (1 KG, 2 KG, 3 KG...).");
     }
 
-    // Products that do not need preparation always use
-    // an empty preparation value.
-    const selectedPreparation = requiresPreparation
-      ? selectedPreparationInput
-      : "";
+    const variant = getPrawnVariant(product, selectedVariantIdOrPrice);
+    const variants = getPrawnVariants(product);
+    const numericLegacyPrice = selectedVariantIdOrPrice !== "" &&
+      Number.isFinite(Number(selectedVariantIdOrPrice)) && !variant;
+    if (variants.length > 0 && !variant) return toast.error("Please select a prawn count option.");
+    if (variant && variant.isAvailable === false) return toast.error("This prawn count option is unavailable.");
 
-    /* ----------------------------------------------------------
-       WEIGHT
-    ---------------------------------------------------------- */
-
-    const selectedWeight =
-      Number(weight);
-
-    if (
-      !Number.isFinite(
-        selectedWeight
-      ) ||
-      selectedWeight <= 0
-    ) {
-      toast.error(
-        "Please select a valid weight."
-      );
-      return;
-    }
-
-    /* ----------------------------------------------------------
-       PREPARATION PRICE
-    ---------------------------------------------------------- */
-
-    const passedPrice =
-      Number(
-        selectedPricePerKg
-      );
-
-    const pricePerKg =
-      Number.isFinite(
-        passedPrice
-      ) &&
-      passedPrice > 0
-        ? passedPrice
-        : getPreparationPrice(
-            product,
-            selectedPreparation
-          );
-
-    /* ----------------------------------------------------------
-       STOCK
-    ---------------------------------------------------------- */
-
-    const stock = Number(
-      product.stock || 0
-    );
-
-    if (stock <= 0) {
-      toast.error(
-        "This product is currently out of stock."
-      );
-      return;
-    }
-
-    if (
-      selectedWeight >
+    const variantId = variant ? String(variant._id || variant.id || "") : "";
+    const variantCount = variant ? String(variant.count || "") : "";
+    const stock = variant ? Number(variant.stock || 0) : Number(product.stock || 0);
+    if (stock < 1) return toast.error("This product option is currently out of stock.");
+    const maxWeight = Math.floor(Math.min(
+      Number(product.maxQuantity ?? stock),
       stock
-    ) {
-      toast.error(
-        `Only ${stock} KG available.`
-      );
-      return;
-    }
+    ));
+    if (selectedWeight > maxWeight) return toast.error(`Maximum available quantity is ${maxWeight} KG for this option.`);
 
-    /* ----------------------------------------------------------
-       MIN / MAX WEIGHT
-    ---------------------------------------------------------- */
+    const suppliedPrice = numericLegacyPrice ? Number(selectedVariantIdOrPrice) : Number(selectedPricePerKg);
+    const variantPrice = Number(variant?.pricePerKg);
+    const productPrice = Number(product.price ?? product.pricePerKg ?? 0);
+    const pricePerKg = variant && Number.isFinite(variantPrice) && variantPrice > 0
+      ? variantPrice
+      : Number.isFinite(productPrice) && productPrice > 0
+        ? productPrice
+        : Number.isFinite(suppliedPrice) && suppliedPrice > 0
+          ? suppliedPrice
+          : 0;
+    if (!Number.isFinite(pricePerKg) || pricePerKg <= 0) return toast.error("Unable to determine the price for this item.");
 
-   
-    /* ----------------------------------------------------------
-       MIN / MAX WEIGHT
-    ---------------------------------------------------------- */
-
-    const usesQuarterKg = usesQuarterKgRules(product);
-
-    const minWeight = usesQuarterKg
-      ? 0.25
-      : Number(product.minQuantity ?? 0.5);
-
-    const maxWeight = Number(
-      product.maxQuantity ?? stock
-    );
-
-    if (selectedWeight < minWeight - 0.000001) {
-      toast.error(
-        `Minimum order weight is ${minWeight} KG.`
-      );
-      return;
-    }
-
-    if (selectedWeight > maxWeight) {
-      toast.error(
-        `Maximum order weight is ${maxWeight} KG.`
-      );
-      return;
-    }
-
-    /* ----------------------------------------------------------
-       QUANTITY STEP
-    ---------------------------------------------------------- */
-
-    const quantityStep = usesQuarterKg
-      ? 0.25
-      : Number(product.quantityStep ?? 0.5);
-
-    const steps = selectedWeight / quantityStep;
-
-    if (
-      Math.abs(steps - Math.round(steps)) > 0.000001
-    ) {
-      toast.error(
-        `Weight must be in increments of ${quantityStep} KG.`
-      );
-      return;
-    }
-
-
-    /* ----------------------------------------------------------
-       CART LINE KEY
-    ---------------------------------------------------------- */
-
-    const lineKey =
-      createCartLineKey(
-        selectedWeight,
-        selectedPreparation
-      );
-
-    /* ----------------------------------------------------------
-       CURRENT CART
-    ---------------------------------------------------------- */
-
-    const normalizedCurrentCart =
-      normalizeCartData(
-        cartItems
-      );
-
-    /* ----------------------------------------------------------
-       ADD / REPLACE SAME LINE
-    ---------------------------------------------------------- */
-
+    const lineKey = createCartLineKey(selectedWeight, selectedPreparation, variantId);
+    const current = normalizeCartData(cartItems);
+    const existing = current[id]?.[lineKey];
     const updatedCart = {
-      ...normalizedCurrentCart,
-
+      ...current,
       [id]: {
-        ...(normalizedCurrentCart[
-          id
-        ] || {}),
-
+        ...(current[id] || {}),
         [lineKey]: {
-          weight:
-            selectedWeight,
-          quantity: 1,
-          preparation:
-            selectedPreparation,
+          weight: selectedWeight,
+          quantity: Number(existing?.quantity || 1),
+          preparation: selectedPreparation,
+          variantId,
+          variantCount,
           pricePerKg,
         },
       },
     };
+    setCartItems(updatedCart);
 
-    /* ----------------------------------------------------------
-       UPDATE UI IMMEDIATELY
-    ---------------------------------------------------------- */
+    if (!token) {
+      toast.success("Added to cart.");
+      return;
+    }
 
-    setCartItems(
-      updatedCart
-    );
-
-    /* ----------------------------------------------------------
-       LOGGED-IN USER → BACKEND
-    ---------------------------------------------------------- */
-
-    if (token) {
-      try {
-        const response =
-          await axios.post(
-            `${backendUrl}/api/cart/add`,
-            {
-              itemId: id,
-              weight:
-                selectedWeight,
-              preparation:
-                selectedPreparation,
-            },
-            {
-              headers: {
-                token,
-              },
-            }
-          );
-
-        if (
-          response.data?.success
-        ) {
-          const backendCart =
-            normalizeCartData(
-              response.data
-                .cartData ||
-                updatedCart
-            );
-
-          setCartItems(
-            backendCart
-          );
-
-          toast.success(
-            "Added to cart."
-          );
-        } else {
-          toast.error(
-            response.data
-              ?.message ||
-              "Unable to add product."
-          );
-
-          await loadUserCart();
-        }
-      } catch (error) {
-        console.error(
-          "❌ Add cart error:",
-          error
-        );
-
-        handleAuthError(error);
-
-        if (
-          error?.response
-            ?.status !== 401 &&
-          error?.response
-            ?.status !== 403
-        ) {
-          await loadUserCart();
-        }
-      }
-    } else {
-      /* --------------------------------------------------------
-         GUEST USER
-      -------------------------------------------------------- */
-
-      toast.success(
-        "Added to cart."
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/cart/add`,
+        { itemId: id, weight: selectedWeight, preparation: selectedPreparation, variantId, variantCount, pricePerKg },
+        { headers: { token } }
       );
+      if (response.data?.success) {
+        setCartItems(normalizeCartData(response.data.cartData || updatedCart));
+        toast.success("Added to cart.");
+      } else {
+        toast.error(response.data?.message || "Unable to add product.");
+        await loadUserCart();
+      }
+    } catch (error) {
+      console.error("Add cart error:", error);
+      handleAuthError(error);
+      if (![401, 403].includes(error?.response?.status)) await loadUserCart();
     }
   };
 
@@ -1472,347 +1117,98 @@ export const ShopContextProvider = ({ children }) => {
      Preparation stays attached to the item.
   ============================================================ */
 
-  const updateWeight =
-    async (
-      id,
-      oldWeight,
-      newWeight,
-      lineKey,
-      preparation
-    ) => {
-      const product =
-        products.find(
-          (item) =>
-            item._id === id
-        );
+  const updateWeight = async (
+    id,
+    oldWeight,
+    newWeight,
+    lineKey,
+    preparation
+  ) => {
+    const product = products.find((item) => String(item._id) === String(id));
+    if (!product) return toast.error("Product not found.");
 
-      if (!product) {
-        toast.error(
-          "Product not found."
-        );
-        return;
-      }
+    const updatedWeight = Number(newWeight);
+    const previousWeight = Number(oldWeight);
+    if (!Number.isInteger(updatedWeight) || updatedWeight < 1) {
+      return toast.error("Weight must be a whole number of kilograms (1 KG, 2 KG, 3 KG...).");
+    }
+    if (!Number.isFinite(previousWeight) || previousWeight < 1) {
+      return toast.error("Invalid previous weight.");
+    }
 
-      const updatedWeight =
-        Number(newWeight);
+    const current = normalizeCartData(cartItems);
+    if (!current[id]) return toast.error("Cart item not found.");
 
-      const previousWeight =
-        Number(oldWeight);
+    let oldLineKey = lineKey;
+    if (!oldLineKey || !current[id][oldLineKey]) {
+      oldLineKey = Object.keys(current[id]).find((key) => {
+        const item = current[id][key];
+        return Number(item?.weight) === previousWeight &&
+          String(item?.preparation || "").trim() === String(preparation || "").trim();
+      });
+    }
+    const existingItem = oldLineKey ? current[id][oldLineKey] : null;
+    if (!existingItem) return toast.error("Cart item not found.");
 
-      if (
-        !Number.isFinite(
-          updatedWeight
-        ) ||
-        updatedWeight <= 0
-      ) {
-        toast.error(
-          "Invalid weight."
-        );
-        return;
-      }
+    const variantId = String(existingItem.variantId || "");
+    const variant = getPrawnVariant(product, variantId);
+    const stock = variant ? Number(variant.stock || 0) : Number(product.stock || 0);
+    const maxWeight = Math.floor(Math.min(Number(product.maxQuantity ?? stock), stock));
+    if (stock < 1) return toast.error("This product option is currently out of stock.");
+    if (updatedWeight > maxWeight) return toast.error(`Maximum available quantity is ${maxWeight} KG for this option.`);
 
-      if (
-        !Number.isFinite(
-          previousWeight
-        ) ||
-        previousWeight <= 0
-      ) {
-        toast.error(
-          "Invalid previous weight."
-        );
-        return;
-      }
+    const selectedPreparation = String(preparation ?? existingItem.preparation ?? "").trim();
+    const variantCount = String(existingItem.variantCount || variant?.count || "");
+    const pricePerKg = getItemBasePricePerKg(product, {
+      ...existingItem,
+      variantId,
+    });
 
-      /* --------------------------------------------------------
-         STOCK
-      -------------------------------------------------------- */
-
-      if (
-        updatedWeight >
-        Number(
-          product.stock || 0
-        )
-      ) {
-        toast.error(
-          `Only ${product.stock} KG available.`
-        );
-        return;
-      }
-
-     
-      /* --------------------------------------------------------
-         MIN / MAX WEIGHT
-      -------------------------------------------------------- */
-
-      const usesQuarterKg = usesQuarterKgRules(product);
-
-      const minWeight = usesQuarterKg
-        ? 0.25
-        : Number(product.minQuantity ?? 0.5);
-
-      const maxWeight = Number(
-        product.maxQuantity ?? product.stock ?? 10
-      );
-
-      if (updatedWeight < minWeight - 0.000001) {
-        toast.error(
-          `Minimum weight is ${minWeight} KG.`
-        );
-        return;
-      }
-
-      if (updatedWeight > maxWeight) {
-        toast.error(
-          `Maximum weight is ${maxWeight} KG.`
-        );
-        return;
-      }
-
-      /* --------------------------------------------------------
-         QUANTITY STEP
-      -------------------------------------------------------- */
-
-      const quantityStep = usesQuarterKg
-        ? 0.25
-        : Number(product.quantityStep ?? 0.5);
-
-      const steps = updatedWeight / quantityStep;
-
-      if (
-        Math.abs(steps - Math.round(steps)) > 0.000001
-      ) {
-        toast.error(
-          `Weight must be in increments of ${quantityStep} KG.`
-        );
-        return;
-      }
-      /* --------------------------------------------------------
-         CURRENT CART
-      -------------------------------------------------------- */
-
-      const normalizedCart =
-        normalizeCartData(
-          cartItems
-        );
-
-      if (
-        !normalizedCart[id]
-      ) {
-        return;
-      }
-
-      /*
-        Find the actual old line.
-      */
-
-      let oldLineKey =
-        lineKey;
-
-      if (
-        !oldLineKey ||
-        !normalizedCart[id][
-          oldLineKey
-        ]
-      ) {
-        oldLineKey =
-          Object.keys(
-            normalizedCart[id]
-          ).find(
-            (key) => {
-              const item =
-                normalizedCart[
-                  id
-                ][key];
-
-              return (
-                Number(
-                  item?.weight
-                ) ===
-                  previousWeight &&
-                String(
-                  item?.preparation ||
-                    ""
-                ).trim() ===
-                  String(
-                    preparation || ""
-                  ).trim()
-              );
-            }
-          );
-      }
-
-      if (
-        !oldLineKey ||
-        !normalizedCart[id][
-          oldLineKey
-        ]
-      ) {
-        toast.error(
-          "Cart item not found."
-        );
-        return;
-      }
-
-      const existingItem =
-        normalizedCart[id][
-          oldLineKey
-        ];
-
-      const selectedPreparation =
-        String(
-          preparation ||
-            existingItem?.preparation ||
-            ""
-        ).trim();
-
-      /*
-        New key after changing weight.
-      */
-
-      const newLineKey =
-        createCartLineKey(
-          updatedWeight,
-          selectedPreparation
-        );
-
-      const updatedProductCart =
-        {
-          ...normalizedCart[id],
-        };
-
-      /*
-        Remove old line.
-      */
-
-      delete updatedProductCart[
-        oldLineKey
-      ];
-
-      /*
-        If the new key already exists,
-        preserve its quantity.
-      */
-
-      const existingNewLine =
-        updatedProductCart[
-          newLineKey
-        ];
-
-      const preparationPrice =
-        getPreparationPrice(
-          product,
-          selectedPreparation
-        );
-
-      updatedProductCart[
-        newLineKey
-      ] = {
-        weight:
-          updatedWeight,
-
-        quantity: Number(
-          existingNewLine?.quantity ||
-            existingItem?.quantity ||
-            1
-        ),
-
-        preparation:
-          selectedPreparation,
-
-        pricePerKg:
-          preparationPrice,
-      };
-
-      const updatedCart = {
-        ...normalizedCart,
-
-        [id]:
-          updatedProductCart,
-      };
-
-      setCartItems(
-        updatedCart
-      );
-
-      /* --------------------------------------------------------
-         GUEST
-      -------------------------------------------------------- */
-
-      if (!token) {
-        return;
-      }
-
-      /* --------------------------------------------------------
-         LOGGED-IN USER
-      -------------------------------------------------------- */
-
-      try {
-        const response =
-          await axios.post(
-            `${backendUrl}/api/cart/update`,
-            {
-              itemId: id,
-
-              oldWeight:
-                previousWeight,
-
-              newWeight:
-                updatedWeight,
-
-              preparation:
-                selectedPreparation,
-
-              oldLineKey,
-
-              newLineKey,
-            },
-            {
-              headers: {
-                token,
-              },
-            }
-          );
-
-        if (
-          response.data?.success
-        ) {
-          const backendCart =
-            normalizeCartData(
-              response.data
-                .cartData ||
-                updatedCart
-            );
-
-          setCartItems(
-            backendCart
-          );
-        } else {
-          toast.error(
-            response.data
-              ?.message ||
-              "Unable to update weight."
-          );
-
-          await loadUserCart();
-        }
-      } catch (error) {
-        console.error(
-          "❌ Update weight error:",
-          error
-        );
-
-        handleAuthError(error);
-
-        if (
-          error?.response
-            ?.status !== 401 &&
-          error?.response
-            ?.status !== 403
-        ) {
-          await loadUserCart();
-        }
-      }
+    const newLineKey = createCartLineKey(updatedWeight, selectedPreparation, variantId);
+    const productCart = { ...current[id] };
+    delete productCart[oldLineKey];
+    const existingNewLine = productCart[newLineKey];
+    productCart[newLineKey] = {
+      weight: updatedWeight,
+      quantity: Number(existingNewLine?.quantity || existingItem.quantity || 1),
+      preparation: selectedPreparation,
+      variantId,
+      variantCount,
+      pricePerKg,
     };
+    const updatedCart = { ...current, [id]: productCart };
+    setCartItems(updatedCart);
+
+    if (!token) return;
+
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/cart/update`,
+        {
+          itemId: id,
+          oldWeight: previousWeight,
+          newWeight: updatedWeight,
+          preparation: selectedPreparation,
+          oldLineKey,
+          newLineKey,
+          variantId,
+          variantCount,
+          pricePerKg,
+        },
+        { headers: { token } }
+      );
+      if (response.data?.success) {
+        setCartItems(normalizeCartData(response.data.cartData || updatedCart));
+      } else {
+        toast.error(response.data?.message || "Unable to update weight.");
+        await loadUserCart();
+      }
+    } catch (error) {
+      console.error("Update weight error:", error);
+      handleAuthError(error);
+      if (![401, 403].includes(error?.response?.status)) await loadUserCart();
+    }
+  };
 
   /* ============================================================
      CART COUNT
@@ -1870,127 +1266,50 @@ export const ShopContextProvider = ({ children }) => {
   /* ============================================================
      CART AMOUNT
 
-     Price is PER KG.
-
-     Preparation price is used when preparation exists.
+     Seafood subtotal only: base price × KG × item quantity.
+     Preparation & Cleaning is calculated separately below.
   ============================================================ */
 
-  const getCartAmount =
-    () => {
-      let total = 0;
+  const getCartAmount = () => {
+    let total = 0;
+    const normalizedCart = normalizeCartData(cartItems);
 
-      const normalizedCart =
-        normalizeCartData(
-          cartItems
-        );
+    Object.entries(normalizedCart).forEach(([id, productCart]) => {
+      const product = products.find((item) => String(item._id) === String(id));
+      if (!product) return;
 
-      Object.entries(
-        normalizedCart
-      ).forEach(
-        ([id, productCart]) => {
-          const product =
-            products.find(
-              (item) =>
-                item._id === id
-            );
+      Object.values(productCart || {}).forEach((lineItem) => {
+        const weight = Number(lineItem?.weight || 0);
+        const quantity = Number(lineItem?.quantity || 1);
+        if (!Number.isInteger(weight) || weight < 1 || !Number.isInteger(quantity) || quantity < 1) return;
 
-          if (!product) {
-            return;
-          }
+        const pricePerKg = getItemBasePricePerKg(product, lineItem);
+        if (!Number.isFinite(pricePerKg) || pricePerKg <= 0) return;
+        total += pricePerKg * weight * quantity;
+      });
+    });
 
-          Object.values(
-            productCart || {}
-          ).forEach(
-            (lineItem) => {
-              const weight =
-                Number(
-                  lineItem?.weight ||
-                    0
-                );
+    return Number(total.toFixed(2));
+  };
 
-              const quantity =
-                Number(
-                  lineItem?.quantity ||
-                    1
-                );
+  const getCartPreparationAmount = () => {
+    let total = 0;
+    const normalizedCart = normalizeCartData(cartItems);
 
-              if (
-                !Number.isFinite(
-                  weight
-                ) ||
-                weight <= 0 ||
-                !Number.isFinite(
-                  quantity
-                ) ||
-                quantity <= 0
-              ) {
-                return;
-              }
+    Object.entries(normalizedCart).forEach(([id, productCart]) => {
+      const product = products.find((item) => String(item._id) === String(id));
+      if (!product || !requiresPreparation(product)) return;
 
-              let pricePerKg;
+      Object.values(productCart || {}).forEach((lineItem) => {
+        const weight = Number(lineItem?.weight || 0);
+        const quantity = Number(lineItem?.quantity || 1);
+        if (!Number.isInteger(weight) || weight < 1 || !Number.isInteger(quantity) || quantity < 1) return;
+        total += PREPARATION_CHARGE_PER_KG * weight * quantity;
+      });
+    });
 
-              const preparation =
-                String(
-                  lineItem?.preparation ||
-                    ""
-                ).trim();
-
-              if (
-                preparation
-              ) {
-                /*
-                  Always calculate current price
-                  from current product preparation.
-                */
-
-                pricePerKg =
-                  getPreparationPrice(
-                    product,
-                    preparation
-                  );
-              } else {
-                pricePerKg =
-                  Number(
-                    lineItem?.pricePerKg ||
-                      0
-                  );
-
-                if (
-                  !Number.isFinite(
-                    pricePerKg
-                  ) ||
-                  pricePerKg <= 0
-                ) {
-                  pricePerKg =
-                    Number(
-                      product.price ||
-                        0
-                    );
-                }
-              }
-
-              if (
-                !Number.isFinite(
-                  pricePerKg
-                ) ||
-                pricePerKg <= 0
-              ) {
-                return;
-              }
-
-              total +=
-                pricePerKg *
-                weight *
-                quantity;
-            }
-          );
-        }
-      );
-
-      return Number(
-        total.toFixed(2)
-      );
-    };
+    return Number(total.toFixed(2));
+  };
 
   /* ============================================================
      UPDATE USER
@@ -2066,6 +1385,7 @@ export const ShopContextProvider = ({ children }) => {
 
     currency,
     delivery_fee,
+    PREPARATION_CHARGE_PER_KG,
     backendUrl,
     navigate,
 
@@ -2104,7 +1424,10 @@ export const ShopContextProvider = ({ children }) => {
 
     getCartCount,
     getCartAmount,
+    getCartPreparationAmount,
     getPreparationPrice,
+    getPreparationOptions,
+    requiresPreparation,
 
     /* ========================================================
        Favorites

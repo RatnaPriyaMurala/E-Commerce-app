@@ -578,36 +578,121 @@ const userOrders = async (
    ADMIN - ALL ORDERS
 ========================================================= */
 
-const allOrders = async (
-  req,
-  res
-) => {
-  try {
-    const orders =
-      await orderModel
-        .find({})
-        .sort({
-          date: -1,
-        })
-        .lean();
+/* =========================================================
+   ADMIN: SEARCH AND FILTER ORDERS
+========================================================= */
 
-    return res.json({
+const allOrders = async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      search = "",
+      status = "All Status",
+      page = 1,
+      limit = 20,
+      includeAll = false,
+    } = req.body || {};
+
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
+
+    const filter = {};
+
+    // India local-day boundaries (UTC+05:30).
+    // Example startDate: "2026-10-16"
+    const indiaStartOfDay = (date) =>
+      new Date(`${date}T00:00:00+05:30`).getTime();
+
+    const indiaEndOfDay = (date) =>
+      new Date(`${date}T23:59:59.999+05:30`).getTime();
+
+    // Default to 16 October 2026 onward.
+    // Send includeAll: true to retrieve historical orders.
+    if (!includeAll) {
+      const from = startDate || "2026-10-16";
+
+      filter.date = {
+        $gte: indiaStartOfDay(from),
+      };
+
+      if (endDate) {
+        filter.date.$lte = indiaEndOfDay(endDate);
+      }
+    } else if (startDate || endDate) {
+      filter.date = {};
+
+      if (startDate) {
+        filter.date.$gte = indiaStartOfDay(startDate);
+      }
+
+      if (endDate) {
+        filter.date.$lte = indiaEndOfDay(endDate);
+      }
+    }
+
+    if (status && status !== "All Status") {
+      filter.orderStatus = status;
+    }
+
+    const keyword = String(search).trim();
+
+    if (keyword) {
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escaped, "i");
+
+      const searchConditions = [
+        { "address.firstName": regex },
+        { "address.lastName": regex },
+        { "address.phone": regex },
+        { "address.alternatePhone": regex },
+        { "address.city": regex },
+        { "items.name": regex },
+        { paymentMethod: regex },
+        { paymentStatus: regex },
+      ];
+
+      // Allow searching by the full MongoDB order ID.
+      const mongoose = (await import("mongoose")).default;
+
+      if (mongoose.Types.ObjectId.isValid(keyword)) {
+        searchConditions.push({
+          _id: new mongoose.Types.ObjectId(keyword),
+        });
+      }
+
+      filter.$or = searchConditions;
+    }
+
+    const totalOrders = await orderModel.countDocuments(filter);
+
+    const orders = await orderModel
+      .find(filter)
+      .sort({ date: -1, _id: -1 })
+      .skip((currentPage - 1) * pageSize)
+      .limit(pageSize)
+      .lean();
+
+    return res.status(200).json({
       success: true,
       orders,
+      pagination: {
+        page: currentPage,
+        limit: pageSize,
+        totalOrders,
+        totalPages: Math.ceil(totalOrders / pageSize),
+      },
     });
   } catch (error) {
-    console.error(
-      "❌ All orders error:",
-      error
-    );
+    console.error("ADMIN ORDERS FETCH ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        "Unable to fetch orders",
+      message: "Unable to fetch orders",
     });
   }
 };
+
 
 /* =========================================================
    ADMIN - UPDATE ORDER STATUS

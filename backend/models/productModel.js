@@ -131,6 +131,44 @@ const productSchema = new mongoose.Schema(
       min: 0,
     },
 
+    /* -------------------------------------------------------
+   PRAWN COUNT VARIANTS
+
+   Each variant has its own count label, price per kg,
+   stock, and availability.
+------------------------------------------------------- */
+
+variants: {
+  type: [
+    {
+      count: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      pricePerKg: {
+        type: Number,
+        required: true,
+        min: 0,
+      },
+
+      stock: {
+        type: Number,
+        required: true,
+        min: 0,
+        default: 0,
+      },
+
+      isAvailable: {
+        type: Boolean,
+        default: true,
+      },
+    },
+  ],
+  default: [],
+},
+
     isAvailable: {
       type: Boolean,
       default: true,

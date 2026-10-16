@@ -1,57 +1,77 @@
+
 import mongoose from "mongoose";
 
 /* =========================================================
    ORDER ITEM
 ========================================================= */
 
-const orderItemSchema = new mongoose.Schema({
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "product",
-    required: true,
-  },
+const orderItemSchema = new mongoose.Schema(
+  {
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "product",
+      required: true,
+    },
 
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-  image: {
-    type: String,
-    default: "",
-  },
+    image: {
+      type: String,
+      default: "",
+    },
 
-  price: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
+    // Verified database price per kilogram.
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
 
-  weight: {
-    type: Number,
-    required: true,
-    min: 0.1,
-  },
+    weight: {
+      type: Number,
+      required: true,
+      min: 0.1,
+    },
 
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1,
-  },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
 
-  preparation: {
-    type: String,
-    default: "",
-    trim: true,
-  },
+    preparation: {
+      type: String,
+      default: "",
+      trim: true,
+    },
 
-  subtotal: {
-    type: Number,
-    required: true,
-    min: 0,
+    // Used for products such as prawns that have count variants.
+    // Empty for ordinary products.
+    variantId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // Example: "20 count", "30 count", depending on your admin label.
+    variantCount: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    subtotal: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
   },
-}, { _id: false });
+  { _id: false }
+);
 
 /* =========================================================
    ORDER ADDRESS
@@ -74,6 +94,24 @@ const orderAddressSchema = new mongoose.Schema(
     phone: {
       type: String,
       required: true,
+      trim: true,
+    },
+
+    alternatePhone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    deliveryPoint: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    landmark: {
+      type: String,
+      default: "",
       trim: true,
     },
 
@@ -107,9 +145,7 @@ const orderAddressSchema = new mongoose.Schema(
       trim: true,
     },
   },
-  {
-    _id: false,
-  }
+  { _id: false }
 );
 
 /* =========================================================
@@ -118,10 +154,6 @@ const orderAddressSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
-    /* -------------------------------------------------------
-       USER
-    ------------------------------------------------------- */
-
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -129,25 +161,15 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
 
-    /* -------------------------------------------------------
-       PRODUCTS
-    ------------------------------------------------------- */
-
     items: {
       type: [orderItemSchema],
       required: true,
-
       validate: {
         validator: (items) =>
           Array.isArray(items) && items.length > 0,
-
         message: "Order must contain at least one item",
       },
     },
-
-    /* -------------------------------------------------------
-       MONEY
-    ------------------------------------------------------- */
 
     subtotal: {
       type: Number,
@@ -162,27 +184,16 @@ const orderSchema = new mongoose.Schema(
       default: 0,
     },
 
-    /*
-     * subtotal + deliveryFee
-     */
     amount: {
       type: Number,
       required: true,
       min: 0,
     },
 
-    /* -------------------------------------------------------
-       ADDRESS SNAPSHOT
-    ------------------------------------------------------- */
-
     address: {
       type: orderAddressSchema,
       required: true,
     },
-
-    /* -------------------------------------------------------
-       PAYMENT
-    ------------------------------------------------------- */
 
     paymentMethod: {
       type: String,
@@ -192,18 +203,9 @@ const orderSchema = new mongoose.Schema(
 
     paymentStatus: {
       type: String,
-      enum: [
-        "Pending",
-        "Paid",
-        "Failed",
-        "Refunded",
-      ],
+      enum: ["Pending", "Paid", "Failed", "Refunded"],
       default: "Pending",
     },
-
-    /* -------------------------------------------------------
-       RAZORPAY
-    ------------------------------------------------------- */
 
     razorpayOrderId: {
       type: String,
@@ -224,13 +226,8 @@ const orderSchema = new mongoose.Schema(
       default: "",
     },
 
-    /* -------------------------------------------------------
-       ORDER STATUS
-    ------------------------------------------------------- */
-
     orderStatus: {
       type: String,
-
       enum: [
         "Order Placed",
         "Processing",
@@ -239,13 +236,8 @@ const orderSchema = new mongoose.Schema(
         "Delivered",
         "Cancelled",
       ],
-
       default: "Order Placed",
     },
-
-    /* -------------------------------------------------------
-       DATE
-    ------------------------------------------------------- */
 
     date: {
       type: Number,
@@ -253,15 +245,10 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
   },
-
   {
     timestamps: true,
   }
 );
-
-/* =========================================================
-   MODEL
-========================================================= */
 
 const orderModel =
   mongoose.models.order ||

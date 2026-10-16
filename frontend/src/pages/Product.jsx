@@ -48,8 +48,10 @@ const Product = () => {
   } = useContext(ShopContext);
 
   const [productData, setProductData] = useState(null);
-  const [weight, setWeight] = useState(0.5);
+  const [weight, setWeight] = useState(1);
   const [selectedPreparation, setSelectedPreparation] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
+  const PREPARATION_CHARGE_PER_KG = 40;
 
   // Cart edit mode
   const editCart = location.state?.editCart === true;
@@ -80,38 +82,18 @@ const Product = () => {
 
     setProductData(foundProduct);
 
-    const stock = Number(foundProduct.stock ?? 0);
-    const category = String(foundProduct.category || "")
-      .trim()
-      .toLowerCase();
+    const variants = Array.isArray(foundProduct.variants) ? foundProduct.variants : [];
+    const firstAvailableVariant = variants.find(
+      (variant) => variant?.isAvailable !== false && Number(variant?.stock || 0) >= 1
+    );
+    setSelectedVariantId(String(firstAvailableVariant?._id || firstAvailableVariant?.id || ""));
 
-    const usesQuarterKg = [
-      "dry fish",
-      "dry prawns",
-      "pickles",
-    ].includes(category);
-
-    const minQuantity = usesQuarterKg
-      ? 0.25
-      : Number(foundProduct.minQuantity ?? 0.5);
-
-    const quantityStep = usesQuarterKg
-      ? 0.25
-      : Number(foundProduct.quantityStep ?? 0.5);
-
+    const stock = Number(firstAvailableVariant ? firstAvailableVariant.stock : foundProduct.stock ?? 0);
     if (editCart && editCartWeight > 0) {
-      const requestedWeight = Math.max(editCartWeight, minQuantity);
-      const stepsFromMin = Math.round(
-        (requestedWeight - minQuantity) / (quantityStep > 0 ? quantityStep : 0.5)
-      );
-      const validWeight = minQuantity + stepsFromMin * (quantityStep > 0 ? quantityStep : 0.5);
-      setWeight(stock > 0 ? Number(Math.min(validWeight, stock).toFixed(2)) : 0);
+      const requestedWeight = Math.max(1, Math.floor(editCartWeight));
+      setWeight(stock >= 1 ? Math.min(requestedWeight, Math.floor(stock)) : 0);
     } else {
-      setWeight(
-        stock > 0
-          ? Math.min(minQuantity, stock)
-          : 0
-      );
+      setWeight(stock >= 1 ? 1 : 0);
     }
 
     if (editCart && editCartPreparation) {
@@ -132,42 +114,18 @@ const Product = () => {
   // ============================================================
 
   const preparationOptions = useMemo(() => {
-    if (
-      !productData ||
-      !Array.isArray(productData.preparationOptions)
-    ) {
-      return [];
-    }
+    if (!productData) return [];
+    const category = String(productData.category || "").trim().toLowerCase();
+    const name = String(productData.name || "").trim().toLowerCase();
+    if (["dry fish", "dry prawns", "pickles"].includes(category)) return [];
 
-    return productData.preparationOptions
-      .map((option) => {
-        if (
-          option &&
-          typeof option === "object" &&
-          option.name
-        ) {
-          return {
-            name: String(option.name).trim(),
-            pricePerKg: Number(
-              option.pricePerKg ??
-                option.price ??
-                productData.price ??
-                0
-            ),
-          };
-        }
+    const isPrawn = category.includes("prawn") || name.includes("prawn") || name.includes("shrimp");
+    const isCrab = category.includes("crab") || name.includes("crab");
+    const names = isPrawn || isCrab
+      ? ["Whole Cleaned", "Uncleaned"]
+      : ["Whole Cleaned", "Uncleaned", "Curry Cut", "Fry Cut"];
 
-        return {
-          name: String(option || "").trim(),
-          pricePerKg: Number(productData.price ?? 0),
-        };
-      })
-      .filter(
-        (option) =>
-          option.name &&
-          Number.isFinite(option.pricePerKg) &&
-          option.pricePerKg >= 0
-      );
+    return names.map((name) => ({ name, pricePerKg: 40 }));
   }, [productData]);
 
   // ============================================================
@@ -194,67 +152,34 @@ const Product = () => {
   // PRODUCT VALUES
   // ============================================================
 
-  const normalizedCategory = String(
-    productData.category || ""
-  )
-    .trim()
-    .toLowerCase();
+  const normalizedCategory = String(productData.category || "").trim().toLowerCase();
+  const categoriesWithoutPreparation = ["dry fish", "dry prawns", "pickles"];
+  const requiresPreparation = !categoriesWithoutPreparation.includes(normalizedCategory) && preparationOptions.length > 0;
 
-  const categoriesWithoutPreparation = [
-    "dry fish",
-    "dry prawns",
-    "pickles",
-  ];
-
-  const usesQuarterKg = categoriesWithoutPreparation.includes(
-    normalizedCategory
+  const productVariants = Array.isArray(productData.variants) ? productData.variants : [];
+  const selectedVariant = productVariants.find(
+    (variant) => String(variant?._id || variant?.id || "") === String(selectedVariantId)
+  ) || null;
+  const variantPrice = Number(selectedVariant?.pricePerKg);
+  const productPrice = Number(
+    selectedVariant && Number.isFinite(variantPrice) && variantPrice > 0
+      ? variantPrice
+      : productData.price ?? 0
   );
-
-  const min = usesQuarterKg
-    ? 0.25
-    : Number(productData.minQuantity ?? 0.5);
-
-  const max = Number(productData.maxQuantity ?? 10);
-
-  const step = usesQuarterKg
-    ? 0.25
-    : Number(productData.quantityStep ?? 0.5);
-
-  const availableStock = Number(productData.stock ?? 0);
-
-  const safeMin = Math.max(0, min);
-  const safeStep = step > 0 ? step : 0.5;
-
-  const availableMax = Math.max(
-    0,
-    Math.min(max, availableStock)
-  );
-
-  const isOutOfStock =
-    productData.isAvailable === false ||
-    availableStock <= 0 ||
-    availableMax < safeMin;
-
+  const availableStock = Number(selectedVariant ? selectedVariant.stock ?? 0 : productData.stock ?? 0);
+  const safeMin = 1;
+  const safeStep = 1;
+  const max = Math.floor(Number(productData.maxQuantity ?? availableStock));
+  const availableMax = Math.max(0, Math.min(max, Math.floor(availableStock)));
+  const isOutOfStock = productData.isAvailable === false ||
+    (selectedVariant && selectedVariant.isAvailable === false) || availableStock < 1 || availableMax < 1;
   const hasPreparationOptions = preparationOptions.length > 0;
-
-  const requiresPreparation =
-    !categoriesWithoutPreparation.includes(normalizedCategory) &&
-    hasPreparationOptions;
-
-  const isPreparationSelected =
-    selectedPreparation.trim().length > 0;
-
-  const selectedPreparationOption = preparationOptions.find(
-    (option) => option.name === selectedPreparation
-  );
-
-  const productPrice = Number(productData.price ?? 0);
-
-  const currentPricePerKg = selectedPreparationOption
-    ? selectedPreparationOption.pricePerKg
-    : productPrice;
-
-  const estimatedTotal = currentPricePerKg * Number(weight || 0);
+  const isPreparationSelected = selectedPreparation.trim().length > 0;
+  const selectedPreparationOption = preparationOptions.find((option) => option.name === selectedPreparation);
+  const preparationCharge = requiresPreparation && selectedPreparationOption
+    ? 40 * Number(weight || 0)
+    : 0;
+  const estimatedTotal = productPrice * Number(weight || 0) + preparationCharge;
 
   // ============================================================
   // WEIGHT HANDLER
@@ -262,40 +187,13 @@ const Product = () => {
 
   const handleWeightChange = (value) => {
     const numericValue = Number(value);
-
-    if (Number.isNaN(numericValue)) return;
-
-    if (availableStock <= 0) {
+    if (!Number.isFinite(numericValue)) return;
+    if (availableStock < 1) {
       setWeight(0);
       return;
     }
-
-    let nextValue = numericValue;
-
-    if (nextValue < safeMin) {
-      nextValue = safeMin;
-    }
-
-    if (nextValue > availableMax) {
-      nextValue = availableMax;
-    }
-
-    const stepsFromMin = Math.round(
-      (nextValue - safeMin) / safeStep
-    );
-
-    const steppedValue =
-      safeMin +
-      stepsFromMin * safeStep;
-
-    const finalValue = Math.min(
-      availableMax,
-      Math.max(safeMin, steppedValue)
-    );
-
-    setWeight(
-      Number(finalValue.toFixed(2))
-    );
+    const finalWeight = Math.min(availableMax, Math.max(1, Math.round(numericValue)));
+    setWeight(Number.isFinite(finalWeight) ? Math.floor(finalWeight) : 1);
   };
 
   // ============================================================
@@ -376,9 +274,9 @@ const Product = () => {
       await addToCart(
         productData._id,
         weight,
-        requiresPreparation
-          ? selectedPreparation
-          : ""
+        requiresPreparation ? selectedPreparation : "",
+        selectedVariant ? String(selectedVariant._id || selectedVariant.id || "") : "",
+        productPrice
       );
     } catch (error) {
       console.error(
@@ -420,22 +318,19 @@ const Product = () => {
       _id: productData._id,
 
       name: productData.name,
+      category: productData.category || "",
 
       image: Array.isArray(productData.image)
         ? productData.image[0] || ""
         : productData.image || "",
 
-      price: Number(
-        currentPricePerKg || 0
-      ),
-
+      price: Number(productPrice || 0),
+      pricePerKg: Number(productPrice || 0),
       weight: Number(weight),
-
       quantity: 1,
-
-      preparation: requiresPreparation
-        ? selectedPreparation
-        : "",
+      preparation: requiresPreparation ? selectedPreparation : "",
+      variantId: selectedVariant ? String(selectedVariant._id || selectedVariant.id || "") : "",
+      variantCount: selectedVariant ? String(selectedVariant.count || "") : "",
     };
 
     navigate("/place-order", {
@@ -602,16 +497,14 @@ const Product = () => {
 
           <div className="mt-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 px-4 py-3 text-white shadow-md">
             <p className="text-[11px] uppercase tracking-wide text-cyan-100">
-              {isPreparationSelected
-                ? `${selectedPreparation} price`
-                : "Base price"}
+              {selectedVariant ? `Prawn count: ${selectedVariant.count || "Selected option"}` : "Seafood price"}
             </p>
 
             <div className="flex items-end justify-between gap-3">
               <div className="flex items-end gap-1.5">
                 <span className="text-2xl font-extrabold sm:text-3xl">
                   {currency}
-                  {currentPricePerKg.toLocaleString(
+                  {productPrice.toLocaleString(
                     "en-IN"
                   )}
                 </span>
@@ -624,7 +517,7 @@ const Product = () => {
               {weight > 0 && (
                 <div className="text-right">
                   <p className="text-[10px] text-cyan-200">
-                    Estimated total
+                    Seafood + preparation
                   </p>
 
                   <p className="text-sm font-bold">
@@ -637,6 +530,9 @@ const Product = () => {
                       }
                     )}
                   </p>
+                  {requiresPreparation && isPreparationSelected && (
+                    <p className="mt-1 text-[10px] text-cyan-100">Includes ₹40/KG preparation charge</p>
+                  )}
                 </div>
               )}
             </div>
@@ -679,6 +575,42 @@ const Product = () => {
               </p>
             </div>
           </div>
+
+          {/* PRAWN COUNT / SIZE VARIANT */}
+          {productVariants.length > 0 && (
+            <div className="mt-2.5 rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+              <label htmlFor="prawn-variant" className="mb-2 block text-sm font-bold text-gray-800">
+                Select Prawn Count / Size
+              </label>
+              <select
+                id="prawn-variant"
+                value={selectedVariantId}
+                onChange={(event) => {
+                  const nextId = event.target.value;
+                  setSelectedVariantId(nextId);
+                  const nextVariant = productVariants.find(
+                    (variant) => String(variant?._id || variant?.id || "") === nextId
+                  );
+                  const nextStock = Math.floor(Number(nextVariant?.stock || 0));
+                  setWeight(nextStock >= 1 ? Math.min(Math.max(1, Math.floor(Number(weight) || 1)), nextStock) : 0);
+                }}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-cyan-500"
+              >
+                {productVariants.map((variant) => {
+                  const variantId = String(variant?._id || variant?.id || "");
+                  const isAvailable = variant?.isAvailable !== false && Number(variant?.stock || 0) >= 1;
+                  return (
+                    <option key={variantId} value={variantId} disabled={!isAvailable}>
+                      {variant.count || variant.label || "Prawn option"} — {currency}{Number(variant.pricePerKg || 0).toLocaleString("en-IN")}/KG{!isAvailable ? " (Out of stock)" : ""}
+                    </option>
+                  );
+                })}
+              </select>
+              {selectedVariant && (
+                <p className="mt-1.5 text-xs text-gray-500">Selected option: {selectedVariant.count || selectedVariant.label || "Prawn count"}</p>
+              )}
+            </div>
+          )}
 
           {/* QUANTITY */}
 
@@ -779,7 +711,7 @@ const Product = () => {
                 title="Choose Preparation"
                 subtitle={
                   isPreparationSelected
-                    ? `${selectedPreparation} • ${currency}${currentPricePerKg}/KG`
+                    ? `${selectedPreparation} • ${currency}40/KG preparation charge`
                     : "Select how you want it prepared"
                 }
                 open={showPreparation}
@@ -856,11 +788,7 @@ const Product = () => {
                               </div>
 
                               <span className="shrink-0 text-[11px] font-semibold text-gray-500">
-                                {currency}
-                                {option.pricePerKg.toLocaleString(
-                                  "en-IN"
-                                )}
-                                /KG
+                                {currency}40/KG charge
                               </span>
                             </button>
                           );
@@ -1123,8 +1051,7 @@ const Product = () => {
                           : "border-gray-200 bg-gray-50 text-gray-600"
                       }`}
                     >
-                      {option.name} • {currency}
-                      {option.pricePerKg}/KG
+                      {option.name} • {currency}40/KG charge
                     </span>
                   )
                 )}

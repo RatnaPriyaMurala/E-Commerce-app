@@ -6,46 +6,208 @@ import customerModel from "../models/customerModel.js";
    HELPERS
 ========================================================= */
 
-/*
-  Creates the same line-key format used by ShopContext.
+const normalizePreparation = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 
-  Example:
-  1 KG + Curry Cut
-  -> "1-curry-cut"
-
-  1 KG + Fry Cut
-  -> "1-fry-cut"
-*/
-const createCartLineKey = (weight, preparation) => {
-  const normalizedPreparation = String(preparation || "")
+const createCartLineKey = (weight, preparation, variantId = "") => {
+  const normalizedPrep = String(preparation || "")
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
-  return `${Number(weight)}-${normalizedPreparation}`;
+  const normalizedVariantId = String(variantId || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, "");
+
+  const baseKey = `${Number(weight)}-${normalizedPrep}`;
+
+  return normalizedVariantId
+    ? `${baseKey}-variant-${normalizedVariantId}`
+    : baseKey;
+};
+
+const getProductVariants = (product) =>
+  Array.isArray(product?.variants) ? product.variants : [];
+
+const getVariantById = (product, variantId) => {
+  if (!variantId) return null;
+
+  return (
+    getProductVariants(product).find(
+      (variant) =>
+        String(variant?._id || variant?.id || "") === String(variantId)
+    ) || null
+  );
+};
+
+const requiresPreparation = (product) => {
+  const category = String(product?.category || "").trim().toLowerCase();
+
+  return !["dry fish", "dry prawns", "pickles"].includes(category);
 };
 
 /*
-  Converts old cart data into the new cart structure.
+  WHOLE-KG RULE:
+  Accepted: 1 KG, 2 KG, 3 KG, etc.
+  Rejected: 0.25 KG, 0.5 KG, 1.5 KG, etc.
+*/
+const validateWeight = (product, weight, availableStock) => {
+  if (!Number.isFinite(weight) || weight <= 0) {
+    return {
+      valid: false,
+      message: "Please enter a valid weight in KG.",
+    };
+  }
 
-  OLD:
-  {
-    productId: {
-      "1": 1
+  if (!Number.isInteger(weight)) {
+    return {
+      valid: false,
+      message:
+        "Weight must be a whole number of kilograms (1 KG, 2 KG, 3 KG, etc.).",
+    };
+  }
+
+  const stock = Number(availableStock);
+
+  if (!Number.isFinite(stock) || stock <= 0) {
+    return {
+      valid: false,
+      message: "This product option is out of stock.",
+    };
+  }
+
+  const configuredMax = Number(product?.maxQuantity);
+
+  const maxWeight = Math.min(
+    Number.isFinite(configuredMax) && configuredMax > 0
+      ? configuredMax
+      : stock,
+    stock
+  );
+
+  if (weight > maxWeight) {
+    return {
+      valid: false,
+      message: `Maximum available weight is ${maxWeight} KG.`,
+    };
+  }
+
+  return { valid: true };
+};
+
+const validatePreparation = (product, preparation) => {
+  if (!requiresPreparation(product)) {
+    return { valid: true, preparation: "" };
+  }
+
+  const selected = String(preparation || "").trim();
+
+  if (!selected) {
+    return {
+      valid: false,
+      message: "Please select a preparation option.",
+    };
+  }
+
+  const options = Array.isArray(product?.preparationOptions)
+    ? product.preparationOptions
+    : [];
+
+  if (options.length > 0) {
+    const allowed = options
+      .map((option) => {
+        if (typeof option === "string") {
+          return option.trim();
+        }
+
+        return String(
+          option?.name ??
+            option?.label ??
+            option?.preparation ??
+            option?.title ??
+            ""
+        ).trim();
+      })
+      .filter(Boolean);
+
+    if (
+      !allowed.some(
+        (name) =>
+          normalizePreparation(name) ===
+          normalizePreparation(selected)
+      )
+    ) {
+      return {
+        valid: false,
+        message: "Invalid preparation option.",
+      };
     }
   }
 
-  NEW:
-  {
-    productId: {
-      "1-curry-cut": {
-        weight: 1,
-        quantity: 1,
-        preparation: "Curry Cut"
+  return {
+    valid: true,
+    preparation: selected,
+  };
+};
+
+const getPreparationPrice = (product, preparation) => {
+  const basePrice = Number(product?.price || 0);
+
+  if (!preparation) {
+    return basePrice;
+  }
+
+  const options = Array.isArray(product?.preparationOptions)
+    ? product.preparationOptions
+    : [];
+
+  const selected = options.find((option) => {
+    if (typeof option === "string") {
+      return (
+        normalizePreparation(option) ===
+        normalizePreparation(preparation)
+      );
+    }
+
+    const name =
+      option?.name ??
+      option?.label ??
+      option?.preparation ??
+      option?.title ??
+      "";
+
+    return (
+      normalizePreparation(name) ===
+      normalizePreparation(preparation)
+    );
+  });
+
+  if (selected && typeof selected === "object") {
+    for (const value of [
+      selected.pricePerKg,
+      selected.price,
+      selected.amount,
+    ]) {
+      const price = Number(value);
+
+      if (Number.isFinite(price) && price > 0) {
+        return price;
       }
     }
   }
+
+  return basePrice;
+};
+
+/*
+  Normalize current and legacy cart formats.
+
+  Invalid fractional weights are excluded so old cart entries
+  cannot reintroduce fractional quantities.
 */
 const normalizeCartData = (cartData) => {
   if (
@@ -70,9 +232,6 @@ const normalizeCartData = (cartData) => {
     normalized[productId] = {};
 
     Object.entries(productCart).forEach(([key, value]) => {
-      /*
-        NEW FORMAT
-      */
       if (
         value &&
         typeof value === "object" &&
@@ -80,248 +239,203 @@ const normalizeCartData = (cartData) => {
         value.weight !== undefined
       ) {
         const weight = Number(value.weight);
-        const quantity = Number(value.quantity || 1);
-        const preparation = String(
-          value.preparation || ""
-        ).trim();
+        const quantity = Number(value.quantity ?? 1);
+        const preparation = String(value.preparation || "").trim();
+        const variantId = String(value.variantId || "").trim();
+        const variantCount = String(value.variantCount || "").trim();
+        const price = Number(value.pricePerKg);
 
         if (
-          Number.isFinite(weight) &&
-          weight > 0 &&
-          Number.isFinite(quantity) &&
-          quantity > 0
+          !Number.isInteger(weight) ||
+          weight <= 0 ||
+          !Number.isFinite(quantity) ||
+          quantity <= 0
         ) {
-          const lineKey = createCartLineKey(
-            weight,
-            preparation
-          );
-
-          normalized[productId][lineKey] = {
-            weight,
-            quantity,
-            preparation,
-          };
+          return;
         }
+
+        const lineKey = createCartLineKey(
+          weight,
+          preparation,
+          variantId
+        );
+
+        normalized[productId][lineKey] = {
+          weight,
+          quantity,
+          preparation,
+          variantId,
+          variantCount,
+          pricePerKg:
+            Number.isFinite(price) && price > 0 ? price : 0,
+        };
 
         return;
       }
 
-      /*
-        OLD FORMAT
-
-        {
-          "1": 1
-        }
-      */
+      // Legacy cart format: { "1": 1 }
       const oldWeight = Number(key);
       const oldQuantity = Number(value || 0);
 
       if (
-        Number.isFinite(oldWeight) &&
+        Number.isInteger(oldWeight) &&
         oldWeight > 0 &&
         Number.isFinite(oldQuantity) &&
         oldQuantity > 0
       ) {
-        const lineKey = createCartLineKey(
-          oldWeight,
-          ""
-        );
+        const lineKey = createCartLineKey(oldWeight, "");
 
         normalized[productId][lineKey] = {
           weight: oldWeight,
           quantity: oldQuantity,
           preparation: "",
+          variantId: "",
+          variantCount: "",
+          pricePerKg: 0,
         };
       }
     });
 
-    if (
-      Object.keys(normalized[productId]).length === 0
-    ) {
+    if (Object.keys(normalized[productId]).length === 0) {
       delete normalized[productId];
     }
   });
 
   return normalized;
 };
+
+/*
+  Rebuild the customer's separate cart from database product
+  and variant prices.
+*/
 const syncCustomerCart = async (userId, cartData) => {
   try {
     const customer = await customerModel.findOne({ userId });
 
-    if (!customer) {
-      console.log(
-        "⚠️ Customer profile not found for user:",
-        userId
-      );
-      return;
-    }
+    if (!customer) return;
 
     const normalizedCart = normalizeCartData(cartData || {});
-    const productIds = Object.keys(normalizedCart);
-
-    // Cart is empty
-    if (productIds.length === 0) {
-      customer.cartItems = [];
-
-      await customer.save();
-
-      console.log(
-        `🛒 Customer ${customer.customerId} cart cleared`
-      );
-
-      return;
-    }
-
     const cartItems = [];
 
-    for (const productId of productIds) {
+    for (const [productId, productCart] of Object.entries(
+      normalizedCart
+    )) {
       const product = await productModel.findById(productId);
 
-      if (!product) {
-        continue;
-      }
-
-      const productCart = normalizedCart[productId];
+      if (!product) continue;
 
       for (const line of Object.values(productCart)) {
+        const variant = getVariantById(product, line.variantId);
+
+        const pricePerKg = variant
+          ? Number(variant.pricePerKg || 0)
+          : getPreparationPrice(product, line.preparation);
+
         cartItems.push({
           productId: String(productId),
-
           productName: product.name || "",
-
           image: Array.isArray(product.image)
             ? product.image[0] || ""
             : product.image || "",
-
           weight: Number(line.weight || 0),
-
           quantity: Number(line.quantity || 1),
-
           preparation: line.preparation || "",
+          variantId: line.variantId || "",
+          variantCount: variant
+            ? String(variant.count || "")
+            : String(line.variantCount || ""),
+          pricePerKg,
         });
       }
     }
 
     customer.cartItems = cartItems;
-
     await customer.save();
-
-    console.log(
-      `🛒 Customer ${customer.customerId} cart synchronized`
-    );
-
   } catch (error) {
-    console.error(
-      "❌ Customer cart sync error:",
-      error
-    );
+    console.error("Customer cart sync error:", error);
   }
 };
+
 /*
-  Validates preparation against the product's
-  preparationOptions.
-
-  Supports both:
-
-  ["Curry Cut", "Fry Cut"]
-
-  and:
-
-  [
-    { name: "Curry Cut" },
-    { label: "Fry Cut" }
-  ]
+  Validate the product or selected prawn variant and return
+  its available stock.
 */
+const getAvailableOption = (product, variantId) => {
+  const variants = getProductVariants(product);
 
-const validatePreparation = (product, preparation) => {
-  const category = String(product?.category || "")
-    .trim()
-    .toLowerCase();
-
-  // These categories do not require preparation selection.
-  const categoriesWithoutPreparation = [
-    "dry fish",
-    "dry prawns",
-    "pickles",
-  ];
-
-  if (categoriesWithoutPreparation.includes(category)) {
-    return {
-      valid: true,
-      preparation: "",
-    };
-  }
-
-  // Fresh fish and other seafood still require preparation.
-  const selectedPreparation = String(preparation || "").trim();
-
-  if (!selectedPreparation) {
-    return {
-      valid: false,
-      message: "Please select a preparation option.",
-    };
-  }
-
-  const options = Array.isArray(product?.preparationOptions)
-    ? product.preparationOptions
-    : [];
-
-  if (options.length > 0) {
-    const allowedOptions = options
-      .map((option) => {
-        if (typeof option === "string") {
-          return option.trim();
-        }
-
-        return String(
-          option?.name ??
-          option?.label ??
-          option?.preparation ??
-          option?.title ??
-          ""
-        ).trim();
-      })
-      .filter(Boolean);
-
-    const isAllowed = allowedOptions.some(
-      (option) =>
-        option.toLowerCase() === selectedPreparation.toLowerCase()
-    );
-
-    if (!isAllowed) {
+  if (variants.length > 0) {
+    if (!variantId) {
       return {
         valid: false,
-        message: "Invalid preparation option.",
+        status: 400,
+        message: "Please select a prawn count option.",
       };
     }
+
+    const variant = getVariantById(product, variantId);
+
+    if (!variant) {
+      return {
+        valid: false,
+        status: 400,
+        message:
+          "Selected prawn count option is invalid. Please refresh the product.",
+      };
+    }
+
+    if (
+      variant.isAvailable === false ||
+      Number(variant.stock || 0) <= 0
+    ) {
+      return {
+        valid: false,
+        status: 400,
+        message:
+          "This prawn count option is unavailable or out of stock.",
+      };
+    }
+
+    return {
+      valid: true,
+      variant,
+      stock: Number(variant.stock || 0),
+    };
+  }
+
+  if (variantId) {
+    return {
+      valid: false,
+      status: 400,
+      message: "This product does not have the selected variant.",
+    };
+  }
+
+  if (
+    product.isAvailable === false ||
+    Number(product.stock || 0) <= 0
+  ) {
+    return {
+      valid: false,
+      status: 400,
+      message:
+        "This product is currently unavailable or out of stock.",
+    };
   }
 
   return {
     valid: true,
-    preparation: selectedPreparation,
+    variant: null,
+    stock: Number(product.stock || 0),
   };
 };
 
-
-const usesQuarterKgRules = (product) => {
-  const category = String(product?.category || "")
-    .trim()
-    .toLowerCase();
-
-  return ["dry fish", "dry prawns", "pickles"].includes(category);
-};
 /* =========================================================
    ADD TO CART
 ========================================================= */
 
 const addToCart = async (req, res) => {
   try {
-    const {
-      itemId,
-      weight,
-      preparation,
-      pricePerKg,
-    } = req.body;
+    const { itemId, weight, preparation, variantId } = req.body;
 
     if (!itemId) {
       return res.status(400).json({
@@ -332,18 +446,14 @@ const addToCart = async (req, res) => {
 
     const numericWeight = Number(weight);
 
-    if (
-      !Number.isFinite(numericWeight) ||
-      numericWeight <= 0
-    ) {
+    if (!Number.isFinite(numericWeight) || numericWeight <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Invalid weight.",
+        message: "Please enter a valid weight in KG.",
       });
     }
 
-    const product =
-      await productModel.findById(itemId);
+    const product = await productModel.findById(itemId);
 
     if (!product) {
       return res.status(404).json({
@@ -352,111 +462,41 @@ const addToCart = async (req, res) => {
       });
     }
 
-    /* -------------------------------------------------------
-       PREPARATION
-    ------------------------------------------------------- */
+    const option = getAvailableOption(product, variantId);
 
-    const preparationValidation =
-      validatePreparation(
-        product,
-        preparation
-      );
+    if (!option.valid) {
+      return res.status(option.status).json({
+        success: false,
+        message: option.message,
+      });
+    }
+
+    const preparationValidation = validatePreparation(
+      product,
+      preparation
+    );
 
     if (!preparationValidation.valid) {
       return res.status(400).json({
         success: false,
-        message:
-          preparationValidation.message,
+        message: preparationValidation.message,
       });
     }
 
-    const selectedPreparation =
-      preparationValidation.preparation;
-
-    /* -------------------------------------------------------
-       AVAILABILITY / STOCK
-    ------------------------------------------------------- */
-
-    const stock = Number(
-      product.stock || 0
+    const weightValidation = validateWeight(
+      product,
+      numericWeight,
+      option.stock
     );
 
-    if (
-      product.isAvailable === false ||
-      stock <= 0
-    ) {
+    if (!weightValidation.valid) {
       return res.status(400).json({
         success: false,
-        message:
-          "This product is currently unavailable.",
+        message: weightValidation.message,
       });
     }
 
-    if (numericWeight > stock) {
-      return res.status(400).json({
-        success: false,
-        message:
-          `Only ${stock} KG available.`,
-      });
-    }
-
-    /* -------------------------------------------------------
-       MIN / MAX
-    ------------------------------------------------------- */
-
-   /* MIN / MAX */
-
-const usesQuarterKg = usesQuarterKgRules(product);
-
-const minQuantity = usesQuarterKg
-  ? 0.25
-  : Number(product.minQuantity || 0.5);
-
-const maxQuantity = Number(
-  product.maxQuantity || stock
-);
-
-if (numericWeight < minQuantity) {
-  return res.status(400).json({
-    success: false,
-    message: `Minimum order weight is ${minQuantity} KG.`,
-  });
-}
-
-if (numericWeight > maxQuantity) {
-  return res.status(400).json({
-    success: false,
-    message: `Maximum order weight is ${maxQuantity} KG.`,
-  });
-}
-
-/* QUANTITY STEP */
-
-const quantityStep = usesQuarterKg
-  ? 0.25
-  : Number(product.quantityStep || 0);
-
-if (quantityStep > 0) {
-  const steps = numericWeight / quantityStep;
-
-  if (Math.abs(steps - Math.round(steps)) > 0.000001) {
-    return res.status(400).json({
-      success: false,
-      message: `Weight must be in increments of ${quantityStep} KG.`,
-    });
-  }
-}
-
-
-
-    /* -------------------------------------------------------
-       USER
-    ------------------------------------------------------- */
-
-    const user =
-      await userModel.findById(
-        req.userId
-      );
+    const user = await userModel.findById(req.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -465,68 +505,68 @@ if (quantityStep > 0) {
       });
     }
 
-    /* -------------------------------------------------------
-       NORMALIZE CART
-    ------------------------------------------------------- */
+    const cartData = normalizeCartData(user.cartData || {});
+    const productId = String(itemId);
 
-    const cartData =
-      normalizeCartData(
-        user.cartData || {}
-      );
-
-    if (!cartData[itemId]) {
-      cartData[itemId] = {};
+    if (!cartData[productId]) {
+      cartData[productId] = {};
     }
 
-    /* -------------------------------------------------------
-       LINE KEY
-    ------------------------------------------------------- */
+    const selectedVariant = option.variant;
 
-    const lineKey =
-      createCartLineKey(
-        numericWeight,
-        selectedPreparation
-      );
+    const normalizedVariantId = selectedVariant
+      ? String(selectedVariant._id || selectedVariant.id)
+      : "";
 
-    /*
-      Same product + same weight + same preparation
-      = same cart line.
+    const selectedPreparation = preparationValidation.preparation;
 
-      Same product + same weight + DIFFERENT preparation
-      = different cart line.
-    */
+    const lineKey = createCartLineKey(
+      numericWeight,
+      selectedPreparation,
+      normalizedVariantId
+    );
 
-    cartData[itemId][lineKey] = {
+    // Never trust pricePerKg supplied by the browser.
+    const pricePerKg = selectedVariant
+      ? Number(selectedVariant.pricePerKg)
+      : getPreparationPrice(product, selectedPreparation);
+
+    if (!Number.isFinite(pricePerKg) || pricePerKg <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Unable to determine the price for this item.",
+      });
+    }
+
+    const existingLine = cartData[productId][lineKey];
+
+    cartData[productId][lineKey] = {
       weight: numericWeight,
-      quantity: 1,
+      quantity: Number(existingLine?.quantity || 1),
       preparation: selectedPreparation,
+      variantId: normalizedVariantId,
+      variantCount: selectedVariant
+        ? String(selectedVariant.count || "")
+        : "",
+      pricePerKg,
     };
 
     user.cartData = cartData;
+    await user.save();
 
-await user.save();
+    await syncCustomerCart(user._id, user.cartData);
 
-await syncCustomerCart(
-  user._id,
-  user.cartData
-);
-
-return res.json({
+    return res.json({
       success: true,
       message: "Added to cart.",
       cartData: user.cartData,
     });
   } catch (error) {
-    console.error(
-      "❌ Add cart error:",
-      error
-    );
+    console.error("Add cart error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        error.message ||
-        "Unable to add product to cart.",
+      message: error.message || "Unable to add product to cart.",
     });
   }
 };
@@ -543,7 +583,7 @@ const updateCartWeight = async (req, res) => {
       newWeight,
       preparation,
       oldLineKey,
-      newLineKey,
+      variantId: requestedVariantId,
     } = req.body;
 
     if (
@@ -553,51 +593,26 @@ const updateCartWeight = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Product and weight information are required.",
+        message: "Product and weight information are required.",
       });
     }
 
-    const numericOldWeight =
-      Number(oldWeight);
-
-    const numericNewWeight =
-      Number(newWeight);
+    const numericOldWeight = Number(oldWeight);
+    const numericNewWeight = Number(newWeight);
 
     if (
-      !Number.isFinite(
-        numericOldWeight
-      ) ||
-      numericOldWeight <= 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Invalid previous weight.",
-      });
-    }
-
-    if (
-      !Number.isFinite(
-        numericNewWeight
-      ) ||
+      !Number.isFinite(numericOldWeight) ||
+      numericOldWeight <= 0 ||
+      !Number.isFinite(numericNewWeight) ||
       numericNewWeight <= 0
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Invalid new weight.",
+        message: "Invalid old or new weight.",
       });
     }
 
-    /* -------------------------------------------------------
-       PRODUCT
-    ------------------------------------------------------- */
-
-    const product =
-      await productModel.findById(
-        itemId
-      );
+    const product = await productModel.findById(itemId);
 
     if (!product) {
       return res.status(404).json({
@@ -606,97 +621,7 @@ const updateCartWeight = async (req, res) => {
       });
     }
 
-    if (
-      product.isAvailable === false ||
-      Number(product.stock || 0) <= 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Product is currently unavailable.",
-      });
-    }
-
-    /* -------------------------------------------------------
-       PREPARATION
-    ------------------------------------------------------- */
-
-    const preparationValidation =
-      validatePreparation(
-        product,
-        preparation
-      );
-
-    if (!preparationValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        message:
-          preparationValidation.message,
-      });
-    }
-
-    const selectedPreparation =
-      preparationValidation.preparation;
-
-    /* -------------------------------------------------------
-       MIN / MAX
-    ------------------------------------------------------- */
-
-const usesQuarterKg = usesQuarterKgRules(product);
-
-const minQuantity = usesQuarterKg
-  ? 0.25
-  : Number(product.minQuantity || 0.5);
-
-const maxQuantity = Number(
-  product.maxQuantity || product.stock || 10
-);
-
-if (
-  numericNewWeight < minQuantity ||
-  numericNewWeight > maxQuantity
-) {
-  return res.status(400).json({
-    success: false,
-    message: `Weight must be between ${minQuantity} KG and ${maxQuantity} KG.`,
-  });
-}
-
-/* STOCK */
-
-if (numericNewWeight > Number(product.stock || 0)) {
-  return res.status(400).json({
-    success: false,
-    message: `${product.name} has only ${product.stock} KG available.`,
-  });
-}
-
-/* QUANTITY STEP */
-
-const quantityStep = usesQuarterKg
-  ? 0.25
-  : Number(product.quantityStep || 0);
-
-if (quantityStep > 0) {
-  const steps = numericNewWeight / quantityStep;
-
-  if (Math.abs(steps - Math.round(steps)) > 0.000001) {
-    return res.status(400).json({
-      success: false,
-      message: `Weight must be in increments of ${quantityStep} KG.`,
-    });
-  }
-}
-
-
-    /* -------------------------------------------------------
-       USER
-    ------------------------------------------------------- */
-
-    const user =
-      await userModel.findById(
-        req.userId
-      );
+    const user = await userModel.findById(req.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -705,158 +630,168 @@ if (quantityStep > 0) {
       });
     }
 
-    /* -------------------------------------------------------
-       NORMALIZE CART
-    ------------------------------------------------------- */
+    const cartData = normalizeCartData(user.cartData || {});
+    const productId = String(itemId);
+    const productCart = cartData[productId];
 
-    const cartData =
-      normalizeCartData(
-        user.cartData || {}
-      );
-
-    if (!cartData[itemId]) {
+    if (!productCart) {
       return res.status(404).json({
         success: false,
-        message:
-          "Item not found in cart.",
+        message: "Item not found in cart.",
       });
     }
 
-    /* -------------------------------------------------------
-       FIND OLD LINE
-    ------------------------------------------------------- */
-
-    let actualOldLineKey =
-      oldLineKey;
+    let actualOldLineKey = oldLineKey;
 
     if (
       !actualOldLineKey ||
-      !cartData[itemId][
-        actualOldLineKey
-      ]
+      !productCart[actualOldLineKey]
     ) {
-      actualOldLineKey =
-        Object.keys(
-          cartData[itemId]
-        ).find((key) => {
-          const line =
-            cartData[itemId][key];
+      actualOldLineKey = Object.keys(productCart).find((key) => {
+        const line = productCart[key];
 
-          return (
-            Number(
-              line?.weight
-            ) ===
-              numericOldWeight &&
-            String(
-              line?.preparation || ""
-            ).trim().toLowerCase() ===
-              selectedPreparation
-                .trim()
-                .toLowerCase()
-          );
-        });
+        return (
+          Number(line?.weight) === numericOldWeight &&
+          String(line?.variantId || "") ===
+            String(requestedVariantId || "") &&
+          normalizePreparation(line?.preparation) ===
+            normalizePreparation(preparation)
+        );
+      });
     }
 
     if (
       !actualOldLineKey ||
-      !cartData[itemId][
-        actualOldLineKey
-      ]
+      !productCart[actualOldLineKey]
     ) {
       return res.status(404).json({
         success: false,
-        message:
-          "Previous cart item was not found.",
+        message: "Previous cart item was not found.",
       });
     }
 
-    /* -------------------------------------------------------
-       NEW LINE KEY
-    ------------------------------------------------------- */
+    const oldLine = productCart[actualOldLineKey];
 
-    const actualNewLineKey =
-      newLineKey ||
-      createCartLineKey(
-        numericNewWeight,
-        selectedPreparation
-      );
+    const selectedPreparationInput = String(
+      preparation ?? oldLine.preparation ?? ""
+    ).trim();
 
-    const oldLine =
-      cartData[itemId][
-        actualOldLineKey
-      ];
+    const selectedVariantId = String(
+      oldLine.variantId || requestedVariantId || ""
+    ).trim();
 
-    /*
-      Preserve quantity if it exists.
-    */
-    const quantity =
-      Number(
-        oldLine?.quantity || 1
-      );
+    // Prevent changing the variant through a weight-update request.
+    if (
+      requestedVariantId &&
+      oldLine.variantId &&
+      String(requestedVariantId) !== String(oldLine.variantId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected variant does not match the cart item.",
+      });
+    }
 
-    /* -------------------------------------------------------
-       REMOVE OLD LINE
-    ------------------------------------------------------- */
+    const option = getAvailableOption(product, selectedVariantId);
 
-    delete cartData[itemId][
-      actualOldLineKey
-    ];
+    if (!option.valid) {
+      return res.status(option.status).json({
+        success: false,
+        message: option.message,
+      });
+    }
 
-    /* -------------------------------------------------------
-       CREATE NEW LINE
-    ------------------------------------------------------- */
+    const preparationValidation = validatePreparation(
+      product,
+      selectedPreparationInput
+    );
 
-    cartData[itemId][
-      actualNewLineKey
-    ] = {
+    if (!preparationValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: preparationValidation.message,
+      });
+    }
+
+    const weightValidation = validateWeight(
+      product,
+      numericNewWeight,
+      option.stock
+    );
+
+    if (!weightValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: weightValidation.message,
+      });
+    }
+
+    const selectedPreparation = preparationValidation.preparation;
+    const selectedVariant = option.variant;
+
+    const normalizedVariantId = selectedVariant
+      ? String(selectedVariant._id || selectedVariant.id)
+      : "";
+
+    const variantCount = selectedVariant
+      ? String(selectedVariant.count || "")
+      : "";
+
+    const pricePerKg = selectedVariant
+      ? Number(selectedVariant.pricePerKg)
+      : getPreparationPrice(product, selectedPreparation);
+
+    if (!Number.isFinite(pricePerKg) || pricePerKg <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Unable to determine the price for this item.",
+      });
+    }
+
+    const newLineKey = createCartLineKey(
+      numericNewWeight,
+      selectedPreparation,
+      normalizedVariantId
+    );
+
+    const oldQuantity = Number(oldLine.quantity || 1);
+
+    // Remove the old line, then merge if the destination line exists.
+    delete productCart[actualOldLineKey];
+
+    const existingNewLine = productCart[newLineKey];
+
+    productCart[newLineKey] = {
       weight: numericNewWeight,
-      quantity:
-        Number.isFinite(quantity) &&
-        quantity > 0
-          ? quantity
-          : 1,
-      preparation:
-        selectedPreparation,
+      quantity: Number(
+        existingNewLine?.quantity || oldQuantity || 1
+      ),
+      preparation: selectedPreparation,
+      variantId: normalizedVariantId,
+      variantCount,
+      pricePerKg,
     };
 
-    /* -------------------------------------------------------
-       CLEAN EMPTY PRODUCT
-    ------------------------------------------------------- */
-
-    if (
-      Object.keys(
-        cartData[itemId]
-      ).length === 0
-    ) {
-      delete cartData[itemId];
+    if (Object.keys(productCart).length === 0) {
+      delete cartData[productId];
     }
 
     user.cartData = cartData;
+    await user.save();
 
-await user.save();
+    await syncCustomerCart(user._id, user.cartData);
 
-await syncCustomerCart(
-  user._id,
-  user.cartData
-);
-
-return res.json({
+    return res.json({
       success: true,
-      message:
-        "Cart weight updated.",
+      message: "Cart weight updated.",
       cartData: user.cartData,
     });
   } catch (error) {
-    console.error(
-      "❌ Update cart weight error:",
-      error
-    );
+    console.error("Update cart weight error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        error.message ||
-        "Unable to update cart.",
+      message: error.message || "Unable to update cart.",
     });
   }
 };
@@ -865,20 +800,6 @@ return res.json({
    REMOVE FROM CART
 ========================================================= */
 
-/*
-  IMPORTANT:
-
-  We now remove a SPECIFIC CART LINE.
-
-  Example:
-
-  Ari
-  ├── 1 KG Curry Cut
-  └── 1 KG Fry Cut
-
-  Removing Curry Cut must NOT remove Fry Cut.
-*/
-
 const removeFromCart = async (req, res) => {
   try {
     const {
@@ -886,20 +807,17 @@ const removeFromCart = async (req, res) => {
       lineKey,
       preparation,
       weight,
+      variantId,
     } = req.body;
 
     if (!itemId) {
       return res.status(400).json({
         success: false,
-        message:
-          "Product ID is required.",
+        message: "Product ID is required.",
       });
     }
 
-    const user =
-      await userModel.findById(
-        req.userId
-      );
+    const user = await userModel.findById(req.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -908,150 +826,98 @@ const removeFromCart = async (req, res) => {
       });
     }
 
-    const cartData =
-      normalizeCartData(
-        user.cartData || {}
-      );
+    const cartData = normalizeCartData(user.cartData || {});
+    const productId = String(itemId);
 
-    if (!cartData[itemId]) {
+    if (!cartData[productId]) {
       return res.json({
         success: true,
-        message:
-          "Item already removed.",
+        message: "Item already removed.",
         cartData,
       });
     }
 
-    /* -------------------------------------------------------
-       FIND LINE TO REMOVE
-    ------------------------------------------------------- */
+    const productCart = cartData[productId];
+    let actualLineKey = lineKey;
 
-    let actualLineKey =
-      lineKey;
-
-    /*
-      If lineKey isn't supplied,
-      find using weight + preparation.
-    */
     if (
       !actualLineKey ||
-      !cartData[itemId][
-        actualLineKey
-      ]
+      !productCart[actualLineKey]
     ) {
       if (
         weight !== undefined ||
-        preparation
+        preparation !== undefined ||
+        variantId !== undefined
       ) {
         const numericWeight =
-          Number(weight);
+          weight === undefined ? undefined : Number(weight);
 
-        actualLineKey =
-          Object.keys(
-            cartData[itemId]
-          ).find((key) => {
-            const line =
-              cartData[itemId][key];
+        actualLineKey = Object.keys(productCart).find((key) => {
+          const line = productCart[key];
 
-            const weightMatches =
-              weight === undefined ||
-              Number(
-                line?.weight
-              ) === numericWeight;
+          const weightMatches =
+            weight === undefined ||
+            Number(line?.weight) === numericWeight;
 
-            const preparationMatches =
-              !preparation ||
-              String(
-                line?.preparation || ""
-              )
-                .trim()
-                .toLowerCase() ===
-                String(
-                  preparation
-                )
-                  .trim()
-                  .toLowerCase();
+          const preparationMatches =
+            preparation === undefined ||
+            normalizePreparation(line?.preparation) ===
+              normalizePreparation(preparation);
 
-            return (
-              weightMatches &&
-              preparationMatches
-            );
-          });
-      }
-    }
+          const variantMatches =
+            variantId === undefined ||
+            String(line?.variantId || "") ===
+              String(variantId || "");
 
-    /* -------------------------------------------------------
-       REMOVE SPECIFIC LINE
-    ------------------------------------------------------- */
-
-    if (
-      actualLineKey &&
-      cartData[itemId][
-        actualLineKey
-      ]
-    ) {
-      delete cartData[itemId][
-        actualLineKey
-      ];
-    } else {
-      /*
-        Backward compatibility:
-        if no line information is supplied,
-        remove the whole product.
-      */
-      if (
-        !lineKey &&
-        !preparation &&
-        weight === undefined
-      ) {
-        delete cartData[itemId];
-      } else {
-        return res.status(404).json({
-          success: false,
-          message:
-            "Cart item was not found.",
+          return (
+            weightMatches &&
+            preparationMatches &&
+            variantMatches
+          );
         });
       }
     }
 
-    /* -------------------------------------------------------
-       CLEAN EMPTY PRODUCT
-    ------------------------------------------------------- */
+    if (actualLineKey && productCart[actualLineKey]) {
+      delete productCart[actualLineKey];
+    } else if (
+      !lineKey &&
+      preparation === undefined &&
+      weight === undefined &&
+      variantId === undefined
+    ) {
+      // Legacy behavior: no line selector removes the entire product.
+      delete cartData[productId];
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: "Cart item was not found.",
+      });
+    }
 
     if (
-      cartData[itemId] &&
-      Object.keys(
-        cartData[itemId]
-      ).length === 0
+      cartData[productId] &&
+      Object.keys(cartData[productId]).length === 0
     ) {
-      delete cartData[itemId];
+      delete cartData[productId];
     }
-user.cartData = cartData;
 
-await user.save(); 
+    user.cartData = cartData;
+    await user.save();
 
-await syncCustomerCart(
-  user._id,
-  user.cartData
-);
+    await syncCustomerCart(user._id, user.cartData);
 
-return res.json({
+    return res.json({
       success: true,
-      message:
-        "Item removed from cart.",
+      message: "Item removed from cart.",
       cartData: user.cartData,
     });
   } catch (error) {
-    console.error(
-      "❌ Remove from cart error:",
-      error
-    );
+    console.error("Remove from cart error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        error.message ||
-        "Unable to remove item from cart.",
+      message: error.message || "Unable to remove item from cart.",
     });
   }
 };
@@ -1062,10 +928,9 @@ return res.json({
 
 const getUserCart = async (req, res) => {
   try {
-    const user =
-      await userModel
-        .findById(req.userId)
-        .select("cartData");
+    const user = await userModel
+      .findById(req.userId)
+      .select("cartData");
 
     if (!user) {
       return res.status(404).json({
@@ -1074,40 +939,16 @@ const getUserCart = async (req, res) => {
       });
     }
 
-    /*
-      Always return normalized cart data.
-
-      This also automatically converts
-      old cart entries when the user opens
-      their cart after the update.
-    */
-    const normalizedCart =
-      normalizeCartData(
-        user.cartData || {}
-      );
-
-    /*
-      Save normalized structure if the old
-      format was detected.
-    */
-    const currentCartString =
-      JSON.stringify(
-        user.cartData || {}
-      );
-
-    const normalizedCartString =
-      JSON.stringify(
-        normalizedCart
-      );
+    const normalizedCart = normalizeCartData(user.cartData || {});
 
     if (
-      currentCartString !==
-      normalizedCartString
+      JSON.stringify(user.cartData || {}) !==
+      JSON.stringify(normalizedCart)
     ) {
-      user.cartData =
-        normalizedCart;
-
+      user.cartData = normalizedCart;
       await user.save();
+
+      await syncCustomerCart(user._id, normalizedCart);
     }
 
     return res.json({
@@ -1115,15 +956,11 @@ const getUserCart = async (req, res) => {
       cartData: normalizedCart,
     });
   } catch (error) {
-    console.error(
-      "❌ Get cart error:",
-      error
-    );
+    console.error("Get cart error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        "Unable to get cart.",
+      message: "Unable to get cart.",
     });
   }
 };

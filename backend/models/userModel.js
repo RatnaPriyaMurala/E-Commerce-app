@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const addressSchema = new mongoose.Schema(
@@ -15,6 +16,24 @@ const addressSchema = new mongoose.Schema(
     },
 
     phone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    alternatePhone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    deliveryPoint: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    landmark: {
       type: String,
       default: "",
       trim: true,

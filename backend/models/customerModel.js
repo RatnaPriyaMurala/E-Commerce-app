@@ -1,4 +1,67 @@
+
 import mongoose from "mongoose";
+
+const customerCartItemSchema = new mongoose.Schema(
+  {
+    productId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    productName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    image: {
+      type: String,
+      default: "",
+    },
+
+    weight: {
+      type: Number,
+      required: true,
+      min: 0.1,
+    },
+
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+
+    preparation: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // Selected prawn variant's MongoDB subdocument ID.
+    variantId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // Display label from the admin-configured variant.
+    variantCount: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // Informational snapshot; the backend must recheck the
+    // authoritative price from the product document at checkout.
+    pricePerKg: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+  },
+  { _id: false }
+);
 
 const customerSchema = new mongoose.Schema(
   {
@@ -88,43 +151,12 @@ const customerSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
-  cartItems: {
-  type: [
-    {
-      productId: {
-        type: String,
-        required: true,
-      },
 
-      productName: {
-        type: String,
-        default: "",
-      },
-
-      image: {
-        type: String,
-        default: "",
-      },
-
-      weight: {
-        type: Number,
-        required: true,
-      },
-
-      quantity: {
-        type: Number,
-        default: 1,
-      },
-
-      preparation: {
-        type: String,
-        default: "",
-      },
+    cartItems: {
+      type: [customerCartItemSchema],
+      default: [],
     },
-  ],
-  default: [],
-},
- },
+  },
   {
     timestamps: true,
   }
