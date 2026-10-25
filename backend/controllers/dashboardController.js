@@ -13,6 +13,9 @@ import customerModel from "../models/customerModel.js";
 
 const dashboard = async (req, res) => {
   try {
+
+console.log("DASHBOARD CONTROLLER VERSION: OCTOBER SORT FIX");
+
     const [
       totalOrders,
       totalProducts,
