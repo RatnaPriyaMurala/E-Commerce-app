@@ -28,6 +28,12 @@ const parseBoolean = (value, defaultValue = false) => {
 const isPrawnCategory = (category) =>
   String(category || "").trim().toLowerCase() === "prawns";
 
+// Lobster and Scampi can use base product price and overall stock.
+const isOptionalPrawnCount = (name, subCategory) =>
+  /\b(lobster|scampi)\b/i.test(
+    `${String(name || "")} ${String(subCategory || "")}`
+  );
+
 /* =========================================================
    PARSE PREPARATION OPTIONS
 ========================================================= */
@@ -342,45 +348,49 @@ export const addProduct = async (req, res) => {
     }
 
     /* PRAWN VARIANTS */
+/* PRAWN VARIANTS */
 
-    let parsedVariants = [];
+let parsedVariants = [];
 
-    try {
-      parsedVariants = isPrawnCategory(category)
-        ? parsePrawnVariants(variants)
-        : [];
+try {
+  parsedVariants = isPrawnCategory(category)
+    ? parsePrawnVariants(variants)
+    : [];
 
-      if (isPrawnCategory(category) && parsedVariants.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Add at least one prawn count variant",
-        });
-      }
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
+  const optionalCount = isPrawnCategory(category) &&
+    isOptionalPrawnCount(name, subCategory);
 
-    /*
-     * For prawns, product stock is the sum of the individual
-     * variant stocks. This prevents the overall stock from
-     * disagreeing with the count-specific stock.
-     */
+  
+} catch (error) {
+  return res.status(400).json({
+    success: false,
+    message: error.message,
+  });
+}
 
-    const finalStock = isPrawnCategory(category)
-      ? parsedVariants.reduce((total, variant) => total + variant.stock, 0)
-      : numericStock;
+const optionalCount = isPrawnCategory(category) &&
+  isOptionalPrawnCount(name, subCategory);
 
-    const requestedAvailability = parseBoolean(isAvailable, true);
+// Normal prawns use the sum of variant stock.
+// Lobster and Scampi without variants use overall stock.
+const hasPrawnVariants =
+  isPrawnCategory(category) && parsedVariants.length > 0;
 
-    const finalAvailability = isPrawnCategory(category)
-      ? requestedAvailability &&
-        parsedVariants.some(
-          (variant) => variant.isAvailable && variant.stock > 0
-        )
-      : requestedAvailability && finalStock > 0;
+const finalStock = hasPrawnVariants
+  ? parsedVariants.reduce(
+      (total, variant) => total + variant.stock,
+      0
+    )
+  : numericStock;
+
+const requestedAvailability = parseBoolean(isAvailable, true);
+
+const finalAvailability = hasPrawnVariants
+  ? requestedAvailability &&
+    parsedVariants.some(
+      (variant) => variant.isAvailable && variant.stock > 0
+    )
+  : requestedAvailability && finalStock > 0;
 
     /* IMAGE UPLOAD */
 
@@ -733,33 +743,36 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    if (isPrawnCategory(finalCategory) && parsedVariants.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Add at least one prawn count variant",
-      });
-    }
+    const optionalCount =
+  isPrawnCategory(finalCategory) &&
+  isOptionalPrawnCount(name, finalSubCategory);
 
-    /*
-     * Prawn stock is derived from its variant stock.
-     * Other categories continue to use the normal stock field.
-     */
 
-    const finalStock = isPrawnCategory(finalCategory)
-      ? parsedVariants.reduce((total, variant) => total + variant.stock, 0)
-      : numericStock;
 
-    const requestedAvailability = parseBoolean(
-      isAvailable,
-      existingProduct.isAvailable !== false
-    );
+// Ordinary prawns use variant stock.
+// Lobster and Scampi without variants use overall stock.
+const hasPrawnVariants =
+  isPrawnCategory(finalCategory) && parsedVariants.length > 0;
 
-    const finalAvailability = isPrawnCategory(finalCategory)
-      ? requestedAvailability &&
-        parsedVariants.some(
-          (variant) => variant.isAvailable && variant.stock > 0
-        )
-      : requestedAvailability && finalStock > 0;
+const finalStock = hasPrawnVariants
+  ? parsedVariants.reduce(
+      (total, variant) => total + variant.stock,
+      0
+    )
+  : numericStock;
+
+const requestedAvailability = parseBoolean(
+  isAvailable,
+  existingProduct.isAvailable !== false
+);
+
+const finalAvailability = hasPrawnVariants
+  ? requestedAvailability &&
+    parsedVariants.some(
+      (variant) => variant.isAvailable && variant.stock > 0
+    )
+  : requestedAvailability && finalStock > 0;
+
 
     /* UPDATE DATA */
 

@@ -48,7 +48,8 @@ const Cart = () => {
 
         const variantId = String(line.variantId || "");
         const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
-        const selectedVariant = hasVariants
+        const countOptional = /\b(lobster|scampi)\b/i.test(String(product.name || ""));
+        const selectedVariant = hasVariants && variantId
           ? product.variants.find((v) => String(v._id || v.id || "") === variantId) || null
           : null;
         const preparation = String(line.preparation || "").trim();
@@ -58,7 +59,9 @@ const Cart = () => {
           selectedVariant?.pricePerKg ?? line.pricePerKg ?? product.price ?? 0
         );
         const category = String(product.category || "").trim().toLowerCase();
-        const requiresPreparation = !["dry fish", "dry prawns", "pickles"].includes(category);
+        const requiresPreparation =
+          !["boneless", "dry fish", "dry prawns", "pickles"].includes(category) &&
+          !String(product.name || "").toLowerCase().includes("boneless");
         const preparationCharge = requiresPreparation ? 40 * weight * quantity : 0;
         const seafoodTotal = (Number.isFinite(pricePerKg) ? pricePerKg : 0) * weight * quantity;
         const lineKey = storedKey || `${weight}-${preparation.toLowerCase().replace(/\s+/g, "-")}`;
@@ -74,8 +77,10 @@ const Cart = () => {
           variantId,
           variantCount: String(line.variantCount ?? selectedVariant?.count ?? ""),
           selectedVariant,
-          hasVariants,
-          stock: hasVariants ? Number(selectedVariant?.stock ?? 0) : Number(product.stock ?? 0),
+          hasVariants: hasVariants && !(countOptional && !variantId),
+          stock: selectedVariant
+            ? Number(selectedVariant.stock ?? 0)
+            : Number(product.stock ?? 0),
           pricePerKg: Number.isFinite(pricePerKg) ? pricePerKg : 0,
           requiresPreparation,
           preparationCharge,

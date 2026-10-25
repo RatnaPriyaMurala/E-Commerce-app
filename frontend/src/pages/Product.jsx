@@ -53,6 +53,10 @@ const Product = () => {
   const [selectedVariantId, setSelectedVariantId] = useState("");
   const PREPARATION_CHARGE_PER_KG = 40;
 
+  // Count/size selection is optional for these products.
+  const isPrawnCountOptional = (product) =>
+    /\b(lobster|scampi)\b/i.test(String(product?.name || ""));
+
   // Cart edit mode
   const editCart = location.state?.editCart === true;
   const editCartLineKey = location.state?.lineKey || "";
@@ -83,7 +87,8 @@ const Product = () => {
     setProductData(foundProduct);
 
     const variants = Array.isArray(foundProduct.variants) ? foundProduct.variants : [];
-    const firstAvailableVariant = variants.find(
+    const countOptional = isPrawnCountOptional(foundProduct);
+    const firstAvailableVariant = countOptional ? null : variants.find(
       (variant) => variant?.isAvailable !== false && Number(variant?.stock || 0) >= 1
     );
     setSelectedVariantId(String(firstAvailableVariant?._id || firstAvailableVariant?.id || ""));
@@ -117,7 +122,7 @@ const Product = () => {
     if (!productData) return [];
     const category = String(productData.category || "").trim().toLowerCase();
     const name = String(productData.name || "").trim().toLowerCase();
-    if (["dry fish", "dry prawns", "pickles"].includes(category)) return [];
+    if (["boneless", "dry fish", "dry prawns", "pickles"].includes(category) || name.includes("boneless")) return [];
 
     const isPrawn = category.includes("prawn") || name.includes("prawn") || name.includes("shrimp");
     const isCrab = category.includes("crab") || name.includes("crab");
@@ -153,8 +158,11 @@ const Product = () => {
   // ============================================================
 
   const normalizedCategory = String(productData.category || "").trim().toLowerCase();
-  const categoriesWithoutPreparation = ["dry fish", "dry prawns", "pickles"];
-  const requiresPreparation = !categoriesWithoutPreparation.includes(normalizedCategory) && preparationOptions.length > 0;
+  const categoriesWithoutPreparation = ["boneless", "dry fish", "dry prawns", "pickles"];
+  const requiresPreparation =
+    !categoriesWithoutPreparation.includes(normalizedCategory) &&
+    !String(productData.name || "").toLowerCase().includes("boneless") &&
+    preparationOptions.length > 0;
 
   const productVariants = Array.isArray(productData.variants) ? productData.variants : [];
   const selectedVariant = productVariants.find(
@@ -577,7 +585,7 @@ const Product = () => {
           </div>
 
           {/* PRAWN COUNT / SIZE VARIANT */}
-          {productVariants.length > 0 && (
+          {productVariants.length > 0 && !isPrawnCountOptional(productData) && (
             <div className="mt-2.5 rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
               <label htmlFor="prawn-variant" className="mb-2 block text-sm font-bold text-gray-800">
                 Select Prawn Count / Size
@@ -836,12 +844,7 @@ const Product = () => {
                 >
                   <FaShoppingCart />
 
-                  {requiresPreparation &&
-                  !isPreparationSelected
-                    ? "SELECT PREPARATION TO CONTINUE"
-                    : editCart
-                    ? "UPDATE CART"
-                    : "ADD TO CART"}
+               {editCart ? "UPDATE CART" : "ADD TO CART"}
                 </button>
 
                 {!editCart && (
@@ -858,10 +861,7 @@ const Product = () => {
                   >
                     <FaCreditCard />
 
-                    {requiresPreparation &&
-                    !isPreparationSelected
-                      ? "SELECT PREPARATION TO CONTINUE"
-                      : "BUY NOW"}
+                    BUY NOW
                   </button>
                 )}
               </div>

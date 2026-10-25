@@ -44,10 +44,31 @@ const getVariantById = (product, variantId) => {
   );
 };
 
-const requiresPreparation = (product) => {
-  const category = String(product?.category || "").trim().toLowerCase();
+// Lobster and Scampi can be sold without a count variant.
+const isPrawnCountOptional = (product) =>
+  /\b(lobster|scampi)\b/i.test(
+    `${String(product?.name || "")} ${String(product?.subCategory || "")}`
+  );
 
-  return !["dry fish", "dry prawns", "pickles"].includes(category);
+const normalizeCategory = (product) =>
+  String(product?.category || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+// Boneless, dry products and pickles do not require preparation.
+const requiresPreparation = (product) => {
+  const category = normalizeCategory(product);
+  const name = String(product?.name || "").trim().toLowerCase();
+
+  return !(
+    category.includes("boneless") ||
+    name.includes("boneless") ||
+    category.includes("dry fish") ||
+    category.includes("dry prawn") ||
+    category.includes("pickle")
+  );
 };
 
 /*
@@ -137,8 +158,7 @@ const validatePreparation = (product, preparation) => {
     if (
       !allowed.some(
         (name) =>
-          normalizePreparation(name) ===
-          normalizePreparation(selected)
+          normalizePreparation(name) === normalizePreparation(selected)
       )
     ) {
       return {
@@ -205,9 +225,7 @@ const getPreparationPrice = (product, preparation) => {
 
 /*
   Normalize current and legacy cart formats.
-
-  Invalid fractional weights are excluded so old cart entries
-  cannot reintroduce fractional quantities.
+  Invalid fractional weights are excluded.
 */
 const normalizeCartData = (cartData) => {
   if (
@@ -305,8 +323,7 @@ const normalizeCartData = (cartData) => {
 };
 
 /*
-  Rebuild the customer's separate cart from database product
-  and variant prices.
+  Rebuild the customer's separate cart using database prices.
 */
 const syncCustomerCart = async (userId, cartData) => {
   try {
@@ -357,14 +374,18 @@ const syncCustomerCart = async (userId, cartData) => {
 };
 
 /*
-  Validate the product or selected prawn variant and return
-  its available stock.
+  Validate the product or selected prawn variant.
+  Lobster and Scampi can use base product stock without a variant.
 */
 const getAvailableOption = (product, variantId) => {
   const variants = getProductVariants(product);
+  const selectedVariantId = String(variantId || "").trim();
 
-  if (variants.length > 0) {
-    if (!variantId) {
+  if (
+    variants.length > 0 &&
+    !(isPrawnCountOptional(product) && !selectedVariantId)
+  ) {
+    if (!selectedVariantId) {
       return {
         valid: false,
         status: 400,
@@ -372,7 +393,7 @@ const getAvailableOption = (product, variantId) => {
       };
     }
 
-    const variant = getVariantById(product, variantId);
+    const variant = getVariantById(product, selectedVariantId);
 
     if (!variant) {
       return {
@@ -402,7 +423,7 @@ const getAvailableOption = (product, variantId) => {
     };
   }
 
-  if (variantId) {
+  if (selectedVariantId) {
     return {
       valid: false,
       status: 400,
@@ -526,7 +547,7 @@ const addToCart = async (req, res) => {
       normalizedVariantId
     );
 
-    // Never trust pricePerKg supplied by the browser.
+    // Never trust the price supplied by the browser.
     const pricePerKg = selectedVariant
       ? Number(selectedVariant.pricePerKg)
       : getPreparationPrice(product, selectedPreparation);
@@ -643,10 +664,7 @@ const updateCartWeight = async (req, res) => {
 
     let actualOldLineKey = oldLineKey;
 
-    if (
-      !actualOldLineKey ||
-      !productCart[actualOldLineKey]
-    ) {
+    if (!actualOldLineKey || !productCart[actualOldLineKey]) {
       actualOldLineKey = Object.keys(productCart).find((key) => {
         const line = productCart[key];
 
@@ -680,7 +698,7 @@ const updateCartWeight = async (req, res) => {
       oldLine.variantId || requestedVariantId || ""
     ).trim();
 
-    // Prevent changing the variant through a weight-update request.
+    // Prevent changing variants through a weight-update request.
     if (
       requestedVariantId &&
       oldLine.variantId &&
@@ -840,10 +858,7 @@ const removeFromCart = async (req, res) => {
     const productCart = cartData[productId];
     let actualLineKey = lineKey;
 
-    if (
-      !actualLineKey ||
-      !productCart[actualLineKey]
-    ) {
+    if (!actualLineKey || !productCart[actualLineKey]) {
       if (
         weight !== undefined ||
         preparation !== undefined ||
@@ -866,8 +881,7 @@ const removeFromCart = async (req, res) => {
 
           const variantMatches =
             variantId === undefined ||
-            String(line?.variantId || "") ===
-              String(variantId || "");
+            String(line?.variantId || "") === String(variantId || "");
 
           return (
             weightMatches &&
@@ -886,7 +900,7 @@ const removeFromCart = async (req, res) => {
       weight === undefined &&
       variantId === undefined
     ) {
-      // Legacy behavior: no line selector removes the entire product.
+      // Legacy behavior: no line selector removes the whole product.
       delete cartData[productId];
     } else {
       return res.status(404).json({

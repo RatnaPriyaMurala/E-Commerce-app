@@ -620,50 +620,271 @@ const userOrders = async (req, res) => {
 // UPDATE PROFILE
 // ======================================
 
+// ======================================
+// UPDATE PROFILE
+// ======================================
+
 const updateProfile = async (req, res) => {
     try {
         const {
             name,
+            firstName,
+            lastName,
             phone,
-            address,
-        } = req.body;
+        } = req.body || {};
 
-        const updateData = {};
+        // The profile form sends delivery details inside `address`.
+        // Supports older requests as well.
+        const incomingAddress =
+            req.body?.address &&
+            typeof req.body.address === "object" &&
+            !Array.isArray(req.body.address)
+                ? req.body.address
+                : null;
+
+        const clean = (value, fallback = "") => {
+            if (value === undefined || value === null) {
+                return fallback;
+            }
+
+            return String(value).trim();
+        };
+
+        // Find the existing user.
+        const existingUser = await userModel.findById(
+            req.userId
+        );
+
+        if (!existingUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        // --------------------------------------
+        // UPDATE CUSTOMER NAME
+        // --------------------------------------
+
+        let updatedName = existingUser.name;
 
         if (name !== undefined) {
-            if (!name.trim()) {
+            updatedName = clean(name);
+
+            if (!updatedName) {
                 return res.status(400).json({
                     success: false,
-                    message:
-                        "Name cannot be empty",
+                    message: "Name cannot be empty",
+                });
+            }
+        } else if (
+            firstName !== undefined ||
+            lastName !== undefined
+        ) {
+            const currentParts = clean(existingUser.name)
+                .split(/\s+/)
+                .filter(Boolean);
+
+            const currentFirstName = currentParts.shift() || "";
+            const currentLastName = currentParts.join(" ");
+
+            const nextFirstName = clean(
+                firstName,
+                currentFirstName
+            );
+
+            const nextLastName = clean(
+                lastName,
+                currentLastName
+            );
+
+            if (!nextFirstName) {
+                return res.status(400).json({
+                    success: false,
+                    message: "First name cannot be empty",
                 });
             }
 
-            updateData.name =
-                name.trim();
+            updatedName = [
+                nextFirstName,
+                nextLastName,
+            ].filter(Boolean).join(" ");
+        }
+
+        // --------------------------------------
+        // VALIDATE PRIMARY PHONE
+        // --------------------------------------
+
+        if (phone !== undefined && clean(phone)) {
+            if (!/^\d{10}$/.test(clean(phone))) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Please enter a valid 10-digit phone number",
+                });
+            }
+        }
+
+        // --------------------------------------
+        // PRESERVE EXISTING ADDRESS INFORMATION
+        // --------------------------------------
+
+        const oldAddress =
+            existingUser.address?.toObject?.() ||
+            existingUser.address ||
+            {};
+
+        let nextAddress = oldAddress;
+
+        if (incomingAddress) {
+            nextAddress = {
+                ...oldAddress,
+
+                firstName: clean(
+                    incomingAddress.firstName,
+                    clean(firstName, oldAddress.firstName || "")
+                ),
+
+                lastName: clean(
+                    incomingAddress.lastName,
+                    clean(lastName, oldAddress.lastName || "")
+                ),
+
+                phone: clean(
+                    incomingAddress.phone,
+                    clean(phone, oldAddress.phone || existingUser.phone || "")
+                ),
+
+                alternatePhone: clean(
+                    incomingAddress.alternatePhone,
+                    oldAddress.alternatePhone || ""
+                ),
+
+                deliveryPoint: clean(
+                    incomingAddress.deliveryPoint,
+                    oldAddress.deliveryPoint || ""
+                ),
+
+                landmark: clean(
+                    incomingAddress.landmark,
+                    oldAddress.landmark || ""
+                ),
+
+                address: clean(
+                    incomingAddress.address,
+                    oldAddress.address || ""
+                ),
+
+                city: clean(
+                    incomingAddress.city,
+                    oldAddress.city || ""
+                ),
+
+                state: clean(
+                    incomingAddress.state,
+                    oldAddress.state || ""
+                ),
+
+                zipcode: clean(
+                    incomingAddress.zipcode,
+                    oldAddress.zipcode || ""
+                ),
+
+                country: clean(
+                    incomingAddress.country,
+                    oldAddress.country || "India"
+                ) || "India",
+            };
+
+            // --------------------------------------
+            // VALIDATE ADDRESS PHONE NUMBERS
+            // --------------------------------------
+
+            const mainPhone = clean(
+                incomingAddress.phone,
+                clean(phone, existingUser.phone || "")
+            );
+
+            const alternatePhone = clean(
+                incomingAddress.alternatePhone,
+                oldAddress.alternatePhone || ""
+            );
+
+            if (
+                mainPhone &&
+                !/^\d{10}$/.test(mainPhone)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Please enter a valid 10-digit phone number",
+                });
+            }
+
+            if (
+                alternatePhone &&
+                !/^\d{10}$/.test(alternatePhone)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Please enter a valid 10-digit alternate phone number",
+                });
+            }
+
+            if (
+                alternatePhone &&
+                mainPhone &&
+                alternatePhone === mainPhone
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Alternate phone number must be different from the primary phone number",
+                });
+            }
+
+            // Validate PIN code when provided.
+            if (
+                nextAddress.zipcode &&
+                !/^\d{6}$/.test(nextAddress.zipcode)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Please enter a valid 6-digit PIN code",
+                });
+            }
+        }
+
+        // --------------------------------------
+        // SAVE USER PROFILE
+        // --------------------------------------
+
+        const updateData = {};
+
+        if (updatedName !== existingUser.name) {
+            updateData.name = updatedName;
         }
 
         if (phone !== undefined) {
-            updateData.phone =
-                phone.trim();
+            updateData.phone = clean(phone);
         }
 
-        if (address !== undefined) {
-            updateData.address =
-                address;
+        if (incomingAddress) {
+            updateData.address = nextAddress;
         }
 
-        const user =
-            await userModel
-                .findByIdAndUpdate(
-                    req.userId,
-                    updateData,
-                    {
-                        new: true,
-                        runValidators: true,
-                    }
-                )
-                .select("-password");
+        const user = await userModel.findByIdAndUpdate(
+            req.userId,
+            {
+                $set: updateData,
+            },
+            {
+                new: true,
+                runValidators: true,
+            }
+        ).select("-password");
 
         if (!user) {
             return res.status(404).json({
@@ -672,58 +893,124 @@ const updateProfile = async (req, res) => {
             });
         }
 
-        /* =================================================
-           UPDATE CUSTOMER PROFILE TOO
-        ================================================= */
+        // --------------------------------------
+        // SYNC ADMIN CUSTOMER PROFILE
+        // --------------------------------------
 
-        const customer =
-            await customerModel.findOne({
-                userId: req.userId,
+        let customer = await customerModel.findOne({
+            userId: req.userId,
+        });
+
+        // Create a customer record if one does not exist.
+        if (!customer) {
+            const customerCount =
+                await customerModel.countDocuments();
+
+            const customerId =
+                `CUS${String(customerCount + 1).padStart(6, "0")}`;
+
+            customer = new customerModel({
+                customerId,
+                userId: user._id,
+
+                firstName: clean(
+                    user.address?.firstName,
+                    user.name || "Customer"
+                ),
+
+                lastName: clean(
+                    user.address?.lastName
+                ),
+
+                phone:
+                    user.address?.phone ||
+                    user.phone ||
+                    "",
+
+                totalOrders: 0,
+                totalSpent: 0,
+                totalWeight: 0,
+                lastOrder: null,
             });
-
-        if (customer) {
-            if (name !== undefined) {
-                customer.firstName =
-                    name.trim();
-            }
-
-            if (phone !== undefined) {
-                customer.phone =
-                    phone.trim();
-            }
-
-            if (address !== undefined) {
-                customer.address =
-                    address.address || "";
-
-                customer.city =
-                    address.city || "";
-
-                customer.state =
-                    address.state || "";
-
-                customer.zipcode =
-                    address.zipcode || "";
-
-                customer.country =
-                    address.country ||
-                    "India";
-            }
-
-            await customer.save();
         }
+
+        // Keep the customer's name synchronized.
+        if (
+            name !== undefined ||
+            firstName !== undefined ||
+            lastName !== undefined
+        ) {
+            const nameParts = clean(user.name)
+                .split(/\s+/)
+                .filter(Boolean);
+
+            customer.firstName = clean(
+                user.address?.firstName,
+                nameParts.shift() || "Customer"
+            );
+
+            customer.lastName = clean(
+                user.address?.lastName,
+                nameParts.join(" ")
+            );
+        }
+
+        // Synchronize contact information.
+        if (phone !== undefined || incomingAddress) {
+            customer.phone = clean(
+                user.address?.phone,
+                user.phone || ""
+            );
+        }
+
+        // Synchronize all delivery fields.
+        if (incomingAddress) {
+            customer.alternatePhone = clean(
+                user.address?.alternatePhone
+            );
+
+            customer.deliveryPoint = clean(
+                user.address?.deliveryPoint
+            );
+
+            customer.landmark = clean(
+                user.address?.landmark
+            );
+
+            customer.address = clean(
+                user.address?.address
+            );
+
+            customer.city = clean(
+                user.address?.city
+            );
+
+            customer.state = clean(
+                user.address?.state
+            );
+
+            customer.zipcode = clean(
+                user.address?.zipcode
+            );
+
+            customer.country = clean(
+                user.address?.country,
+                "India"
+            ) || "India";
+        }
+
+        await customer.save();
+
+        // --------------------------------------
+        // RESPONSE
+        // --------------------------------------
 
         return res.json({
             success: true,
-
+            message: "Profile updated successfully",
             user,
-
-            customer:
-                customer || null,
-
-            customerId:
-                customer?.customerId ||
-                null,
+            customer,
+            customerId: customer.customerId || null,
         });
 
     } catch (error) {

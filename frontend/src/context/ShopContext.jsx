@@ -186,6 +186,11 @@ export const ShopContextProvider = ({ children }) => {
       : baseKey;
   };
 
+  // Lobster and Scampi Prawns can be sold at the product's own price/stock
+  // without forcing the customer to choose a count/size variant.
+  const isPrawnCountOptional = (product) =>
+    /\b(lobster|scampi)\b/i.test(String(product?.name || ""));
+
   const getPrawnVariants = (product) =>
     Array.isArray(product?.variants) ? product.variants : [];
 
@@ -213,6 +218,10 @@ export const ShopContextProvider = ({ children }) => {
     const subCategory = normalizeCategoryText(product?.subCategory);
     const combined = `${category} ${subCategory} ${name}`;
 
+    // Boneless products use their listed price and never require preparation.
+    // Check this before the generic fish rule because "Boneless Fish" also
+    // contains the word "fish".
+    if (/boneless/.test(combined)) return "no-preparation";
     if (/dry\s*fish|dry\s*prawns?|pickles?/.test(combined)) return "no-preparation";
     if (/prawns?|shrimp/.test(combined)) return "prawns";
     if (/crabs?/.test(combined)) return "crab";
@@ -873,7 +882,9 @@ export const ShopContextProvider = ({ children }) => {
     const variants = getPrawnVariants(product);
     const numericLegacyPrice = selectedVariantIdOrPrice !== "" &&
       Number.isFinite(Number(selectedVariantIdOrPrice)) && !variant;
-    if (variants.length > 0 && !variant) return toast.error("Please select a prawn count option.");
+    if (variants.length > 0 && !variant && !isPrawnCountOptional(product)) {
+      return toast.error("Please select a prawn count option.");
+    }
     if (variant && variant.isAvailable === false) return toast.error("This prawn count option is unavailable.");
 
     const variantId = variant ? String(variant._id || variant.id || "") : "";

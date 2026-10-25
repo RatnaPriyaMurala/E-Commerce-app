@@ -80,6 +80,9 @@ const Add = ({ token }) => {
   const [bestseller, setBestseller] = useState(false);
 
   const isPrawns = category === "Prawns";
+  // Lobster and Scampi can use base price/overall stock without a count variant.
+  const isOptionalPrawnCount =
+    isPrawns && /\b(lobster|scampi)\b/i.test(`${name} ${subCategory}`);
   const isBoneless = category === "Boneless";
   const isDryCategory = [
     "Dry Fish",
@@ -386,10 +389,8 @@ const Add = ({ token }) => {
       let finalPrawnVariants = [];
 
       if (isPrawns) {
-        if (prawnVariants.length === 0) {
-          toast.error("Please add at least one prawn count variant");
-          return;
-        }
+        // Count variants are required for ordinary prawns, but optional for Lobster and Scampi.
+
 
         const usedCounts = new Set();
 
@@ -723,7 +724,9 @@ const Add = ({ token }) => {
               )}
               {isPrawns && (
                 <p className="text-xs text-gray-500 mt-2">
-                  Each prawn count variant below has its own price.
+                  {isOptionalPrawnCount
+                    ? "For Lobster and Scampi, this base price and overall stock can be used without count variants. Add variants only if customers should choose a count."
+                    : "Each prawn count variant below has its own price and stock."}
                 </p>
               )}
             </div>
@@ -824,7 +827,9 @@ const Add = ({ token }) => {
                 Prawn Count Variants
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Each count has a separate price and stock.
+                {isOptionalPrawnCount
+                  ? "Count variants are optional for Lobster and Scampi. Without variants, customers use the base price and overall stock."
+                  : "Each count has a separate price and stock. Add at least one count variant for this prawn product."}
               </p>
             </div>
 
@@ -844,7 +849,9 @@ const Add = ({ token }) => {
                 No count variants added yet.
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                Click Add Count to add the first variant.
+                {isOptionalPrawnCount
+                  ? "No count variants are needed for this product. Customers can order using the base price and overall stock."
+                  : "Click Add Count to add the first variant."}
               </p>
             </div>
           ) : (

@@ -6,6 +6,7 @@ import {
     userOrders,
     allOrders,
     updateOrderStatus,
+    updateOrderConfirmation,
     cancelOrder,
 } from "../controllers/orderController.js";
 
@@ -65,6 +66,12 @@ orderRouter.post(
     "/update-status",
     adminAuth,
     updateOrderStatus
+);
+
+orderRouter.post(
+    "/update-confirmation",
+    adminAuth,
+    updateOrderConfirmation
 );
 
 export default orderRouter;

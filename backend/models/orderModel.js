@@ -238,6 +238,51 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Order Placed",
     },
+        // Confirmation call: independent of delivery status.
+    confirmationStatus: {
+      type: String,
+      enum: [
+        "Call Required",
+        "Confirmed",
+        "No Answer - Retry",
+        "Needs Clarification",
+      ],
+      default: "Call Required",
+      index: true,
+    },
+
+    // Message shown to the customer in My Orders.
+    confirmationMessage: {
+      type: String,
+      default:
+        "Payment received. Our team will call you to confirm your delivery point and order details.",
+      trim: true,
+      maxlength: 500,
+    },
+
+    confirmationNote: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 500,
+    },
+
+    confirmationUpdatedAt: {
+      type: Date,
+      default: null,
+    },
+
+    confirmationUpdatedBy: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    confirmationCallAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
 
     date: {
       type: Number,

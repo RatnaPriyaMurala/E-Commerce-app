@@ -25,6 +25,7 @@ const Orders = ({ token }) => {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [confirmationDrafts, setConfirmationDrafts] = useState({});
 
   // ===============================
   // LOAD ORDERS
@@ -101,6 +102,51 @@ const Orders = ({ token }) => {
       );
     }
   };
+
+
+const updateConfirmation = async (
+  orderId,
+  confirmationStatus,
+  confirmationMessage,
+  confirmationNote
+) => {
+  try {
+    const response = await axios.post(
+      backendUrl + "/api/order/update-confirmation",
+      {
+        orderId,
+        confirmationStatus,
+        confirmationMessage,
+        confirmationNote,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.data.success) {
+      toast.success("Order confirmation saved");
+      setConfirmationDrafts((previous) => {
+        const updated = { ...previous };
+        delete updated[orderId];
+        return updated;
+      });
+      await getOrders();
+    } else {
+      toast.error(
+        response.data.message || "Failed to save confirmation"
+      );
+    }
+  } catch (error) {
+    console.error("Confirmation update error:", error);
+    toast.error(
+      error.response?.data?.message ||
+        "Failed to save confirmation"
+    );
+  }
+};
 
   // ===============================
   // SEARCH + FILTER
@@ -516,6 +562,24 @@ const Orders = ({ token }) => {
 
                   </h3>
 
+                  {address.deliveryPoint && (
+  <p className="font-semibold text-emerald-700 mb-2">
+    Delivery Point: {address.deliveryPoint}
+  </p>
+)}
+
+{address.landmark && (
+  <p className="text-gray-700 mb-2">
+    Nearby Landmark: {address.landmark}
+  </p>
+)}
+
+{address.alternatePhone && (
+  <p className="text-gray-700 mb-2">
+    Alternate Phone: {address.alternatePhone}
+  </p>
+)}
+
                   <p className="text-gray-700">
                     {address.address || "Address unavailable"}
                   </p>
@@ -586,6 +650,138 @@ const Orders = ({ token }) => {
                 </div>
 
               </div>
+
+
+
+{/* ===============================
+                  ORDER CONFIRMATION
+              =============================== */}
+
+              <div className="mx-5 md:mx-6 mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 md:p-5">
+                <h3 className="text-lg font-bold text-gray-800">
+                  Customer Order Confirmation
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-600">
+                  Update the call result and customer-visible message. Internal notes are only for admins.
+                </p>
+
+                {order.paymentStatus === "Paid" && !isLocked ? (
+                  (() => {
+                    const draft = confirmationDrafts[order._id] || {};
+                    const status =
+                      draft.status ?? order.confirmationStatus ?? "Call Required";
+                    const message =
+                      draft.message ??
+                      order.confirmationMessage ??
+                      "Payment received. Our team will call you to confirm your delivery point and order details.";
+                    const note = draft.note ?? order.confirmationNote ?? "";
+
+                    return (
+                      <div className="mt-4 space-y-4">
+                        <div>
+                          <label className="mb-1 block text-sm font-semibold">
+                            Confirmation Status
+                          </label>
+                          <select
+                            value={status}
+                            onChange={(e) =>
+                              setConfirmationDrafts((previous) => ({
+                                ...previous,
+                                [order._id]: {
+                                  ...previous[order._id],
+                                  status: e.target.value,
+                                },
+                              }))
+                            }
+                            className="w-full rounded-lg border border-gray-300 bg-white p-3"
+                          >
+                            <option value="Call Required">Call Required</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="No Answer - Retry">No Answer - Retry</option>
+                            <option value="Needs Clarification">Needs Clarification</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-sm font-semibold">
+                            Message Visible to Customer
+                          </label>
+                          <textarea
+                            rows={3}
+                            maxLength={500}
+                            value={message}
+                            onChange={(e) =>
+                              setConfirmationDrafts((previous) => ({
+                                ...previous,
+                                [order._id]: {
+                                  ...previous[order._id],
+                                  message: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Enter the message the customer should see"
+                            className="w-full rounded-lg border border-gray-300 bg-white p-3"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            {message.length}/500 characters
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-sm font-semibold">
+                            Internal Admin Note (not shown to customer)
+                          </label>
+                          <textarea
+                            rows={2}
+                            maxLength={1000}
+                            value={note}
+                            onChange={(e) =>
+                              setConfirmationDrafts((previous) => ({
+                                ...previous,
+                                [order._id]: {
+                                  ...previous[order._id],
+                                  note: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Example: Called customer; delivery point confirmed"
+                            className="w-full rounded-lg border border-gray-300 bg-white p-3"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateConfirmation(order._id, status, message, note)
+                          }
+                          className="rounded-lg bg-cyan-700 px-5 py-3 font-semibold text-white hover:bg-cyan-800"
+                        >
+                          Save Confirmation
+                        </button>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <p className="mt-3 text-sm text-gray-600">
+                    Confirmation can be edited only for paid orders that are not delivered or cancelled.
+                  </p>
+                )}
+
+                <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3">
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    Current Saved Status
+                  </p>
+                  <p className="mt-1 font-bold text-gray-800">
+                    {order.confirmationStatus || "Call Required"}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">
+                    {order.confirmationMessage ||
+                      "Payment received. Our team will call you to confirm your delivery point and order details."}
+                  </p>
+                </div>
+              </div>
+
 
               {/* ===============================
                   ORDERED PRODUCTS
@@ -830,7 +1026,8 @@ const Orders = ({ token }) => {
 
                 </div>
 
-                {/* LOCK MESSAGE */}
+
+{/* LOCK MESSAGE */}
 
                 {isLocked && (
                   <p className="text-xs text-gray-500 mt-4">

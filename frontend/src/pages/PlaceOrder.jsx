@@ -141,8 +141,28 @@ const PlaceOrder = () => {
     return items;
   }, [isBuyNow, buyNowItem, products, cartItems]);
 
-  const categoriesWithoutPreparation = ["dry fish", "dry prawns", "pickles"];
+  const categoriesWithoutPreparation = ["boneless", "dry fish", "dry prawns", "pickles"];
   const preparationChargePerKg = 40;
+
+  // Use both category and product name because older boneless products may
+  // still be saved under "Fresh Water Fish" in the database.
+  const isBonelessItem = (item, product = null) => {
+    const category = String(product?.category || item?.category || "")
+      .trim()
+      .toLowerCase();
+    const name = String(product?.name || item?.name || "")
+      .trim()
+      .toLowerCase();
+    return category === "boneless" || name.includes("boneless");
+  };
+
+  const itemRequiresPreparation = (item, product = null) => {
+    const category = String(product?.category || item?.category || "")
+      .trim()
+      .toLowerCase();
+    return !isBonelessItem(item, product) &&
+      !categoriesWithoutPreparation.includes(category);
+  };
 
   const seafoodSubtotal = useMemo(() => {
     return Number(orderItems.reduce((sum, item) => {
@@ -152,12 +172,14 @@ const PlaceOrder = () => {
 
   const preparationAmount = useMemo(() => {
     return Number(orderItems.reduce((sum, item) => {
-      const category = String(item.category || "").trim().toLowerCase();
-      const requiresPreparation = !categoriesWithoutPreparation.includes(category);
+      const product = products?.find(
+        (productItem) => String(productItem._id) === String(item._id)
+      );
+      const requiresPreparation = itemRequiresPreparation(item, product);
       if (!requiresPreparation || !String(item.preparation || "").trim()) return sum;
       return sum + preparationChargePerKg * Number(item.weight || 0) * Number(item.quantity || 1);
     }, 0).toFixed(2));
-  }, [orderItems]);
+  }, [orderItems, products]);
 
   // No delivery fee is charged.
   const deliveryAmount = 0;
@@ -353,12 +375,7 @@ const PlaceOrder = () => {
           productItem._id === item._id
       );
 
-      const category = String(
-        product?.category || item.category || ""
-      ).trim().toLowerCase();
-
-      const requiresPreparation =
-        !categoriesWithoutPreparation.includes(category);
+      const requiresPreparation = itemRequiresPreparation(item, product);
 
       if (
         requiresPreparation &&

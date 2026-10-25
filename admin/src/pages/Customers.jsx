@@ -164,35 +164,60 @@ const Customers = ({ token }) => {
         .toLowerCase();
 
       const matchingOrders = allOrders.filter((order) => {
-        const orderUserId = getUserId(order.userId);
+  const orderUserId = getUserId(order.userId);
 
-        // User ID is the preferred, reliable relationship.
-        if (customerUserId && orderUserId) {
-          return customerUserId === orderUserId;
-        }
+  // Match by user ID whenever it agrees.
+  if (
+    customerUserId &&
+    orderUserId &&
+    customerUserId === orderUserId
+  ) {
+    return true;
+  }
 
-        // Fallback for older customer records without a userId.
-        const orderPhone = String(
-          order.address?.phone || ""
-        ).replace(/\D/g, "");
+  // Fallback for older records with missing or mismatched IDs.
+  // Only use a phone number when both records have one.
+  const orderPhone = String(
+    order.address?.phone || ""
+  ).replace(/\D/g, "");
 
-        const orderName = getOrderCustomerName(order).toLowerCase();
+  if (
+    customerPhone &&
+    orderPhone &&
+    customerPhone === orderPhone
+  ) {
+    return true;
+  }
 
-        if (customerPhone && orderPhone) {
-          return customerPhone === orderPhone;
-        }
+  // Last fallback: exact full-name match.
+  const orderName = getOrderCustomerName(order)
+    .trim()
+    .toLowerCase();
 
-        return Boolean(
-          customerName &&
-          orderName &&
-          customerName === orderName
-        );
-      });
+  return Boolean(
+    customerName &&
+    orderName &&
+    customerName === orderName
+  );
+});
+const getOrderTimestamp = (order) => {
+  const value = order.date ?? order.createdAt;
 
-      matchingOrders.sort(
-        (a, b) => Number(b.date || 0) - Number(a.date || 0)
-      );
+  if (value == null) return 0;
 
+  // Supports numeric milliseconds, ISO date strings,
+  // and MongoDB date values serialized as strings.
+  const timestamp =
+    typeof value === "number"
+      ? value
+      : new Date(value).getTime();
+
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+matchingOrders.sort(
+  (a, b) => getOrderTimestamp(b) - getOrderTimestamp(a)
+);
       setCustomerOrders(matchingOrders);
 
       if (matchingOrders.length === 0) {

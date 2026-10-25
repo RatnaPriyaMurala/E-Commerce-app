@@ -23,6 +23,7 @@ const CATEGORIES = [
   "Fresh Water Fish",
   "Sea Fish",
   "Kolkata Fish",
+   "Boneless",
   "Prawns",
   "Crabs",
   "Dry Fish",
@@ -164,17 +165,41 @@ if (search.trim()) {
     // ----------------------------------------------------------
     // CATEGORY
     // ----------------------------------------------------------
+// ----------------------------------------------------------
+// CATEGORY FILTER — INCLUDING BONELESS PRODUCTS
+// ----------------------------------------------------------
 
-    if (category.length > 0) {
-      result = result.filter((item) =>
-        category.some(
-          (selectedCategory) =>
-            selectedCategory.toLowerCase() ===
-            item.category?.toLowerCase()
-        )
+if (category.length > 0) {
+  result = result.filter((item) => {
+    const productCategory = String(item.category || "")
+      .trim()
+      .toLowerCase();
+
+    const productName = String(item.name || "")
+      .trim()
+      .toLowerCase();
+
+    const isBoneless =
+      productCategory === "boneless" ||
+      productName.includes("boneless");
+
+    return category.some((selectedCategory) => {
+      const selected = selectedCategory.trim().toLowerCase();
+
+      // Show every boneless product, even if its saved
+      // database category is still "Fresh Water Fish".
+      if (selected === "boneless") {
+        return isBoneless;
+      }
+
+      // Do not show boneless products under other categories.
+      return (
+        !isBoneless &&
+        productCategory === selected
       );
-    }
-
+    });
+  });
+}
     // ----------------------------------------------------------
     // SORT
     // ----------------------------------------------------------

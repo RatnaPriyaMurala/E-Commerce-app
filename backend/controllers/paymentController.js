@@ -1,4 +1,3 @@
-
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
@@ -20,21 +19,29 @@ const razorpay = new Razorpay({
    HELPERS
 ========================================================= */
 
-const PREPARATION_CHARGE_PER_KG = 40;
-
 const roundMoney = (value) =>
   Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+
+/* =========================================================
+   PREPARATION + PRICE HELPERS
+========================================================= */
+
+const PREPARATION_CHARGE_PER_KG = 40;
 
 const normalizeCategory = (product) =>
   String(product?.category || "")
     .trim()
     .toLowerCase()
-    .replace(/[_-]+/g, " ");
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
 
 const requiresPreparation = (product) => {
   const category = normalizeCategory(product);
+  const name = String(product?.name || "").trim().toLowerCase();
 
   return !(
+    category.includes("boneless") ||
+    name.includes("boneless") ||
     category.includes("dry fish") ||
     category.includes("dry prawn") ||
     category.includes("pickle")
@@ -50,12 +57,7 @@ const allowedPreparations = (product) => {
     return ["Whole Cleaned", "Uncleaned"];
   }
 
-  return [
-    "Whole Cleaned",
-    "Uncleaned",
-    "Curry Cut",
-    "Fry Cut",
-  ];
+  return ["Whole Cleaned", "Uncleaned", "Curry Cut", "Fry Cut"];
 };
 
 const getVariantById = (product, variantId) => {
@@ -63,13 +65,16 @@ const getVariantById = (product, variantId) => {
     ? product.variants
     : [];
 
-  if (!variants.length || !variantId) return null;
+  if (!variants.length) return null;
+
+  const requestedId = String(variantId || "").trim();
+
+  if (!requestedId) return null;
 
   return (
     variants.find(
       (variant) =>
-        String(variant?._id || variant?.id || "") ===
-        String(variantId)
+        String(variant?._id || variant?.id || "") === requestedId
     ) || null
   );
 };
@@ -95,6 +100,12 @@ const getBasePricePerKg = (product, variant) => {
     ? productPrice
     : 0;
 };
+
+// Lobster and Scampi do not require a count variant.
+const isPrawnCountOptional = (product) =>
+  /\b(lobster|scampi)\b/i.test(
+    `${String(product?.name || "")} ${String(product?.subCategory || "")}`
+  );
 
 /* =========================================================
    ADDRESS
@@ -154,7 +165,6 @@ const validateAddress = (address) => {
 
 /* =========================================================
    ORDER ITEM VALIDATION
-   Never trust frontend prices.
 ========================================================= */
 
 const validateOrderItems = async (items) => {
@@ -176,6 +186,7 @@ const validateOrderItems = async (items) => {
     }
 
     const variantId = String(item.variantId || "").trim();
+
     const variants = Array.isArray(product.variants)
       ? product.variants
       : [];
@@ -189,7 +200,14 @@ const validateOrderItems = async (items) => {
     const category = normalizeCategory(product);
     const isPrawns = category.includes("prawn");
 
-    if (isPrawns && variants.length && !variant) {
+    // Normal prawns need a valid count variant.
+    // Lobster and Scampi can use the base product price and stock.
+    if (
+      isPrawns &&
+      variants.length &&
+      !variant &&
+      !isPrawnCountOptional(product)
+    ) {
       throw new Error(
         `Please select a valid prawn size/count for ${product.name}`
       );
@@ -216,6 +234,7 @@ const validateOrderItems = async (items) => {
     const weight = Number(item.weight);
     const quantity = Number(item.quantity ?? 1);
 
+    // Whole kilograms only.
     if (!Number.isInteger(weight) || weight < 1) {
       throw new Error(
         `Weight for ${product.name} must be a whole number of at least 1 KG`
@@ -254,10 +273,11 @@ const validateOrderItems = async (items) => {
 
     if (!needsPreparation && preparation) {
       throw new Error(
-        `${product.name} does not have a preparation option`
+        `${product.name} does not have a preparation charge or preparation option`
       );
     }
 
+    // Always calculate the price using the database.
     const pricePerKg = getBasePricePerKg(product, variant);
 
     if (!Number.isFinite(pricePerKg) || pricePerKg <= 0) {
@@ -270,6 +290,7 @@ const validateOrderItems = async (items) => {
       pricePerKg * requiredStock
     );
 
+    // Boneless, dry fish, dry prawns and pickles get no preparation fee.
     const preparationChargePerKg = needsPreparation
       ? PREPARATION_CHARGE_PER_KG
       : 0;
@@ -285,26 +306,21 @@ const validateOrderItems = async (items) => {
     validatedItems.push({
       productId: product._id,
       name: product.name,
-
       image:
         Array.isArray(product.image) && product.image.length > 0
           ? product.image[0]
           : "",
-
       price: pricePerKg,
       pricePerKg,
       weight,
       quantity,
       preparation,
-
       variantId: variant
         ? String(variant._id || variant.id || variantId)
         : "",
-
       variantCount: String(
         variant?.count || variant?.label || item.variantCount || ""
       ),
-
       preparationChargePerKg,
       preparationSubtotal,
       seafoodSubtotal,
@@ -316,7 +332,7 @@ const validateOrderItems = async (items) => {
 };
 
 /* =========================================================
-   STOCK REDUCTION
+   STOCK REDUCTION + RESTORE
 ========================================================= */
 
 const reduceOrderStock = async (validatedItems) => {
@@ -353,7 +369,9 @@ const reduceOrderStock = async (validatedItems) => {
           isAvailable: { $ne: false },
         },
         {
-          $inc: { stock: -requiredStock },
+          $inc: {
+            stock: -requiredStock,
+          },
         },
         { new: true }
       );
@@ -372,10 +390,6 @@ const reduceOrderStock = async (validatedItems) => {
     }
   }
 };
-
-/* =========================================================
-   STOCK RESTORE
-========================================================= */
 
 const restoreOrderStock = async (validatedItems) => {
   for (const item of validatedItems) {
@@ -398,8 +412,12 @@ const restoreOrderStock = async (validatedItems) => {
       await productModel.findByIdAndUpdate(
         item.productId,
         {
-          $inc: { stock: restoreStock },
-          $set: { isAvailable: true },
+          $inc: {
+            stock: restoreStock,
+          },
+          $set: {
+            isAvailable: true,
+          },
         }
       );
     }
@@ -412,7 +430,9 @@ const restoreOrderStock = async (validatedItems) => {
 
 const createRazorpayOrder = async (req, res) => {
   try {
-    const validatedItems = await validateOrderItems(req.body?.items);
+    const validatedItems = await validateOrderItems(
+      req.body?.items
+    );
 
     const subtotal = roundMoney(
       validatedItems.reduce(
@@ -421,7 +441,7 @@ const createRazorpayOrder = async (req, res) => {
       )
     );
 
-    // Delivery is free. Ignore any fee supplied by the frontend.
+    // Delivery is free. Ignore any client-supplied delivery fee.
     const deliveryFee = 0;
     const amount = subtotal;
 
@@ -499,6 +519,10 @@ const verifyPayment = async (req, res) => {
       orderData,
     } = req.body;
 
+    /* =====================================================
+       BASIC VALIDATION
+    ===================================================== */
+
     if (
       !razorpay_order_id ||
       !razorpay_payment_id ||
@@ -524,7 +548,9 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    /* Verify signature */
+    /* =====================================================
+       VERIFY RAZORPAY SIGNATURE
+    ===================================================== */
 
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -532,14 +558,11 @@ const verifyPayment = async (req, res) => {
       .digest("hex");
 
     const signatureBuffer = Buffer.from(generatedSignature);
-    const suppliedSignatureBuffer = Buffer.from(razorpay_signature);
+    const receivedSignature = Buffer.from(razorpay_signature);
 
     if (
-      signatureBuffer.length !== suppliedSignatureBuffer.length ||
-      !crypto.timingSafeEqual(
-        signatureBuffer,
-        suppliedSignatureBuffer
-      )
+      signatureBuffer.length !== receivedSignature.length ||
+      !crypto.timingSafeEqual(signatureBuffer, receivedSignature)
     ) {
       return res.status(400).json({
         success: false,
@@ -547,7 +570,9 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    /* Prevent duplicate payment processing */
+    /* =====================================================
+       CHECK DUPLICATE PAYMENT
+    ===================================================== */
 
     const existingOrder = await orderModel.findOne({
       razorpayPaymentId: razorpay_payment_id,
@@ -561,7 +586,9 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    /* Verify logged-in user */
+    /* =====================================================
+       GET USER
+    ===================================================== */
 
     const user = await userModel.findById(req.userId);
 
@@ -572,9 +599,12 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    /* Validate address */
+    /* =====================================================
+       NORMALIZE + VALIDATE ADDRESS
+    ===================================================== */
 
     const normalizedAddress = normalizeAddress(orderData.address);
+
     const addressError = validateAddress(normalizedAddress);
 
     if (addressError) {
@@ -584,9 +614,15 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    /* Recalculate prices from database */
+    /* =====================================================
+       REVALIDATE PRODUCTS + PRICES
+    ===================================================== */
 
     validatedItems = await validateOrderItems(orderData.items);
+
+    /* =====================================================
+       CALCULATE AUTHORITATIVE AMOUNTS
+    ===================================================== */
 
     const subtotal = roundMoney(
       validatedItems.reduce(
@@ -595,11 +631,13 @@ const verifyPayment = async (req, res) => {
       )
     );
 
-    // Delivery is always free.
+    // Delivery is free. Do not trust a fee sent by the browser.
     const deliveryFee = 0;
     const calculatedAmount = roundMoney(subtotal);
 
-    /* Verify the Razorpay order amount */
+    /* =====================================================
+       VERIFY RAZORPAY ORDER
+    ===================================================== */
 
     const razorpayOrder = await razorpay.orders.fetch(
       razorpay_order_id
@@ -619,21 +657,35 @@ const verifyPayment = async (req, res) => {
       });
     }
 
+    // Ensure this Razorpay order belongs to the amount being verified.
     const razorpayAmount = Number(razorpayOrder.amount) / 100;
 
-    if (roundMoney(razorpayAmount) !== calculatedAmount) {
+    if (
+      roundMoney(razorpayAmount) !== roundMoney(calculatedAmount)
+    ) {
       return res.status(400).json({
         success: false,
         message: "Payment amount does not match order amount",
       });
     }
 
-    /* Reduce stock */
+    if (razorpayOrder.status === "paid" && !razorpay_payment_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment details are incomplete",
+      });
+    }
+
+    /* =====================================================
+       REDUCE STOCK
+    ===================================================== */
 
     await reduceOrderStock(validatedItems);
     stockReduced = true;
 
-    /* Save address to user profile */
+    /* =====================================================
+       SAVE USER ADDRESS
+    ===================================================== */
 
     user.phone = normalizedAddress.phone;
 
@@ -651,7 +703,9 @@ const verifyPayment = async (req, res) => {
       country: normalizedAddress.country,
     };
 
-    /* Save order */
+    /* =====================================================
+       CREATE ORDER
+    ===================================================== */
 
     const newOrder = new orderModel({
       userId: req.userId,
@@ -671,7 +725,12 @@ const verifyPayment = async (req, res) => {
 
     await newOrder.save();
 
-    /* Create or update customer record */
+    /* =====================================================
+       CREATE / UPDATE CUSTOMER
+
+       Same userId = same customer.
+       Each order still gets its own order ID.
+    ===================================================== */
 
     try {
       let customer = await customerModel.findOne({
@@ -685,11 +744,14 @@ const verifyPayment = async (req, res) => {
         0
       );
 
+      /* ===================================================
+         NEW CUSTOMER
+      =================================================== */
+
       if (!customer) {
         const customerCount = await customerModel.countDocuments();
-        const customerId = `CUS${String(
-          customerCount + 1
-        ).padStart(6, "0")}`;
+        const nextNumber = customerCount + 1;
+        const customerId = `CUS${String(nextNumber).padStart(6, "0")}`;
 
         customer = await customerModel.create({
           customerId,
@@ -702,47 +764,90 @@ const verifyPayment = async (req, res) => {
           state: normalizedAddress.state,
           zipcode: normalizedAddress.zipcode,
           country: normalizedAddress.country,
+          alternatePhone: normalizedAddress.alternatePhone,
+deliveryPoint: normalizedAddress.deliveryPoint,
+landmark: normalizedAddress.landmark,
           totalOrders: 1,
-          totalSpent: calculatedAmount,
+          totalSpent:
+            newOrder.orderStatus !== "Cancelled"
+              ? calculatedAmount
+              : 0,
           totalWeight: orderWeight,
           lastOrder: Date.now(),
         });
 
         console.log("New customer created:", customer.customerId);
-      } else {
+            } else {
+        /* =================================================
+           EXISTING CUSTOMER
+        ================================================= */
+
         customer.firstName = normalizedAddress.firstName;
         customer.lastName = normalizedAddress.lastName;
-        customer.phone = normalizedAddress.phone;
-        customer.address = normalizedAddress.address;
-        customer.city = normalizedAddress.city;
-        customer.state = normalizedAddress.state;
-        customer.zipcode = normalizedAddress.zipcode;
-        customer.country = normalizedAddress.country;
 
+        // Contact details
+        customer.phone = normalizedAddress.phone;
+        customer.alternatePhone =
+          normalizedAddress.alternatePhone;
+
+        // Delivery details
+        customer.deliveryPoint =
+          normalizedAddress.deliveryPoint;
+
+        customer.landmark =
+          normalizedAddress.landmark;
+
+        customer.address =
+          normalizedAddress.address;
+
+        customer.city =
+          normalizedAddress.city;
+
+        customer.state =
+          normalizedAddress.state;
+
+        customer.zipcode =
+          normalizedAddress.zipcode;
+
+        customer.country =
+          normalizedAddress.country;
+
+        // Update customer purchase summary
         customer.totalOrders =
           Number(customer.totalOrders || 0) + 1;
 
         customer.totalSpent =
-          Number(customer.totalSpent || 0) + calculatedAmount;
+          Number(customer.totalSpent || 0) +
+          calculatedAmount;
 
         customer.totalWeight =
-          Number(customer.totalWeight || 0) + orderWeight;
+          Number(customer.totalWeight || 0) +
+          orderWeight;
 
         customer.lastOrder = Date.now();
 
         await customer.save();
 
-        console.log("Existing customer updated:", customer.customerId);
+        console.log(
+          "Existing customer updated:",
+          customer.customerId
+        );
       }
     } catch (customerError) {
-      // A customer-profile error must not hide an already-paid order.
+      // Do not fail an already-paid order if customer profile saving fails.
       console.error("Customer save error:", customerError);
     }
 
-    /* Clear cart and save user */
+    /* =====================================================
+       CLEAR USER CART
+    ===================================================== */
 
     user.cartData = {};
     await user.save();
+
+    /* =====================================================
+       SUCCESS
+    ===================================================== */
 
     return res.status(200).json({
       success: true,
@@ -753,17 +858,20 @@ const verifyPayment = async (req, res) => {
     console.error("Verify payment error:", error);
 
     /*
-      If stock was reduced but a later step failed, restore the stock.
-      Use the already validated items rather than validating against
-      stock that may already have been reduced.
+      Restore stock if stock was reduced but the order process failed.
     */
-
-    if (stockReduced && validatedItems.length > 0) {
+    if (stockReduced) {
       try {
         await restoreOrderStock(validatedItems);
-        console.log("Stock restored after order processing error");
+
+        console.log(
+          "Stock restored after payment verification error"
+        );
       } catch (restoreError) {
-        console.error("Failed to restore stock:", restoreError);
+        console.error(
+          "Failed to restore stock:",
+          restoreError
+        );
       }
     }
 
@@ -837,7 +945,10 @@ const debugRazorpayPayments = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("RAZORPAY LOOKUP EXCEPTION:", error.message);
+    console.error(
+      "RAZORPAY LOOKUP EXCEPTION:",
+      error.message
+    );
 
     return res.status(500).json({
       success: false,

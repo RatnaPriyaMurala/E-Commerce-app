@@ -582,6 +582,13 @@ const userOrders = async (
    ADMIN: SEARCH AND FILTER ORDERS
 ========================================================= */
 
+
+/* =========================================================
+   ADMIN: SEARCH, FILTER AND PAGINATE ORDERS
+   No default date restriction.
+   Historical orders remain available.
+========================================================= */
+
 const allOrders = async (req, res) => {
   try {
     const {
@@ -591,35 +598,25 @@ const allOrders = async (req, res) => {
       status = "All Status",
       page = 1,
       limit = 20,
-      includeAll = false,
     } = req.body || {};
 
     const currentPage = Math.max(1, Number(page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
+    const pageSize = Math.min(
+      100,
+      Math.max(1, Number(limit) || 20)
+    );
 
     const filter = {};
 
-    // India local-day boundaries (UTC+05:30).
-    // Example startDate: "2026-10-16"
+    // Only apply date filters when explicitly requested.
+    // Date inputs represent Indian local calendar days.
     const indiaStartOfDay = (date) =>
       new Date(`${date}T00:00:00+05:30`).getTime();
 
     const indiaEndOfDay = (date) =>
       new Date(`${date}T23:59:59.999+05:30`).getTime();
 
-    // Default to 16 October 2026 onward.
-    // Send includeAll: true to retrieve historical orders.
-    if (!includeAll) {
-      const from = startDate || "2026-10-16";
-
-      filter.date = {
-        $gte: indiaStartOfDay(from),
-      };
-
-      if (endDate) {
-        filter.date.$lte = indiaEndOfDay(endDate);
-      }
-    } else if (startDate || endDate) {
+    if (startDate || endDate) {
       filter.date = {};
 
       if (startDate) {
@@ -638,7 +635,11 @@ const allOrders = async (req, res) => {
     const keyword = String(search).trim();
 
     if (keyword) {
-      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const escaped = keyword.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+
       const regex = new RegExp(escaped, "i");
 
       const searchConditions = [
@@ -652,7 +653,6 @@ const allOrders = async (req, res) => {
         { paymentStatus: regex },
       ];
 
-      // Allow searching by the full MongoDB order ID.
       const mongoose = (await import("mongoose")).default;
 
       if (mongoose.Types.ObjectId.isValid(keyword)) {
@@ -666,12 +666,39 @@ const allOrders = async (req, res) => {
 
     const totalOrders = await orderModel.countDocuments(filter);
 
-    const orders = await orderModel
+    // Fetch all matching orders first, then sort by a normalized
+    // date so numeric, Date, and ISO-string values are handled.
+    const allMatchingOrders = await orderModel
       .find(filter)
-      .sort({ date: -1, _id: -1 })
-      .skip((currentPage - 1) * pageSize)
-      .limit(pageSize)
       .lean();
+
+    const getTimestamp = (order) => {
+      const value = order.date ?? order.createdAt;
+
+      if (value == null) return 0;
+
+      const timestamp =
+        typeof value === "number"
+          ? value
+          : new Date(value).getTime();
+
+      return Number.isFinite(timestamp) ? timestamp : 0;
+    };
+
+    allMatchingOrders.sort((a, b) => {
+      const difference = getTimestamp(b) - getTimestamp(a);
+
+      if (difference !== 0) return difference;
+
+      return String(b._id).localeCompare(String(a._id));
+    });
+
+    const startIndex = (currentPage - 1) * pageSize;
+
+    const orders = allMatchingOrders.slice(
+      startIndex,
+      startIndex + pageSize
+    );
 
     return res.status(200).json({
       success: true,
@@ -692,6 +719,7 @@ const allOrders = async (req, res) => {
     });
   }
 };
+
 
 
 /* =========================================================
@@ -821,6 +849,82 @@ const updateOrderStatus = async (
   }
 };
 
+
+/* =========================================================
+   ADMIN - UPDATE ORDER CONFIRMATION
+========================================================= */
+
+const updateOrderConfirmation = async (req, res) => {
+  try {
+    const {
+      orderId,
+      confirmationStatus,
+      confirmationMessage,
+      confirmationNote,
+    } = req.body;
+
+    const allowedStatuses = [
+      "Call Required",
+      "Confirmed",
+      "No Answer - Retry",
+      "Needs Clarification",
+    ];
+
+    if (!orderId || !confirmationStatus) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID and confirmation status are required",
+      });
+    }
+
+    if (!allowedStatuses.includes(confirmationStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order confirmation status",
+      });
+    }
+
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    order.confirmationStatus = confirmationStatus;
+
+    if (confirmationMessage !== undefined) {
+      order.confirmationMessage = String(confirmationMessage)
+        .trim()
+        .slice(0, 500);
+    }
+
+    if (confirmationNote !== undefined) {
+      order.confirmationNote = String(confirmationNote)
+        .trim()
+        .slice(0, 1000);
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Order confirmation updated successfully",
+      order,
+    });
+  } catch (error) {
+    console.error("Update order confirmation error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update order confirmation",
+    });
+  }
+};
+
+
 /* =========================================================
    CANCEL ORDER
 ========================================================= */
@@ -932,6 +1036,8 @@ const cancelOrder = async (
   }
 };
 
+
+
 /* =========================================================
    EXPORTS
 ========================================================= */
@@ -954,4 +1060,5 @@ export {
   roundMoney,
   normalizeAddress,
   validateAddress,
+  updateOrderConfirmation,
 };
