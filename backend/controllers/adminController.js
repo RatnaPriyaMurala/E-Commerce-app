@@ -9,56 +9,42 @@ import customerModel from "../models/customerModel.js";
 
 const dashboard = async (req, res) => {
     try {
+        console.log("ADMIN DASHBOARD: MIXED DATE SORT FIX");
+
         const [
-           totalOrders,
+            totalOrders,
             totalProducts,
             totalCustomers,
             revenueResult,
             lowStockProducts,
-            latestOrders,
+            allOrders,
         ] = await Promise.all([
-            // ----------------------------------
-            // TOTAL ORDERS
-            // ----------------------------------
+            orderModel.countDocuments({}),
 
-            orderModel.countDocuments(),
+            productModel.countDocuments({}),
 
-            // ----------------------------------
-            // TOTAL PRODUCTS
-            // ----------------------------------
+            customerModel.countDocuments({}),
 
-            productModel.countDocuments(),
-
-            // ----------------------------------
-            // TOTAL CUSTOMERS
-            // ----------------------------------
-customerModel.countDocuments(),
-
-            // ----------------------------------
-            // TOTAL REVENUE
-            // ----------------------------------
-
+            // Collected revenue: paid orders or delivered COD orders.
             orderModel.aggregate([
                 {
                     $match: {
                         orderStatus: {
-                            $ne: "Cancelled",
+                            $not: { $regex: /^Cancelled$/i },
                         },
-
-                        /*
-                         * Count paid orders and COD orders
-                         * as revenue only when they are not
-                         * cancelled.
-                         *
-                         * Pending COD orders are still valid
-                         * orders but are not yet collected.
-                         */
                         $or: [
                             {
-                                paymentStatus: "Paid",
+                                paymentStatus: {
+                                    $regex: /^Paid$/i,
+                                },
                             },
                             {
-                                paymentMethod: "COD",
+                                paymentMethod: {
+                                    $regex: /^COD$/i,
+                                },
+                                orderStatus: {
+                                    $regex: /^Delivered$/i,
+                                },
                             },
                         ],
                     },
@@ -66,82 +52,96 @@ customerModel.countDocuments(),
                 {
                     $group: {
                         _id: null,
-
                         totalRevenue: {
                             $sum: {
-                                $ifNull: [
-                                    "$amount",
-                                    0,
-                                ],
+                                $convert: {
+                                    input: "$amount",
+                                    to: "double",
+                                    onError: 0,
+                                    onNull: 0,
+                                },
                             },
                         },
                     },
                 },
             ]),
 
-            // ----------------------------------
-            // LOW STOCK PRODUCTS
-            // ----------------------------------
-
             productModel
-                .find({
-                    stock: {
-                        $lte: 5,
-                    },
-                })
-                .sort({
-                    stock: 1,
-                })
+                .find({ stock: { $lte: 5 } })
+                .sort({ stock: 1 })
                 .limit(5)
                 .lean(),
 
-            // ----------------------------------
-            // LATEST ORDERS
-            // ----------------------------------
-
-            orderModel
-                .find({})
-                .sort({
-                    date: -1,
-                })
-                .limit(8)
-                .lean(),
+            // Fetch all orders, then sort mixed date types in JavaScript.
+            orderModel.find({}).lean(),
         ]);
 
-        const totalRevenue =
-            revenueResult[0]?.totalRevenue || 0;
+        const getTimestamp = (value) => {
+            if (value === null || value === undefined || value === "") {
+                return NaN;
+            }
 
-        return res.json({
+            const timestamp =
+                typeof value === "number"
+                    ? value
+                    : new Date(value).getTime();
+
+            return Number.isFinite(timestamp) ? timestamp : NaN;
+        };
+
+        const getOrderTimestamp = (order) => {
+            // Prefer the actual creation time when available.
+            for (const value of [
+                order.createdAt,
+                order.date,
+                order.updatedAt,
+            ]) {
+                const timestamp = getTimestamp(value);
+
+                if (Number.isFinite(timestamp)) {
+                    return timestamp;
+                }
+            }
+
+            return 0;
+        };
+
+        const latestOrders = allOrders
+            .sort((a, b) => {
+                const difference =
+                    getOrderTimestamp(b) - getOrderTimestamp(a);
+
+                if (difference !== 0) {
+                    return difference;
+                }
+
+                return String(b._id).localeCompare(String(a._id));
+            })
+            .slice(0, 8);
+
+        const totalRevenue = Number(
+            revenueResult[0]?.totalRevenue ?? 0
+        );
+
+        return res.status(200).json({
             success: true,
-
             dashboard: {
                 totalOrders,
-
                 totalProducts,
-
                 totalCustomers,
-
                 totalRevenue,
-
                 lowStockProducts,
-
                 latestOrders,
             },
         });
     } catch (error) {
-        console.error(
-            "Dashboard error:",
-            error
-        );
+        console.error("Dashboard error:", error);
 
         return res.status(500).json({
             success: false,
-            message:
-                "Unable to load dashboard",
+            message: "Unable to load dashboard",
         });
     }
 };
 
-export {
-    dashboard,
-};
+export { dashboard };
