@@ -256,10 +256,6 @@ const List = ({ token }) => {
               All Categories
             </option>
 
-            <option value="Live Fish">
-              Live Fish
-            </option>
-
             <option value="Fresh Water Fish">
               Fresh Water Fish
             </option>
@@ -272,13 +268,34 @@ const List = ({ token }) => {
               Kolkata Fish
             </option>
 
-            <option value="Prawns">
-              Prawns
+            <option value="Prawn">
+              Prawn
             </option>
 
-            <option value="Crabs">
-              Crabs
+            <option value="Crab">
+              Crab
             </option>
+
+            <option value="Dry Fish">
+              Dry Fish
+            </option>
+
+            <option value="Dry Prawn">
+              Dry Prawn
+            </option>
+
+            <option value="Pickles">
+              Pickles
+            </option>
+
+            <option value="Boneless Fish">
+              Boneless Fish
+            </option>
+
+            
+
+
+
           </select>
 
         </div>

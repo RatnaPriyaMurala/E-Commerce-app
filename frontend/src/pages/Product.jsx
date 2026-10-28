@@ -221,10 +221,10 @@ const Product = () => {
     "kolkata fish":
       "Authentic Kolkata market speciality, carefully selected and packed.",
 
-    prawns:
+    prawn:
       "Fresh premium prawns carefully selected and hygienically packed.",
 
-    crabs:
+    crab:
       "Fresh crabs selected for quality and carefully prepared for dispatch.",
   };
 
@@ -1160,7 +1160,7 @@ const Product = () => {
         >
           <div>
             <p className="text-[11px] uppercase tracking-wide text-cyan-100">
-              Priya Live Fish
+              Bezawada Cuts
             </p>
 
             <h2 className="mt-0.5 text-lg font-extrabold">

@@ -193,7 +193,7 @@ const Dashboard = ({ token }) => {
       <div className="mx-auto max-w-[1600px] space-y-7">
         <header className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-cyan-700">Priya Live Fish · Admin</p>
+            <p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-cyan-700">Bezawada Cuts · Admin</p>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Business overview</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-500">
               Monitor orders, sales, catalogue health and customer activity in one place.

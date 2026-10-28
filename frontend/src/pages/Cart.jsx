@@ -169,7 +169,7 @@ const Cart = () => {
     <div className="mx-auto max-w-7xl px-3 py-5 sm:px-5 lg:px-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-cyan-700">Priya Live Fish</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-cyan-700">Bezawada Cuts</p>
           <h1 className="mt-1 text-2xl font-extrabold text-gray-800 sm:text-3xl">Shopping Cart</h1>
           <p className="mt-1 text-sm text-gray-500">All orders are in whole kilograms: 1 KG, 2 KG, 3 KG...</p>
         </div>

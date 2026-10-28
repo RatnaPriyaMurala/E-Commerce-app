@@ -18,12 +18,12 @@ const categories = [
     description: "Popular favourites",
   },
   {
-    name: "Prawns",
+    name: "Prawn",
     icon: "🦐",
     description: "Fresh prawns",
   },
   {
-    name: "Crabs",
+    name: "Crab",
     icon: "🦀",
     description: "Fresh crabs",
   },
@@ -33,7 +33,7 @@ const categories = [
     description: "Traditional favourites",
   },
   {
-    name: "Dry Prawns",
+    name: "Dry Prawn",
     icon: "🦐",
     description: "Dried prawns",
   },

@@ -32,7 +32,7 @@ const Footer = () => {
               <img
                 src={assets.logo}
                 className="w-24 rounded-lg bg-white p-1 sm:w-28"
-                alt="Priya Live Fish"
+                alt="Bezawada Cuts"
               />
             </Link>
 
@@ -169,7 +169,7 @@ const Footer = () => {
               </a>
 
               <a
-                href="mailto:priyalivefish@gmail.com"
+                href="mailto:bezawadacuts@gmail.om"
                 className="flex items-center gap-2 transition-colors hover:text-cyan-400"
               >
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-950">
@@ -177,7 +177,7 @@ const Footer = () => {
                 </span>
 
                 <span className="break-all">
-                  priyalivefish@gmail.com
+                  bezawadacuts@gmail.com
                 </span>
               </a>
 
@@ -187,7 +187,7 @@ const Footer = () => {
                 </span>
 
                 <span className="leading-3.5">
-                  Fresh Fish Market,
+                  Fresh Fish Mart,
                   <br />
                   Andhra Pradesh,
                   <br />
@@ -264,7 +264,7 @@ const Footer = () => {
           <p className="text-[8px] text-gray-500 sm:text-[10px]">
             © {new Date().getFullYear()}{" "}
             <span className="font-medium text-gray-300">
-              Priya Live Fish
+              Bezawada Cuts
             </span>
             . All Rights Reserved.
           </p>

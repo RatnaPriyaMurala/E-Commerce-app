@@ -220,7 +220,7 @@ const Navbar = () => {
             >
               <img
                 src={logo}
-                alt="Priya Live Fish"
+                alt="Bezawada Cuts"
                 className="
                   block
                   h-auto
@@ -838,7 +838,7 @@ const Navbar = () => {
           >
             <img
               src={logo}
-              alt="Priya Live Fish"
+              alt="Bezawada Cuts"
               className="w-28 object-contain"
             />
           </Link>
