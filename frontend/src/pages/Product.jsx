@@ -953,7 +953,7 @@ const Product = () => {
             icon={<FaHeartbeat />}
             iconBg="bg-red-50"
             iconColor="text-red-500"
-            title="Health Benefits"
+            title="Product Highlights"
             subtitle="Benefits listed for this product"
             open={showBenefits}
             onClick={() =>
