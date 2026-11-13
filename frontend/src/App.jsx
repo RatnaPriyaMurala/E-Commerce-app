@@ -43,6 +43,8 @@ import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SearchBar from "./components/SearchBar";
+import NewsletterComplete from "./pages/NewsletterComplete";
+
 
 // =========================
 // TOAST
@@ -248,6 +250,11 @@ const App = () => {
           element={<PaymentFailed />}
         />
 
+
+<Route
+  path="/newsletter/complete"
+  element={<NewsletterComplete />}
+/>
         {/* =========================
             404 PAGE
         ========================== */}

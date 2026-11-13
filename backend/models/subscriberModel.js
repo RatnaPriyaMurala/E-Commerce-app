@@ -11,11 +11,26 @@ const subscriberSchema = new mongoose.Schema(
       trim: true,
     },
 
+    
     name: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+  type: String,
+  default: "",
+  trim: true,
+  maxlength: 100,
+},
+
+city: {
+  type: String,
+  default: "",
+  trim: true,
+  maxlength: 100,
+},
+
+phone: {
+  type: String,
+  default: "",
+  trim: true,
+},
 
     status: {
       type: String,

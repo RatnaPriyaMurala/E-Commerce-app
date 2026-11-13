@@ -9,7 +9,7 @@ const FRONTEND_URL = (
 ).replace(/\/+$/, "");
 
 const BACKEND_URL = (
-  process.env.BACKEND_URL || ""
+  process.env.BACKEND_URL || "https://e-commerce-app-n9oq.onrender.com"
 ).replace(/\/+$/, "");
 
 const escapeHtml = (value = "") =>
@@ -73,26 +73,31 @@ export const sendBrevoEmail = async ({
 };
 
 export const sendConfirmationEmail = async (email, token) => {
-  if (!BACKEND_URL) {
-    throw new Error("BACKEND_URL is missing");
-  }
-
   const confirmationLink =
-    `${BACKEND_URL}/api/newsletter/confirm?token=${encodeURIComponent(token)}`;
+    `${FRONTEND_URL}/newsletter/complete?token=${encodeURIComponent(token)}`;
 
   const htmlContent = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;color:#263238">
       <h2 style="color:#087e8b">Welcome to Bezawada Cuts!</h2>
+
       <p>Thank you for subscribing to our seafood updates.</p>
-      <p>Please confirm your email address to receive fresh product announcements and special offers.</p>
+
+      <p>
+        Please confirm your email address and complete a few basic details
+        to receive fresh product announcements and special offers.
+      </p>
+
       <p style="margin:30px 0">
         <a href="${confirmationLink}"
-           style="background:#087e8b;color:white;padding:13px 24px;text-decoration:none;border-radius:6px">
+           style="background:#087e8b;color:white;padding:13px 24px;text-decoration:none;border-radius:6px;display:inline-block">
           Confirm Subscription
         </a>
       </p>
-      <p>This confirmation link expires in 24 hours.</p>
+
+      <p>This link expires in 24 hours.</p>
+
       <p>If you did not request this subscription, you can ignore this email.</p>
+
       <p>Regards,<br/>Bezawada Cuts</p>
     </div>
   `;
@@ -103,7 +108,6 @@ export const sendConfirmationEmail = async (email, token) => {
     htmlContent,
   });
 };
-
 
 const getUnsubscribeLink = async (subscriber) => {
   if (!BACKEND_URL) {

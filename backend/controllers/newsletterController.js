@@ -87,44 +87,15 @@ export const subscribeNewsletter = async (req, res) => {
 };
 
 export const confirmNewsletter = async (req, res) => {
-  try {
-    const token = String(req.query.token || "");
+  const token = req.query.token;
 
-    if (!token) {
-      return res.redirect(
-        `${FRONTEND_URL}/?newsletter=invalid`
-      );
-    }
-
-    const subscriber = await subscriberModel.findOne({
-      confirmationTokenHash: hashToken(token),
-      confirmationExpires: { $gt: new Date() },
-      status: "pending",
-    });
-
-    if (!subscriber) {
-      return res.redirect(
-        `${FRONTEND_URL}/?newsletter=expired`
-      );
-    }
-
-    subscriber.status = "active";
-    subscriber.confirmedAt = new Date();
-    subscriber.confirmationTokenHash = null;
-    subscriber.confirmationExpires = null;
-
-    await subscriber.save();
-
-    return res.redirect(
-      `${FRONTEND_URL}/?newsletter=confirmed`
-    );
-  } catch (error) {
-    console.error("Newsletter confirmation error:", error);
-
-    return res.redirect(
-      `${FRONTEND_URL}/?newsletter=error`
-    );
+  if (!token) {
+    return res.redirect(`${FRONTEND_URL}/newsletter/complete`);
   }
+
+  return res.redirect(
+    `${FRONTEND_URL}/newsletter/complete?token=${encodeURIComponent(token)}`
+  );
 };
 
 export const unsubscribeNewsletter = async (req, res) => {
@@ -222,6 +193,81 @@ export const getNewsletterSubscribers = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to load newsletter subscribers.",
+    });
+  }
+};
+
+export const completeNewsletterProfile = async (req, res) => {
+  try {
+    const { token, name, city, phone } = req.body;
+
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid confirmation link. Please subscribe again.",
+      });
+    }
+
+    const cleanName = String(name || "").trim();
+    const cleanCity = String(city || "").trim();
+    const cleanPhone = String(phone || "").trim();
+
+    if (!cleanName || !cleanCity) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter your name and city.",
+      });
+    }
+
+    if (cleanName.length > 100 || cleanCity.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Name and city must not exceed 100 characters.",
+      });
+    }
+
+    if (cleanPhone && !/^\+?[0-9\s()-]{7,20}$/.test(cleanPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid mobile number.",
+      });
+    }
+
+    const subscriber = await subscriberModel.findOne({
+      confirmationTokenHash: hashToken(token),
+      confirmationTokenExpires: { $gt: new Date() },
+      status: "pending",
+    });
+
+    if (!subscriber) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This confirmation link is invalid or expired. Please subscribe again.",
+      });
+    }
+
+    subscriber.name = cleanName;
+    subscriber.city = cleanCity;
+    subscriber.phone = cleanPhone;
+    subscriber.status = "active";
+    subscriber.confirmedAt = new Date();
+
+    subscriber.confirmationTokenHash = null;
+    subscriber.confirmationTokenExpires = null;
+
+    await subscriber.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Your newsletter subscription is confirmed. Thank you!",
+    });
+  } catch (error) {
+    console.error("Newsletter profile completion error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to complete your subscription. Please try again.",
     });
   }
 };
