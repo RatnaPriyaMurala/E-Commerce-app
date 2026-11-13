@@ -19,12 +19,16 @@ import connectCloudinary from "./config/cloudinary.js";
 // =====================================================
 
 import productRouter from "./routes/productRoute.js";
+import { generateSitemap } from "./controllers/productController.js";
 import userRouter from "./routes/userRoutes.js";
 import cartRouter from "./routes/cartRoute.js";
 import orderRouter from "./routes/orderRoute.js";
 import adminRouter from "./routes/adminRoute.js";
 import customerRouter from "./routes/customerRoute.js";
 import paymentRouter from "./routes/paymentRoute.js";
+import newsletterRouter from "./routes/newsletterRoute.js";
+import offerRouter from "./routes/offerRoute.js";
+
 
 // =====================================================
 // MIDDLEWARE
@@ -49,11 +53,23 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-
-  // Permanent Vercel production domain
   "https://bezawadacuts.com",
-"https://www.bezawadacuts.com",
+  "https://www.bezawadacuts.com",
 ];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("❌ CORS blocked origin:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 
 app.use(
   cors({
@@ -127,6 +143,15 @@ app.use(
   express.static("uploads")
 );
 
+
+// =====================================================
+// DYNAMIC XML SITEMAP
+// =====================================================
+
+app.get("/sitemap.xml", generateSitemap);
+
+
+
 // =====================================================
 // API ROUTES
 // =====================================================
@@ -165,6 +190,21 @@ app.use(
   "/api/payment",
   paymentRouter
 );
+
+
+
+app.use("/api/newsletter", newsletterRouter);
+
+app.get("/api/newsletter/test", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Newsletter routes are reachable",
+  });
+});
+
+
+app.use("/api/offer", offerRouter);
+
 
 // =====================================================
 // HEALTH CHECK

@@ -1,173 +1,171 @@
-import React, { useContext, useEffect, useState } from "react";
+
+import React, { useContext, useMemo, useRef } from "react";
 import { ShopContext } from "../context/ShopContext";
 import ProductItem from "./ProductItem";
-import { FaCrown, FaStar, FaArrowRight } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import {
+  FaCrown,
+  FaStar,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 
 const BestSeller = () => {
   const { products = [] } = useContext(ShopContext);
+  const scrollRef = useRef(null);
 
-  const [bestSeller, setBestSeller] = useState([]);
+  const freshCategories = [
+    "Fresh Water Fish",
+    "Sea Fish",
+    "Prawns",
+    "Crabs",
+  ];
 
-  useEffect(() => {
-    if (!products || products.length === 0) {
-      setBestSeller([]);
-      return;
-    }
-
-    // =====================================================
-    // FRESH SEAFOOD CATEGORIES
-    // =====================================================
-
-    const freshCategories = [
-      "Fresh Water Fish",
-      "Sea Fish",
-      "Prawns",
-      "Crabs",
+  const getTimestamp = (item) => {
+    const values = [
+      item.createdAt,
+      item.date,
+      item.updatedAt,
     ];
 
-    // =====================================================
-    // ONLY AVAILABLE FRESH BESTSELLERS
-    // =====================================================
+    for (const value of values) {
+      if (value === undefined || value === null || value === "") {
+        continue;
+      }
 
-    const freshBestSellers = products.filter((item) => {
-      return (
+      const timestamp =
+        typeof value === "number"
+          ? value
+          : new Date(value).getTime();
+
+      if (Number.isFinite(timestamp)) {
+        return timestamp;
+      }
+    }
+
+    return 0;
+  };
+
+  const bestSellers = useMemo(() => {
+    return products
+      .filter((item) => (
         item &&
         item.bestseller === true &&
         item.isAvailable !== false &&
         Number(item.stock) > 0 &&
         freshCategories.includes(item.category)
-      );
-    });
-
-    // =====================================================
-    // OPTIONAL SORT
-    //
-    // Newer/updated bestseller products first.
-    // =====================================================
-
-    const sortedBestSellers = [...freshBestSellers].sort((a, b) => {
-      const dateA = new Date(
-        a.updatedAt || a.createdAt || a.date || 0
-      ).getTime();
-
-      const dateB = new Date(
-        b.updatedAt || b.createdAt || b.date || 0
-      ).getTime();
-
-      return dateB - dateA;
-    });
-
-    setBestSeller(sortedBestSellers.slice(0, 5));
+      ))
+      .sort((a, b) => getTimestamp(b) - getTimestamp(a));
   }, [products]);
+
+  const moveProducts = (direction) => {
+    if (!scrollRef.current) return;
+
+    const amount = scrollRef.current.clientWidth * 0.85;
+
+    scrollRef.current.scrollBy({
+      left: direction * amount,
+      behavior: "smooth",
+    });
+  };
 
   return (
     <section className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-white via-cyan-50/70 to-sky-100/70 px-3 py-5 sm:px-5 sm:py-6 lg:px-6 lg:py-7">
 
-      {/* =====================================================
-          DECORATIVE BACKGROUND
-          ===================================================== */}
-
+      {/* DECORATIVE BACKGROUND */}
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
 
       <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-blue-300/20 blur-3xl" />
 
+      {/* HEADER */}
+      <div className="relative z-10 mb-5 flex items-end justify-between gap-3 sm:mb-6">
 
-      {/* =====================================================
-          HEADING
-          ===================================================== */}
+        <div>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-100 to-amber-100 px-3 py-1.5 text-yellow-700 shadow-sm">
+            <FaCrown className="text-yellow-500" />
+            <span className="text-xs font-semibold">
+              Customer Favorites
+            </span>
+            <FaStar className="text-xs text-yellow-500" />
+          </div>
 
-      <div className="relative z-10 mb-5 text-center sm:mb-6">
+          <h2 className="text-xl font-extrabold tracking-tight text-gray-800 sm:text-2xl lg:text-3xl">
+            Best Selling{" "}
+            <span className="bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent">
+              Seafood
+            </span>
+          </h2>
 
-        <div className="inline-flex items-center gap-2 rounded-full border border-yellow-200 bg-gradient-to-r from-yellow-100 to-amber-100 px-3.5 py-1.5 text-yellow-700 shadow-sm">
-
-          <FaCrown className="text-sm text-yellow-500" />
-
-          <span className="text-xs font-semibold sm:text-sm">
-            Customer Favorites
-          </span>
-
-          <FaStar className="text-xs text-yellow-500" />
-
+          <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+            Our customer-favorite seafood selections
+          </p>
         </div>
 
+        {/* ARROWS */}
+        {bestSellers.length > 2 && (
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => moveProducts(-1)}
+              aria-label="Previous bestsellers"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-cyan-500 hover:bg-cyan-600 hover:text-white"
+            >
+              <FaChevronLeft className="text-xs" />
+            </button>
 
-        <h2 className="mt-2.5 text-2xl font-extrabold tracking-tight text-gray-800 sm:text-3xl lg:text-4xl">
-
-          Best Selling{" "}
-
-          <span className="bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent">
-            Seafood
-          </span>
-
-        </h2>
-
-
-        <p className="mx-auto mt-1.5 max-w-2xl px-2 text-xs leading-5 text-gray-500 sm:text-sm">
-          Our most loved fresh seafood selections, carefully sourced,
-          hygienically prepared and delivered with premium quality.
-        </p>
+            <button
+              type="button"
+              onClick={() => moveProducts(1)}
+              aria-label="Next bestsellers"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-cyan-500 hover:bg-cyan-600 hover:text-white"
+            >
+              <FaChevronRight className="text-xs" />
+            </button>
+          </div>
+        )}
 
       </div>
 
+      {/* PRODUCTS */}
+      {bestSellers.length > 0 ? (
 
-      {/* =====================================================
-          PRODUCTS
-          ===================================================== */}
+        <div
+          ref={scrollRef}
+          className="relative z-10 flex gap-3 overflow-x-auto scroll-smooth pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4"
+        >
 
-      {bestSeller.length > 0 ? (
-
-        <div className="relative z-10 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-
-          {bestSeller.map((item) => (
-
+          {bestSellers.map((item) => (
             <div
               key={item._id}
-              className="group relative transition-all duration-300 hover:-translate-y-1"
+              className="group relative w-[calc(50%-6px)] shrink-0 snap-start md:w-[calc(33.333%-11px)]"
             >
 
-              {/* Bestseller Badge */}
-
-              <div className="absolute left-2.5 top-2.5 z-20">
-
-                <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 px-2 py-1 text-[9px] font-semibold text-white shadow-lg shadow-yellow-500/20 sm:text-[10px]">
-
-                  <FaStar className="text-[8px] sm:text-[9px]" />
-
+              {/* BESTSELLER BADGE */}
+              <div className="absolute left-2 top-2 z-20">
+                <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 px-2 py-1 text-[9px] font-semibold text-white shadow-lg sm:text-[10px]">
+                  <FaStar className="text-[9px]" />
                   <span>Bestseller</span>
-
                 </div>
-
               </div>
 
-
-              {/* Product Card */}
-
               <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 group-hover:border-cyan-200 group-hover:shadow-xl">
-
                 <ProductItem
                   id={item._id}
                   name={item.name}
                   image={item.image}
                   price={item.price}
                 />
-
               </div>
 
             </div>
-
           ))}
 
         </div>
 
       ) : (
 
-        <div className="relative z-10 flex flex-col items-center justify-center py-6">
-
+        <div className="relative z-10 flex min-h-[150px] flex-col items-center justify-center py-6 text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-cyan-100">
-
             <FaCrown className="text-xl text-cyan-600" />
-
           </div>
 
           <h3 className="text-base font-semibold text-gray-700 sm:text-lg">
@@ -175,89 +173,11 @@ const BestSeller = () => {
           </h3>
 
           <p className="mt-1.5 max-w-md text-center text-xs text-gray-500 sm:text-sm">
-            We're preparing our most popular seafood selections for you.
+            Mark available seafood products as bestsellers in your admin panel to display them here.
           </p>
-
         </div>
 
       )}
-
-
-      {/* =====================================================
-          TRUST / STATISTICS
-          ===================================================== */}
-
-      <div className="relative z-10 mt-5 rounded-2xl border border-white bg-white/90 p-3.5 shadow-lg backdrop-blur-md sm:mt-6 sm:p-5">
-
-        <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3 sm:gap-5">
-
-          <div className="group">
-
-            <div className="bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-2xl font-extrabold text-transparent sm:text-3xl">
-              500+
-            </div>
-
-            <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-              Happy Families Served
-            </p>
-
-          </div>
-
-
-          <div className="group sm:border-x sm:border-gray-100">
-
-            <div className="bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-2xl font-extrabold text-transparent sm:text-3xl">
-              100%
-            </div>
-
-            <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-              Fresh Daily Catch
-            </p>
-
-          </div>
-
-
-          <div className="group">
-
-            <div className="flex items-center justify-center gap-1.5">
-
-              <span className="bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-2xl font-extrabold text-transparent sm:text-3xl">
-                4.9
-              </span>
-
-              <FaStar className="text-lg text-yellow-400 sm:text-xl" />
-
-            </div>
-
-            <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-              Customer Rating
-            </p>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      {/* =====================================================
-          VIEW ALL BUTTON
-          ===================================================== */}
-
-      <div className="relative z-10 mt-4 flex justify-center sm:mt-5">
-
-        <Link
-          to="/menu"
-          className="group inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-600/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-600/30 sm:px-7 sm:py-3"
-        >
-
-          <span>Explore All Seafood</span>
-
-          <FaArrowRight className="text-xs transition-transform duration-300 group-hover:translate-x-1 sm:text-sm" />
-
-        </Link>
-
-      </div>
 
     </section>
   );

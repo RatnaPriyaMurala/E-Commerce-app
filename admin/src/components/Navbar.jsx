@@ -17,7 +17,7 @@ const Navbar = ({ setToken }) => {
         <div>
 
           <h1 className="text-2xl font-bold text-slate-800">
-            Fish Mart
+            Bezawada Cuts
           </h1>
 
           <p className="text-sm text-gray-500">

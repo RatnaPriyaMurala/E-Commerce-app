@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FaTachometerAlt, FaPlusCircle, FaFish, FaShoppingCart, FaUsers } from "react-icons/fa";
+import { FaTachometerAlt, FaPlusCircle, FaFish, FaShoppingCart, FaUsers, FaEnvelope, FaTags, } from "react-icons/fa";
 
 const Sidebar = () => {
   const menuClass = ({ isActive }) =>
@@ -17,7 +17,7 @@ const Sidebar = () => {
       <div className="p-6 border-b border-slate-700">
 
         <h2 className="text-white text-2xl font-bold">
-          Fish Mart
+          Bezawada Cuts
         </h2>
 
         <p className="text-gray-400 text-sm">
@@ -52,6 +52,16 @@ const Sidebar = () => {
           <FaUsers size={20} />
           <span>Customers</span>
         </NavLink>
+
+        <NavLink to="/newsletter-subscribers" className={menuClass}>
+  <FaEnvelope size={20} />
+  <span>Newsletter Subscribers</span>
+</NavLink>
+
+<NavLink to="/offers" className={menuClass}>
+  <FaTags size={20} />
+  <span>Offers</span>
+</NavLink>
 
       </div>
 

@@ -3,6 +3,11 @@ import { v2 as cloudinary } from "cloudinary";
 import productModel from "../models/productModel.js";
 import fs from "fs";
 
+import {
+  sendNewProductAnnouncement,
+} from "../utils/emailService.js";
+
+
 /* =========================================================
    HELPERS
 ========================================================= */
@@ -423,6 +428,23 @@ const finalAvailability = hasPrawnVariants
     });
 
     await newProduct.save();
+
+const hasSellableStock =
+  Number(newProduct.stock || 0) > 0 ||
+  (newProduct.variants || []).some(
+    (variant) =>
+      variant.isAvailable && Number(variant.stock || 0) > 0
+  );
+
+if (newProduct.isAvailable && hasSellableStock) {
+  sendNewProductAnnouncement(newProduct).catch((emailError) => {
+    console.error(
+      "New product newsletter notification failed:",
+      emailError.message
+    );
+  });
+}
+
 
     return res.status(201).json({
       success: true,
@@ -865,3 +887,89 @@ export const lowStockProducts = async (req, res) => {
     });
   }
 };
+
+
+/* =========================================================
+   DYNAMIC XML SITEMAP
+   Generates URLs from available MongoDB products
+========================================================= */
+
+export const generateSitemap = async (req, res) => {
+  try {
+    const siteUrl = "https://www.bezawadacuts.com";
+
+    // Fetch products that are available and have stock.
+    const products = await productModel
+      .find({
+        isAvailable: true,
+        stock: { $gt: 0 },
+      })
+      .select("_id updatedAt")
+      .lean();
+
+    // Escape special XML characters.
+    const escapeXml = (value) =>
+      String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+
+    // Main website pages.
+    const staticUrls = [
+      "/",
+      "/menu",
+      "/about",
+      "/contact",
+    ];
+
+    const urls = staticUrls.map((path) => ({
+      loc: `${siteUrl}${path}`,
+      lastmod: null,
+    }));
+
+    // Add individual product pages.
+    for (const product of products) {
+      if (!product._id) continue;
+
+      urls.push({
+        loc: `${siteUrl}/product/${product._id}`,
+        lastmod: product.updatedAt || null,
+      });
+    }
+
+    // Generate XML.
+    const xmlUrls = urls
+      .map((url) => {
+        const lastmod = url.lastmod
+          ? `<lastmod>${new Date(url.lastmod).toISOString()}</lastmod>`
+          : "";
+
+        return `
+  <url>
+    <loc>${escapeXml(url.loc)}</loc>
+    ${lastmod}
+  </url>`;
+      })
+      .join("");
+
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${xmlUrls}
+</urlset>`;
+
+    res.set("Content-Type", "application/xml; charset=utf-8");
+    res.set("Cache-Control", "public, max-age=3600");
+
+    return res.status(200).send(sitemap);
+
+  } catch (error) {
+    console.error("Sitemap generation error:", error);
+
+    return res.status(500).type("text/plain").send(
+      "Unable to generate sitemap"
+    );
+  }
+};
+

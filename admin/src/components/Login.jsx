@@ -72,7 +72,7 @@ const Login = ({ setToken }) => {
           />
 
           <h1 className="text-3xl font-bold">
-            Fish Mart
+            Bezawada Cuts
           </h1>
 
           <p className="text-gray-500">

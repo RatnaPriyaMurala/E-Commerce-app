@@ -2,6 +2,9 @@
 import React, { useContext, useEffect, useState } from "react";
 import { ShopContext } from "../context/ShopContext";
 import ProductItem from "./ProductItem";
+import { useNavigate } from "react-router-dom";
+
+
 import {
   FaFish,
   FaStar,
@@ -14,7 +17,7 @@ const OurSpecialItems = () => {
   const { products } = useContext(ShopContext);
 
   const [specialItem, setSpecialItem] = useState(null);
-
+const navigate = useNavigate();
   useEffect(() => {
     if (products.length > 0) {
       const foundItem = products.find((item) =>
@@ -76,13 +79,7 @@ const OurSpecialItems = () => {
         </h2>
 
 
-        {/* Description */}
 
-        <p className="mx-auto mt-1.5 max-w-2xl px-2 text-xs leading-5 text-gray-500 sm:text-sm">
-          A premium selection loved by seafood enthusiasts. Freshly sourced,
-          naturally delicious and carefully packed to preserve its authentic
-          taste.
-        </p>
 
       </div>
 
@@ -269,19 +266,16 @@ const OurSpecialItems = () => {
                 </div>
 
 
-                {/* Product card */}
-
-                <div className="overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_rgba(0,0,0,0.25)]">
-
-                  <ProductItem
-                    id={specialItem._id}
-                    image={specialItem.image}
-                    name={specialItem.name}
-                    price={specialItem.price}
-                  />
-
-                </div>
-
+             <div
+  onClick={() => navigate(`/product/${specialItem._id}`)}
+  className="overflow-hidden rounded-2xl bg-white shadow-xl cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+>
+  <img
+    src={specialItem.image}
+    alt={specialItem.name}
+    className="w-full h-72 sm:h-80 object-cover"
+  />
+</div>
 
                 {/* Premium floating label */}
 

@@ -1,13 +1,18 @@
-import React from "react";
+
+import React, { useState } from "react";
 import {
   FaTruck,
   FaSnowflake,
   FaCreditCard,
   FaHeadset,
   FaCheckCircle,
+  FaChevronDown,
+  FaShieldAlt,
 } from "react-icons/fa";
 
 const OurPolicy = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const policies = [
     {
       icon: FaTruck,
@@ -44,115 +49,118 @@ const OurPolicy = () => {
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-cyan-50 via-white to-white">
-      {/* Decorative Background */}
-      <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-cyan-200/30 blur-3xl" />
+    <section className="mx-auto max-w-7xl">
 
-      <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-blue-200/20 blur-3xl" />
+      {/* COMPACT CLICKABLE HEADER */}
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        aria-controls="policy-details"
+        className="flex w-full items-center gap-3 rounded-xl border border-cyan-100 bg-gradient-to-r from-cyan-50 to-white px-3 py-3 text-left shadow-sm transition-all duration-300 hover:border-cyan-300 hover:shadow-md sm:px-5 sm:py-3.5"
+      >
 
-      {/* Heading */}
-      <div className="relative z-10 mb-5 text-center sm:mb-6">
-        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-100 px-3.5 py-1.5 text-cyan-700 shadow-sm">
-          <FaCheckCircle className="text-sm text-cyan-600" />
-
-          <span className="text-xs font-semibold sm:text-sm">
-            Quality You Can Trust
-          </span>
+        {/* ICON */}
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 sm:h-11 sm:w-11">
+          <FaShieldAlt className="text-lg" />
         </div>
 
-        <h2 className="mt-2.5 text-2xl font-extrabold tracking-tight text-gray-800 sm:text-3xl lg:text-4xl">
-          Why Customers{" "}
-          <span className="bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent">
-            Choose Us
-          </span>
-        </h2>
+        {/* TITLE */}
+        <div className="min-w-0 flex-1">
 
-        <p className="mx-auto mt-1.5 max-w-2xl px-2 text-xs leading-5 text-gray-500 sm:text-sm">
-          We are committed to delivering premium seafood with unmatched
-          freshness, quality and customer satisfaction — from our fishermen
-          to your family table.
-        </p>
-      </div>
+          <h2 className="text-sm font-bold text-gray-800 sm:text-base">
+            Why Customers{" "}
+            <span className="text-cyan-700">Choose Us</span>
+          </h2>
 
-      {/* Policy Cards */}
-      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-        {policies.map((policy, index) => {
-          const Icon = policy.icon;
+          <p className="mt-0.5 text-[10px] text-gray-500 sm:text-xs">
+            Fresh seafood · Quality · Fast delivery · Trusted service
+          </p>
 
-          return (
-            <div
-              key={policy.title}
-              className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:p-5"
-              style={{
-                animationDelay: `${index * 80}ms`,
-              }}
-            >
-              {/* Card Hover Background */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-cyan-50/0 to-cyan-50/70 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+          <p className="mt-1 text-[10px] font-semibold text-cyan-700 sm:text-xs">
+            {isOpen ? "Tap to close" : "Tap to discover what we provide"}
+          </p>
 
-              <div className="relative z-10">
-                {/* Icon */}
+        </div>
+
+        {/* EXPAND ARROW */}
+        <div
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-cyan-700 transition-transform duration-300 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        >
+          <FaChevronDown className="text-xs" />
+        </div>
+
+      </button>
+
+      {/* EXPANDABLE CONTENT */}
+      <div
+        id="policy-details"
+        aria-hidden={!isOpen}
+        className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-in-out ${
+          isOpen
+            ? "mt-3 grid-rows-[1fr] opacity-100"
+            : "mt-0 grid-rows-[0fr] opacity-0"
+        }`}
+      >
+
+        <div className="overflow-hidden">
+
+          {/* POLICY CARDS */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+
+            {policies.map((policy) => {
+              const Icon = policy.icon;
+
+              return (
                 <div
-                  className={`mx-auto flex h-12 w-12 items-center justify-center rounded-xl ${policy.iconBg} transition-all duration-300 group-hover:rotate-2 group-hover:scale-105 sm:h-14 sm:w-14`}
+                  key={policy.title}
+                  className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-all duration-200 hover:border-cyan-200 hover:shadow-md sm:p-4"
                 >
-                  <Icon
-                    size={23}
-                    className={`${policy.iconColor} transition-transform duration-300 group-hover:scale-105`}
-                  />
+
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${policy.iconBg} sm:h-10 sm:w-10`}
+                  >
+                    <Icon
+                      className={`${policy.iconColor} text-base sm:text-lg`}
+                    />
+                  </div>
+
+                  <h3 className="mt-2 text-xs font-bold text-gray-800 sm:text-sm">
+                    {policy.title}
+                  </h3>
+
+                  <p className="mt-1 text-[10px] leading-4 text-gray-500 sm:text-xs sm:leading-5">
+                    {policy.description}
+                  </p>
+
                 </div>
+              );
+            })}
 
-                {/* Title */}
-                <h3 className="mt-3 text-base font-bold text-gray-800 sm:text-lg">
-                  {policy.title}
-                </h3>
-
-                {/* Description */}
-                <p className="mt-1.5 text-xs leading-5 text-gray-500 sm:text-sm sm:leading-6">
-                  {policy.description}
-                </p>
-
-                {/* Bottom Accent */}
-                <div className="mt-3 flex justify-center">
-                  <span className="h-1 w-8 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300 group-hover:w-14" />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Trust Strip */}
-      <div className="relative z-10 mx-auto mt-5 max-w-5xl sm:mt-6">
-        <div className="rounded-2xl border border-white bg-white/90 px-4 py-3 shadow-lg backdrop-blur-md sm:px-6 sm:py-3.5">
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-gray-600 sm:text-sm">
-            <div className="flex items-center gap-1.5">
-              <FaCheckCircle className="text-green-500" />
-              <span>Quality Checked</span>
-            </div>
-
-            <div className="hidden h-4 w-px bg-gray-200 sm:block" />
-
-            <div className="flex items-center gap-1.5">
-              <FaCheckCircle className="text-green-500" />
-              <span>Hygienically Packed</span>
-            </div>
-
-            <div className="hidden h-4 w-px bg-gray-200 sm:block" />
-
-            <div className="flex items-center gap-1.5">
-              <FaCheckCircle className="text-green-500" />
-              <span>Freshly Sourced</span>
-            </div>
-
-            <div className="hidden h-4 w-px bg-gray-200 sm:block" />
-
-            <div className="flex items-center gap-1.5">
-              <FaCheckCircle className="text-green-500" />
-              <span>Customer First</span>
-            </div>
           </div>
+
+          {/* TRUST STRIP */}
+          <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 rounded-xl border border-cyan-50 bg-cyan-50/60 px-3 py-3 text-[10px] text-gray-600 sm:gap-x-6 sm:text-xs">
+
+            {[
+              "Quality Checked",
+              "Hygienically Packed",
+              "Freshly Sourced",
+              "Customer First",
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-1.5">
+                <FaCheckCircle className="text-green-500" />
+                <span>{item}</span>
+              </div>
+            ))}
+
+          </div>
+
         </div>
       </div>
+
     </section>
   );
 };

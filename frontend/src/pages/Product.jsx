@@ -114,6 +114,198 @@ const Product = () => {
     editCartPreparation,
   ]);
 
+
+  
+// ======================================================
+// DYNAMIC PRODUCT SEO
+// ======================================================
+
+useEffect(() => {
+  if (!productData || !productData._id) return;
+
+  const siteUrl = "https://www.bezawadacuts.com";
+  const productUrl = `${siteUrl}/product/${productData._id}`;
+
+  const productName = productData.name || "Fresh Seafood";
+
+  const cleanText = (value) =>
+    String(value || "")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const description =
+    cleanText(productData.overview) ||
+    `Explore ${productName} at Bezawada Cuts. View product details and ordering options online.`;
+
+  const metaDescription = description.slice(0, 300);
+
+  // Save previous page metadata so it can be restored
+  // when the customer navigates away from this product.
+  const previousTitle = document.title;
+
+  const previousMeta = {};
+
+  const metaDefinitions = [
+    ["name", "description"],
+    ["property", "og:title"],
+    ["property", "og:description"],
+    ["property", "og:type"],
+    ["property", "og:url"]
+  ];
+
+  metaDefinitions.forEach(([attribute, value]) => {
+    const element = document.head.querySelector(
+      `meta[${attribute}="${value}"]`
+    );
+
+    previousMeta[`${attribute}:${value}`] = element
+      ? element.getAttribute("content")
+      : null;
+  });
+
+  const previousCanonical = document.head.querySelector(
+    'link[rel="canonical"]'
+  );
+
+  const previousCanonicalHref = previousCanonical
+    ? previousCanonical.getAttribute("href")
+    : null;
+
+  // Update browser title
+  document.title = `${productName} | Bezawada Cuts`;
+
+  // Update or create meta tags
+  const setMeta = (attribute, key, content) => {
+    let element = document.head.querySelector(
+      `meta[${attribute}="${key}"]`
+    );
+
+    if (!element) {
+      element = document.createElement("meta");
+      element.setAttribute(attribute, key);
+      document.head.appendChild(element);
+    }
+
+    element.setAttribute("content", content);
+  };
+
+  setMeta("name", "description", metaDescription);
+
+  setMeta(
+    "property",
+    "og:title",
+    `${productName} | Bezawada Cuts`
+  );
+
+  setMeta("property", "og:description", metaDescription);
+  setMeta("property", "og:type", "product");
+  setMeta("property", "og:url", productUrl);
+
+  // Update canonical URL
+  let canonical = previousCanonical;
+
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.setAttribute("rel", "canonical");
+    document.head.appendChild(canonical);
+  }
+
+  canonical.setAttribute("href", productUrl);
+
+  // Restore previous metadata when leaving this product page
+  return () => {
+    document.title = previousTitle;
+
+    metaDefinitions.forEach(([attribute, value]) => {
+      const selector = `meta[${attribute}="${value}"]`;
+      const element = document.head.querySelector(selector);
+      const previousValue =
+        previousMeta[`${attribute}:${value}`];
+
+      if (previousValue === null) {
+        element?.remove();
+      } else if (element) {
+        element.setAttribute("content", previousValue);
+      }
+    });
+
+    if (previousCanonicalHref === null) {
+      canonical?.remove();
+    } else if (canonical) {
+      canonical.setAttribute("href", previousCanonicalHref);
+    }
+  };
+}, [productData]);
+
+
+
+  // ============================================================
+  // PRODUCT PAGE SEO
+  // ============================================================
+
+  useEffect(() => {
+    if (!productData) return;
+
+    const siteUrl = "https://www.bezawadacuts.com";
+
+    const productUrl = `${siteUrl}/product/${productData._id}`;
+
+    const productName = productData.name || "Fresh Seafood";
+
+    const productDescription = String(
+      productData.overview ||
+      `${productName} available at Bezawada Cuts. Explore product details and ordering options.`
+    )
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 300);
+
+    document.title = `${productName} | Bezawada Cuts`;
+
+    const setMeta = (attribute, key, content) => {
+      let element = document.head.querySelector(
+        `meta[${attribute}="${key}"]`
+      );
+
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attribute, key);
+        document.head.appendChild(element);
+      }
+
+      element.setAttribute("content", content);
+    };
+
+    setMeta("name", "description", productDescription);
+
+    setMeta("property", "og:title", document.title);
+    setMeta("property", "og:description", productDescription);
+    setMeta("property", "og:type", "product");
+    setMeta("property", "og:url", productUrl);
+
+    let canonical = document.querySelector(
+      'link[rel="canonical"]'
+    );
+
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+
+    canonical.setAttribute("href", productUrl);
+
+    return () => {
+      // Restore the homepage canonical when leaving the product page.
+      canonical.setAttribute("href", `${siteUrl}/`);
+    };
+  }, [productData]);
+
+
+
+
   // ============================================================
   // PREPARATION OPTIONS
   // ============================================================
@@ -954,7 +1146,7 @@ const Product = () => {
             iconBg="bg-red-50"
             iconColor="text-red-500"
             title="Product Highlights"
-            subtitle="Benefits listed for this product"
+            subtitle="Product details and features"
             open={showBenefits}
             onClick={() =>
               setShowBenefits(
@@ -984,7 +1176,7 @@ const Product = () => {
                 </div>
               ) : (
                 <p className="text-xs text-gray-500">
-                  Health benefit information is currently unavailable.
+                  Product highlights are currently unavailable.
                 </p>
               )}
             </div>
