@@ -197,6 +197,7 @@ export const getNewsletterSubscribers = async (req, res) => {
   }
 };
 
+
 export const completeNewsletterProfile = async (req, res) => {
   try {
     const { token, name, city, phone } = req.body;
@@ -226,16 +227,21 @@ export const completeNewsletterProfile = async (req, res) => {
       });
     }
 
-    if (cleanPhone && !/^\+?[0-9\s()-]{7,20}$/.test(cleanPhone)) {
+    if (
+      cleanPhone &&
+      !/^\+?[0-9\s()-]{7,20}$/.test(cleanPhone)
+    ) {
       return res.status(400).json({
         success: false,
         message: "Please enter a valid mobile number.",
       });
     }
 
+    // IMPORTANT: Use confirmationExpires, matching the model
+    // and subscribeNewsletter function.
     const subscriber = await subscriberModel.findOne({
       confirmationTokenHash: hashToken(token),
-      confirmationTokenExpires: { $gt: new Date() },
+      confirmationExpires: { $gt: new Date() },
       status: "pending",
     });
 
@@ -254,7 +260,7 @@ export const completeNewsletterProfile = async (req, res) => {
     subscriber.confirmedAt = new Date();
 
     subscriber.confirmationTokenHash = null;
-    subscriber.confirmationTokenExpires = null;
+    subscriber.confirmationExpires = null;
 
     await subscriber.save();
 
